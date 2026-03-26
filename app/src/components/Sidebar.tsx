@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   LayoutDashboard,
   Calendar,
@@ -30,27 +31,27 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
-        <button className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
-          <span className="flex items-center gap-2">
-            <LayoutDashboard className="w-4 h-4" />
-            Dashboard
-          </span>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-        </button>
-        <button className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
-          <span className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Schedule
-          </span>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-        </button>
-        <button className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
-          <span className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Requests
-          </span>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-        </button>
+          <Link href="/dashboard" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+            <span className="flex items-center gap-2">
+              <LayoutDashboard className="w-4 h-4" />
+              Dashboard
+            </span>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </Link>
+          <Link href="/schedule" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+            <span className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Schedule
+            </span>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </Link>
+          <Link href="/requests" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+            <span className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Requests
+            </span>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </Link>
       </nav>
 
       {/* Admin Links */}
