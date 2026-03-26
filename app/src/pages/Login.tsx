@@ -1,7 +1,12 @@
-import { useNavigate, Link } from "react-router";
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 
 export function Login() {
+
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4F46E5] to-[#6366F1] flex items-center justify-center p-4">
@@ -23,7 +28,7 @@ export function Login() {
               <input
                 type="email"
                 id="email"
-                required
+                //required
                 placeholder="you@example.com"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
@@ -39,25 +44,25 @@ export function Login() {
               <input
                 type="password"
                 id="password"
-                required
+                //required
                 placeholder="••••••••"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             </div>
 
-            <button
-              type="submit"
+            <button onClick={() => router.push("/dashboard")}
+              type="button"
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              <LogIn className="w-5 h-5" />
+              Sign In
             </button>
           </div>
 
           <div className="mt-6 text-center">
-            <span
-              className="text-sm text-[#4F46E5] hover:text-[#6366F1] font-medium"
-            >
+            <Link href="/signup" className="text-sm text-[#4F46E5] hover:text-[#6366F1] font-medium">
               Don't have an account? Sign up
-            </span>
+            </Link>
           </div>
 
           <div className="mt-8 p-4 bg-gray-50 rounded-lg">
