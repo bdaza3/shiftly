@@ -1,4 +1,6 @@
 import { Clock, MapPin, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Header } from "../components/Header";
+import { Sidebar } from "../components/Sidebar";
 
 export function Dashboard() {
   // Simulated user for a frontend-only demo
@@ -59,7 +61,11 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      <Header />
+      <div className="flex flex-row items-center">
+      <Sidebar />
       {/* Quick Stats */}
+      <section>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
@@ -226,6 +232,8 @@ export function Dashboard() {
           </div>
         </div>
       )}
+        </section>
+      </div>
     </div>
   );
 }
