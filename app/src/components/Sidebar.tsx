@@ -45,6 +45,13 @@ export function Sidebar() {
             </span>
             <ChevronRight className="w-4 h-4 text-gray-400" />
           </Link>
+          <Link href="/employees" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+            <span className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Team
+            </span>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </Link>
           <Link href="/requests" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
             <span className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
