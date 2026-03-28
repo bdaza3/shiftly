@@ -6,13 +6,17 @@ import { useRouter } from "next/navigation";
 
 export function Profile() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   const handleLogout = async () => {
     await signOut();
     router.push("/");
   };
   if (!user) return null;
+
+  const roleFromProfile = profile?.role ?? user?.user_metadata?.role ?? user?.role
+  const isAdmin = String(roleFromProfile || "").toLowerCase().includes("admin");
+  const displayName = profile?.first_name || profile?.full_name || user?.user_metadata?.full_name || user?.email
 
   return (
     <div className="space-y-6">
@@ -38,8 +42,8 @@ export function Profile() {
               {user.user_metadata?.full_name?.charAt(0).toUpperCase() ?? user.email?.charAt(0).toUpperCase() ?? "U"}
             </div>
             <div className="pb-2">
-              <h3 className="text-2xl font-bold text-gray-900">{user.user_metadata?.full_name ?? user.email ?? "Guest"}</h3>
-              <p className="text-gray-500 capitalize">{user.role ?? "Employee"}</p>
+              <h3 className="text-2xl font-bold text-gray-900">{displayName ?? "Guest"}</h3>
+              <p className="text-gray-500 capitalize">{roleFromProfile ?? user?.role ?? "Employee"}</p>
             </div>
           </div>
 
@@ -56,7 +60,7 @@ export function Profile() {
               <User className="w-5 h-5 text-gray-400" />
               <div>
                 <p className="text-sm text-gray-500">Role</p>
-                <p className="font-medium text-gray-900 capitalize">{user.role ?? "Employee"}</p>
+                <p className="font-medium text-gray-900 capitalize">{roleFromProfile ?? user?.role ?? "Employee"}</p>
               </div>
             </div>
 

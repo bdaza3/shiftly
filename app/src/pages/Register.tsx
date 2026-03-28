@@ -55,7 +55,20 @@ export function Register() {
       const { error } = await supabase.auth.updateUser({ data: newMeta });
       if (error) throw error;
 
-      // Optionally, create a profiles row or company record here.
+      // Upsert into profiles table so role/profile is available for RLS
+      try {
+        if (user?.id) {
+          await supabase.from('profiles').upsert({
+            id: user.id,
+            role: accountType,
+            first_name: newMeta.firstName ?? null,
+            last_name: newMeta.lastName ?? null,
+            phone: newMeta.phone ?? null
+          });
+        }
+      } catch (upsertErr) {
+        console.error('profiles upsert failed', upsertErr);
+      }
 
       // After update, redirect to dashboard
       router.push("/dashboard");

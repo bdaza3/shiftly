@@ -11,6 +11,7 @@ import { Company } from "../src/pages/Company";
 import { Schedule } from "../src/pages/Schedule";
 //import { Team } from "../src/pages/Team";
 import { Requests } from "../src/pages/Requests";
+import { Profile } from "../src/pages/Profile";
 
 const PAGES: Record<string, React.ComponentType<any>> = {
   settings: Settings,
@@ -22,6 +23,7 @@ const PAGES: Record<string, React.ComponentType<any>> = {
   schedule: Schedule,
   requests: Requests,
   register: Register,
+  profile: Profile,
 };
 
 export default async function Page({ params }: { params: Promise<{ page: string }> | { page: string } }) {

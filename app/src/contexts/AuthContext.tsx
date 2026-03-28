@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabaseClient'
 
 type AuthContextValue = {
   user: any | null
+  profile?: any | null
   signIn: (email: string, password: string) => Promise<any>
   signUp: (email: string, password: string) => Promise<any>
   signOut: () => Promise<any>
@@ -14,18 +15,41 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any | null>(null)
+  const [profile, setProfile] = useState<any | null>(null)
 
   useEffect(() => {
     let mounted = true
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return
-      setUser(data.session?.user ?? null)
+      const u = data.session?.user ?? null
+      setUser(u)
+      if (u?.id) {
+        try {
+          const { data: p } = await supabase.from('profiles').select('*').eq('id', u.id).single()
+          setProfile(p ?? null)
+        } catch (e) {
+          setProfile(null)
+        }
+      } else {
+        setProfile(null)
+      }
     })
 
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
     if (!mounted) return
-    setUser(session?.user ?? null)
+    const u = session?.user ?? null
+    setUser(u)
+    if (u?.id) {
+      try {
+        const { data: p } = await supabase.from('profiles').select('*').eq('id', u.id).single()
+        setProfile(p ?? null)
+      } catch (e) {
+        setProfile(null)
+      }
+    } else {
+      setProfile(null)
+    }
     })
     const subscription = data?.subscription
     // cleanup:
@@ -44,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = () => supabase.auth.signOut()
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   )

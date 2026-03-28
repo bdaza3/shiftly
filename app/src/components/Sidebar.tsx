@@ -18,7 +18,7 @@ import { useCompany } from "../contexts/CompanyContext";
 
 export function Sidebar() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { companies, selected, selectCompany, addCompany } = useCompany();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -26,7 +26,9 @@ export function Sidebar() {
     await signOut();
     router.push("/");
   };
-  const isAdmin = (user?.role || "").toString().toLowerCase().includes("admin");
+  const roleFromProfile = profile?.role ?? user?.user_metadata?.role ?? user?.role
+  const isAdmin = String(roleFromProfile || "").toLowerCase().includes("manager") || String(roleFromProfile || "").toLowerCase().includes("company");
+  const displayName = profile?.first_name || profile?.full_name || user?.user_metadata?.full_name || user?.email
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
@@ -121,9 +123,9 @@ export function Sidebar() {
             </div>
             <div className="flex-1">
               <div className="text-sm font-medium text-gray-800">
-                {user?.user_metadata?.full_name ?? user?.email ?? "Guest"}
+                {displayName ?? "Guest"}
               </div>
-              <div className="text-xs text-gray-500">{user?.role ?? "Employee"}</div>
+              <div className="text-xs text-gray-500">{roleFromProfile ?? user?.role ?? "Employee"}</div>
             </div>
           </div>
         </Link>
