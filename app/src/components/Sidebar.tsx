@@ -12,10 +12,12 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useCompany } from "../contexts/CompanyContext";
 
 export function Sidebar() {
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { companies, selected, selectCompany } = useCompany();
 
   const handleLogout = async () => {
     await signOut();
@@ -24,9 +26,23 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-6 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-[#4F46E5]">Shiftly</h1>
-        <p className="text-sm text-gray-500 mt-1">Shift Management</p>
+      <div className="p-6 border-b border-gray-200 flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#4F46E5]">Shiftly</h1>
+          <p className="text-sm text-gray-500 mt-1">Shift Management</p>
+        </div>
+        <div>
+          <select
+            value={selected?.id}
+            onChange={(e) => selectCompany(e.target.value)}
+            className="border rounded px-2 py-1 text-sm"
+            aria-label="Select company"
+          >
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
@@ -55,6 +71,13 @@ export function Sidebar() {
           <span className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
             Requests
+          </span>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+        </Link>
+        <Link href="/company" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+          <span className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Company
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
