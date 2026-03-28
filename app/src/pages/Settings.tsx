@@ -1,8 +1,7 @@
-"use client";
-
+import React from "react";
 import Link from "next/link";
 
-export function Settings() {
+export default function Settings() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between">

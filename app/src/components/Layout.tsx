@@ -7,8 +7,10 @@ import { Header } from "./Header";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideSidebar = pathname === "/" || pathname === "/login" || pathname === "/signup";
-  const hideHeader = pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/profile" || pathname === "/requests" || pathname === "/schedule" || pathname === "/team" || pathname === "/company";
+  const hideSidebar = pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/register";
+  const hideHeader = pathname === "/" || pathname === "/login" || pathname === "/signup" || 
+  pathname === "/profile" || pathname === "/requests" || pathname === "/schedule" || pathname === "/team" || 
+  pathname === "/company" || pathname === "/register";
 
   return (
     <div className="min-h-screen flex bg-white text-gray-800">

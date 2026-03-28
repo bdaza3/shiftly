@@ -26,6 +26,7 @@ export function Sidebar() {
     await signOut();
     router.push("/");
   };
+  const isAdmin = (user?.role || "").toString().toLowerCase().includes("admin");
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
@@ -69,6 +70,33 @@ export function Sidebar() {
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
+        {isAdmin && (
+          <>
+            <Link href="/manage/employees" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+              <span className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Manage Employees
+              </span>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            </Link>
+
+            <Link href="/manage/shifts" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+              <span className="flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" />
+                Manage Shifts
+              </span>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            </Link>
+
+            <Link href="/overview" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+              <span className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Overview
+              </span>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            </Link>
+          </>
+        )}
         <Link href="/requests" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
           <span className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
