@@ -3,10 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import React from "react";
 
 export function Login() {
-
+  const { signIn } = useAuth()
   const router = useRouter();
+  const [email, setEmail] = React.useState("")
+  const [password, setPassword] = React.useState("")
+
+
+  const handleSignIn = async () => {
+    const res = await signIn(email, password)
+    if (res.error) {alert(res.error.message)} else { router.push('/dashboard') }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4F46E5] to-[#6366F1] flex items-center justify-center p-4">
@@ -28,7 +38,9 @@ export function Login() {
               <input
                 type="email"
                 id="email"
-                //required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 placeholder="you@example.com"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
@@ -44,13 +56,15 @@ export function Login() {
               <input
                 type="password"
                 id="password"
-                //required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
                 placeholder="••••••••"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             </div>
 
-            <button onClick={() => router.push("/dashboard")}
+            <button onClick={handleSignIn}
               type="button"
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >

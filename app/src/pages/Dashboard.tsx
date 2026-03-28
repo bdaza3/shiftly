@@ -1,12 +1,11 @@
+"use client";
+
 import { Clock, MapPin, AlertCircle, CheckCircle2 } from "lucide-react";
-import { Header } from "../components/Header";
-import { Sidebar } from "../components/Sidebar";
+import { useAuth } from "../contexts/AuthContext";
 
 export function Dashboard() {
-  // Simulated user for a frontend-only demo
-  const user = { id: "u1", name: "Demo User", role: "employee" };
+  const { user } = useAuth();
 
-  // Today's date (used for display and filtering)
   const today = new Date();
   const todayDateStr = today.toISOString().split("T")[0];
 
