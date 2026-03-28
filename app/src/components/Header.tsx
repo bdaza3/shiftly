@@ -12,7 +12,7 @@ export function Header() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-800">
-            Welcome back, {user?.name || "Sussy"}!
+            Welcome back, {user?.user_metadata?.full_name ?? user?.email ?? "Guest"}!
           </h2>
           <p className="text-sm text-gray-500 mt-1">
             {new Date().toLocaleDateString("en-US", {
