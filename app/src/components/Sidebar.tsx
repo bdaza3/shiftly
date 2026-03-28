@@ -61,20 +61,22 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-700">
-            {user?.user_metadata?.full_name?.charAt(0) ?? user?.email?.charAt(0) ?? "U"}
-            {/* Placeholder avatar with user's initial or "U" for unknown */}
-          </div>
-          <div className="flex-1">
-            <div className="text-sm font-medium text-gray-800">
-              {user?.user_metadata?.full_name ?? user?.email ?? "Guest"}
-              {/* Display user's full name if available, otherwise email, or "Guest" if no user */ }
+        <Link href="/profile" className="block">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-700">
+              {user?.user_metadata?.full_name?.charAt(0) ?? user?.email?.charAt(0) ?? "U"}
             </div>
-            <div className="text-xs text-gray-500">{user?.role ?? "Employee"}</div>
-            {/* Display user's role or default to "Employee" if not available */ }
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-800">
+                {user?.user_metadata?.full_name ?? user?.email ?? "Guest"}
+              </div>
+              <div className="text-xs text-gray-500">{user?.role ?? "Employee"}</div>
+            </div>
           </div>
-          <button onClick={handleLogout} className="text-sm text-red-600 hover:text-red-700">Logout</button>
+        </Link>
+
+        <div className="mt-3">
+          <button onClick={handleLogout} className="w-full text-sm text-red-600 hover:text-red-700 text-left">Logout</button>
         </div>
       </div>
     </aside>
