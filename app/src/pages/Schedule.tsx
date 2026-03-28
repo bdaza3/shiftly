@@ -43,15 +43,23 @@ export function Schedule() {
 
   const weekDates = getWeekDates(currentDate);
 
-  const goToPreviousWeek = () => {
+  const goToPrevious = () => {
     const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() - 7);
+    if (view === "week") {
+      newDate.setDate(newDate.getDate() - 7);
+    } else {
+      newDate.setMonth(newDate.getMonth() - 1);
+    }
     setCurrentDate(newDate);
   };
 
-  const goToNextWeek = () => {
+  const goToNext = () => {
     const newDate = new Date(currentDate);
-    newDate.setDate(newDate.getDate() + 7);
+    if (view === "week") {
+      newDate.setDate(newDate.getDate() + 7);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
     setCurrentDate(newDate);
   };
 
@@ -119,13 +127,13 @@ export function Schedule() {
 
             <div className="flex gap-2">
               <button
-                onClick={goToPreviousWeek}
+                onClick={goToPrevious}
                 className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
-                onClick={goToNextWeek}
+                onClick={goToNext}
                 className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -196,18 +204,98 @@ export function Schedule() {
         </div>
       )}
 
-      {/* Month view placeholder */}
+      {/* Month view */}
       {view === "month" && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <CalendarIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Month View
-          </h3>
-          <p className="text-gray-500">
-            Month view coming soon. Use week view for now.
-          </p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="grid grid-cols-7 border-b border-gray-200">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+              <div key={d} className="p-4 text-center border-r border-gray-200 last:border-r-0">
+                <p className="text-sm font-semibold text-gray-700">{d}</p>
+              </div>
+            ))}
+          </div>
+
+          <MonthGrid
+            monthDate={currentDate}
+            getShiftsForDate={getShiftsForDate}
+            isToday={isToday}
+          />
         </div>
       )}
+    </div>
+  );
+}
+
+function MonthGrid({
+  monthDate,
+  getShiftsForDate,
+  isToday,
+}: {
+  monthDate: Date;
+  getShiftsForDate: (d: Date) => typeof sampleShifts;
+  isToday: (d: Date) => boolean;
+}) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+
+  // first day of month
+  const firstOfMonth = new Date(year, month, 1);
+  // start on Sunday of the week containing the 1st
+  const start = new Date(firstOfMonth);
+  start.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
+
+  // last day of month
+  const lastOfMonth = new Date(year, month + 1, 0);
+  // end on Saturday of the week containing the last
+  const end = new Date(lastOfMonth);
+  end.setDate(lastOfMonth.getDate() + (6 - lastOfMonth.getDay()));
+
+  const days: Date[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    days.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return (
+    <div className="grid grid-cols-7">
+      {days.map((date, idx) => {
+        const shifts = getShiftsForDate(date);
+        const today = isToday(date);
+        const inMonth = date.getMonth() === month;
+
+        return (
+          <div
+            key={idx}
+            className={`min-h-[140px] p-3 border-r border-b border-gray-200 last:border-r-0 ${
+              today ? "bg-[#4F46E5] bg-opacity-5" : "bg-white"
+            } ${inMonth ? "" : "bg-gray-50 text-gray-400"}`}
+          >
+            <div className="flex items-center justify-center mb-2">
+              <span
+                className={`w-8 h-8 flex items-center justify-center rounded-full ${
+                  today ? "bg-[#4F46E5] text-white font-bold" : "text-gray-700"
+                }`}
+              >
+                {date.getDate()}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {shifts.map((shift) => (
+                <div
+                  key={shift.id}
+                  className="bg-[#4F46E5] text-white p-2 rounded text-xs cursor-pointer hover:bg-[#6366F1] transition-colors"
+                >
+                  <p className="font-semibold truncate">{shift.employeeName}</p>
+                  <p className="text-white/80 truncate">{shift.role}</p>
+                  <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
