@@ -15,8 +15,7 @@ export function Profile() {
   if (!user) return null;
 
   const roleFromProfile = profile?.role ?? user?.user_metadata?.role ?? user?.role
-  const isAdmin = String(roleFromProfile || "").toLowerCase().includes("admin");
-  const displayName = profile?.first_name || profile?.full_name || user?.user_metadata?.full_name || user?.email
+  const displayName = profile?.first_name + " " + profile?.last_name || user?.user_metadata?.full_name || user?.email
 
   return (
     <div className="space-y-6">

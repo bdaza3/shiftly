@@ -28,7 +28,7 @@ export function Sidebar() {
   };
   const roleFromProfile = profile?.role ?? user?.user_metadata?.role ?? user?.role
   const isAdmin = String(roleFromProfile || "").toLowerCase().includes("manager") || String(roleFromProfile || "").toLowerCase().includes("company");
-  const displayName = profile?.first_name || profile?.full_name || user?.user_metadata?.full_name || user?.email
+  const displayName = profile?.first_name + " " + profile?.last_name || user?.user_metadata?.full_name || user?.email
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">

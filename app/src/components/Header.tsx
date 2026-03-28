@@ -6,8 +6,10 @@ import { useRouter } from "next/navigation";
 
 export function Header() {
 
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
+  const displayName = profile?.first_name + " " + profile?.last_name || user?.user_metadata?.full_name || user?.email
+
 
   const handleNotificationsClick = () => {
     router.push('/notifications');
@@ -23,7 +25,7 @@ export function Header() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-800">
-            Welcome back, {user?.user_metadata?.full_name ?? user?.email ?? "Guest"}!
+            Welcome back, {displayName ?? "Guest"}!
           </h2>
           <p className="text-sm text-gray-500 mt-1">
             {new Date().toLocaleDateString("en-US", {
