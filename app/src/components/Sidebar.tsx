@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -11,13 +12,15 @@ import {
   BarChart3,
   ChevronRight,
 } from "lucide-react";
+import CompanySelector from "./CompanySelector";
 import { useAuth } from "../contexts/AuthContext";
 import { useCompany } from "../contexts/CompanyContext";
 
 export function Sidebar() {
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const { companies, selected, selectCompany } = useCompany();
+  const { companies, selected, selectCompany, addCompany } = useCompany();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -32,16 +35,15 @@ export function Sidebar() {
           <p className="text-sm text-gray-500 mt-1">Shift Management</p>
         </div>
         <div>
-          <select
-            value={selected?.id}
-            onChange={(e) => selectCompany(e.target.value)}
-            className="border rounded px-2 py-1 text-sm"
-            aria-label="Select company"
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="flex items-center gap-2 border rounded px-3 py-1 text-sm bg-white hover:bg-gray-50"
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
           >
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+            <span>{selected?.name ?? "Select company"}</span>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </button>
         </div>
       </div>
 
@@ -102,6 +104,8 @@ export function Sidebar() {
           <button onClick={handleLogout} className="w-full text-sm text-red-600 hover:text-red-700 text-left">Logout</button>
         </div>
       </div>
+
+      <CompanySelector open={menuOpen} onClose={() => setMenuOpen(false)} />
     </aside>
   );
 }
