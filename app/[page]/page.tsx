@@ -12,6 +12,9 @@ import { Schedule } from "../src/pages/Schedule";
 //import { Team } from "../src/pages/Team";
 import { Requests } from "../src/pages/Requests";
 import { Profile } from "../src/pages/Profile";
+import { ManageEmployees } from "../src/pages/admin/ManageEmployees";
+import { ManageShifts } from "../src/pages/admin/ManageShifts";
+import { Overview } from "../src/pages/admin/Overview";
 
 const PAGES: Record<string, React.ComponentType<any>> = {
   settings: Settings,
@@ -24,6 +27,9 @@ const PAGES: Record<string, React.ComponentType<any>> = {
   requests: Requests,
   register: Register,
   profile: Profile,
+  manageemployees: ManageEmployees,
+  manageshifts: ManageShifts,
+  overview: Overview,
 };
 
 export default async function Page({ params }: { params: Promise<{ page: string }> | { page: string } }) {
