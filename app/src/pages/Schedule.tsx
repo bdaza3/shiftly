@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import CreateShiftModal from "../components/CreateShiftModal";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 
 // Sample shifts used for frontend-only schedule view
-const sampleShifts = [
+const initialShifts = [
   {
     id: "s1",
     employeeName: "Alice Johnson",
@@ -12,6 +13,7 @@ const sampleShifts = [
     date: new Date().toISOString().split("T")[0],
     startTime: "09:00",
     endTime: "17:00",
+    employees: [],
   },
   {
     id: "s2",
@@ -20,12 +22,26 @@ const sampleShifts = [
     date: new Date().toISOString().split("T")[0],
     startTime: "12:00",
     endTime: "20:00",
+    employees: [],
   }
+];
+
+// sample employees for assignment
+const sampleEmployees = [
+  { id: "e1", name: "Alice Johnson", role: "Cashier" },
+  { id: "e2", name: "Bob Smith", role: "Stock" },
+  { id: "e3", name: "Carlos Diaz", role: "Manager" },
+  { id: "e4", name: "Dana Lee", role: "Barista" },
 ];
 
 export function Schedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"week" | "month">("week");
+  const [shifts, setShifts] = useState(initialShifts as any[]);
+
+  // Create shift modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingShift, setEditingShift] = useState<any | null>(null);
 
   const getWeekDates = (date: Date) => {
     const week = [];
@@ -64,7 +80,7 @@ export function Schedule() {
   };
 
   const getShiftsForDate = (date: Date) => {
-    return sampleShifts.filter((shift) => {
+    return shifts.filter((shift) => {
       const shiftDate = new Date(shift.date);
       return (
         shiftDate.getDate() === date.getDate() &&
@@ -72,6 +88,41 @@ export function Schedule() {
         shiftDate.getFullYear() === date.getFullYear()
       );
     });
+  };
+
+  const handleSaveShift = (payload: any) => {
+    if (payload.id) {
+      // update existing
+      setShifts((s) => s.map((sh) => (sh.id === payload.id ? { ...sh, ...payload } : sh)));
+    } else {
+      const newShift = { id: `shift-${Date.now()}`, ...payload };
+      setShifts((s) => [...s, newShift]);
+    }
+    setEditingShift(null);
+    setShowCreateModal(false);
+  };
+
+  const handleDeleteShift = (id: string) => {
+    setShifts((s) => s.filter((sh) => sh.id !== id));
+    setEditingShift(null);
+    setShowCreateModal(false);
+  };
+
+  const handleMoveShift = (shiftId: string, newDateStr: string) => {
+    setShifts((s) => s.map((sh) => (sh.id === shiftId ? { ...sh, date: newDateStr } : sh)));
+  };
+
+  const handleDragStart = (e: any, shiftId: string) => {
+    e.dataTransfer.setData("text/plain", shiftId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDropOnDate = (date: Date, e: any) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData("text/plain");
+    if (!id) return;
+    const dateStr = date.toISOString().split("T")[0];
+    handleMoveShift(id, dateStr);
   };
 
   const isToday = (date: Date) => {
@@ -101,7 +152,7 @@ export function Schedule() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
             <div className="flex border border-gray-200 rounded-lg overflow-hidden">
               <button
                 onClick={() => setView("week")}
@@ -125,6 +176,16 @@ export function Schedule() {
               </button>
             </div>
 
+              <button
+                onClick={() => {
+                  setEditingShift(null);
+                  setShowCreateModal(true);
+                }}
+                className="ml-3 px-3 py-2 bg-[#10B981] text-white rounded-lg text-sm hover:bg-[#059669]"
+              >
+                New Shift
+              </button>
+
             <div className="flex gap-2">
               <button
                 onClick={goToPrevious}
@@ -142,6 +203,15 @@ export function Schedule() {
           </div>
         </div>
       </div>
+
+      <CreateShiftModal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSave={handleSaveShift}
+        onDelete={handleDeleteShift}
+        initialData={editingShift}
+        employees={sampleEmployees}
+      />
 
       {/* Calendar Grid */}
       {view === "week" && (
@@ -165,6 +235,8 @@ export function Schedule() {
               return (
                 <div
                   key={index}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => handleDropOnDate(date, e)}
                   className={`min-h-[200px] p-3 border-r border-b border-gray-200 last:border-r-0 ${
                     today ? "bg-[#4F46E5] bg-opacity-5" : "bg-white"
                   }`}
@@ -185,15 +257,28 @@ export function Schedule() {
                     {shifts.map((shift) => (
                       <div
                         key={shift.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, shift.id)}
+                        onClick={() => {
+                          setEditingShift(shift);
+                          setShowCreateModal(true);
+                        }}
                         className="bg-[#4F46E5] text-white p-2 rounded text-xs cursor-pointer hover:bg-[#6366F1] transition-colors"
                       >
-                        <p className="font-semibold truncate">
-                          {shift.employeeName}
-                        </p>
-                        <p className="text-white/80 truncate">{shift.role}</p>
-                        <p className="text-white/70">
-                          {shift.startTime} - {shift.endTime}
-                        </p>
+                        {shift.employees && shift.employees.length > 0 ? (
+                          <div className="space-y-1">
+                            {shift.employees.map((emp: string, i: number) => (
+                              <p key={i} className="font-semibold truncate">{emp}</p>
+                            ))}
+                            <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="font-semibold truncate">{shift.employeeName}</p>
+                            <p className="text-white/80 truncate">{shift.role}</p>
+                            <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -219,6 +304,11 @@ export function Schedule() {
             monthDate={currentDate}
             getShiftsForDate={getShiftsForDate}
             isToday={isToday}
+            onMoveShift={handleMoveShift}
+            onEditShift={(sh) => {
+              setEditingShift(sh);
+              setShowCreateModal(true);
+            }}
           />
         </div>
       )}
@@ -230,10 +320,14 @@ function MonthGrid({
   monthDate,
   getShiftsForDate,
   isToday,
+  onMoveShift,
+  onEditShift,
 }: {
   monthDate: Date;
-  getShiftsForDate: (d: Date) => typeof sampleShifts;
+  getShiftsForDate: (d: Date) => typeof initialShifts;
   isToday: (d: Date) => boolean;
+  onMoveShift: (shiftId: string, newDateStr: string) => void;
+  onEditShift: (shift: any) => void;
 }) {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -267,6 +361,12 @@ function MonthGrid({
         return (
           <div
             key={idx}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const id = e.dataTransfer.getData("text/plain");
+              if (id) onMoveShift(id, date.toISOString().split("T")[0]);
+            }}
             className={`min-h-[140px] p-3 border-r border-b border-gray-200 last:border-r-0 ${
               today ? "bg-[#4F46E5] bg-opacity-5" : "bg-white"
             } ${inMonth ? "" : "bg-gray-50 text-gray-400"}`}
@@ -285,11 +385,28 @@ function MonthGrid({
               {shifts.map((shift) => (
                 <div
                   key={shift.id}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", shift.id);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onClick={() => onEditShift(shift)}
                   className="bg-[#4F46E5] text-white p-2 rounded text-xs cursor-pointer hover:bg-[#6366F1] transition-colors"
                 >
-                  <p className="font-semibold truncate">{shift.employeeName}</p>
-                  <p className="text-white/80 truncate">{shift.role}</p>
-                  <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
+                  {shift.employees && shift.employees.length > 0 ? (
+                    <div className="space-y-1">
+                      {shift.employees.map((emp: string, i: number) => (
+                        <p key={i} className="font-semibold truncate">{emp}</p>
+                      ))}
+                      <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="font-semibold truncate">{shift.employeeName}</p>
+                      <p className="text-white/80 truncate">{shift.role}</p>
+                      <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
