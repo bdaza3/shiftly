@@ -65,7 +65,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = (email: string, password: string) =>
     supabase.auth.signUp({ email, password })
 
-  const signOut = () => supabase.auth.signOut()
+  const signOut = async () => {
+    try {
+      const res = await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      return res;
+    } catch (err) {
+      console.warn("AuthContext signOut error", err);
+      // ensure local state cleared even on error
+      setUser(null);
+      setProfile(null);
+      throw err;
+    }
+  }
 
   return (
     <AuthContext.Provider value={{ user, profile, signIn, signUp, signOut }}>

@@ -9,8 +9,16 @@ export function Profile() {
   const { user, profile, signOut } = useAuth();
 
   const handleLogout = async () => {
-    await signOut();
-    router.push("/");
+    console.log("Profile: logout clicked");
+    try {
+      const res = await signOut();
+      console.log("Profile: signOut result", res);
+    } catch (err) {
+      console.warn("Profile: signOut error", err);
+    }
+    // navigate to login so user sees sign-in prompt
+    try { router.replace("/login"); } catch (e) { /* ignore */ }
+    try { window.location.assign("/login"); } catch (e) { try { window.location.href = "/login"; } catch(e){/*ignore*/} }
   };
   if (!user) return null;
 

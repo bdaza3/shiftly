@@ -1,30 +1,123 @@
 "use client";
 
 import { Users, Plus, Pencil, Trash2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { useCompany } from "../../contexts/CompanyContext";
 
 export function ManageEmployees() {
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [emailInput, setEmailInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
-    // Mock employee data for frontend-only view
-    const mockEmployees = [
-        {
-            id: "e1",
-            name: "Alice Johnson",
-            position: "Cashier",
-            role: "employee",
-            email: "alice.johnson@example.com",
-            phone: "555-1234",
-            startDate: "2023-01-15",
-        },
-        {
-            id: "e2",
-            name: "Bob Smith",
-            position: "Stock Associate",
-            role: "employee",
-            email: "bob.smith@example.com",
-            phone: "555-5678",
-            startDate: "2023-02-01",
+  const { selected } = useCompany();
+
+  const openAdd = () => {
+    setEmailInput("");
+    setMessage(null);
+    setShowModal(true);
+  };
+
+  const handleAddByEmail = async () => {
+    setLoading(true);
+    setMessage(null);
+    try {
+      // find user in auth 'users' view (may require appropriate RLS/permissions)
+      let userRow: any = null;
+      const { data: urow, error: uErr } = await supabase.from("users").select("id, full_name, email, role").eq("email", emailInput).maybeSingle();
+      if (uErr) {
+        console.warn("could not query users view", uErr);
+      }
+      if (urow) userRow = urow;
+
+      if (!userRow) {
+        setMessage("No user found with that email in profiles or users tables.");
+        setLoading(false);
+        return;
+      }
+
+      if (!selected) {
+        setMessage("No company selected.");
+        setLoading(false);
+        return;
+      }
+
+      // persist membership
+      const { data: insertRes, error: insertErr } = await supabase.from("company_members").insert([{ company_id: selected.id, user_id: userRow.id, role: userRow.role ?? "employee" }]);
+      if (insertErr) throw insertErr;
+
+      const newEmp = {
+        id: userRow.id,
+        name: userRow.full_name ?? userRow.email,
+        email: userRow.email,
+        role: userRow.role ?? "employee",
+        position: "Employee",
+        startDate: new Date().toISOString().split("T")[0],
+      };
+      setEmployees((s) => [newEmp, ...s]);
+      setMessage("Employee added to company.");
+      setEmailInput("");
+      setShowModal(false);
+    } catch (err: any) {
+      console.error("add employee error", err);
+      setMessage(err?.message || String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // load persisted members for selected company
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      if (!selected) return;
+      setLoading(true);
+      try {
+        const { data: rows, error } = await supabase.from("company_members").select("*").eq("company_id", selected.id).order("created_at", { ascending: false });
+        if (error) throw error;
+        const out: any[] = [];
+        for (const r of rows || []) {
+          let info: any = null;
+          try {
+            const { data: p } = await supabase.from("profiles").select("id, first_name, last_name").eq("id", r.user_id).maybeSingle();
+            if (p) info = { id: p.id, full_name: `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() };
+          } catch (e) {
+            // ignore
+          }
+          if (!info) {
+            try {
+              const { data: u } = await supabase.from("users").select("id, full_name, email, role").eq("id", r.user_id).maybeSingle();
+              if (u) info = u;
+            } catch (e) {
+              // ignore
+            }
+          }
+          out.push({ id: r.user_id, name: info?.full_name ?? info?.email ?? r.user_id, email: info?.email ?? null, role: r.role ?? "employee", startDate: r.created_at });
         }
-    ];
+        if (mounted) setEmployees(out);
+      } catch (err) {
+        console.warn("could not load company members", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, [selected]);
+
+  const handleRemove = async (userId: string) => {
+    if (!selected) return;
+    try {
+      const { error } = await supabase.from("company_members").delete().match({ company_id: selected.id, user_id: userId });
+      if (error) throw error;
+      setEmployees((s) => s.filter((e) => e.id !== userId));
+    } catch (err) {
+      console.warn("could not remove member", err);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -33,16 +126,12 @@ export function ManageEmployees() {
           <div className="flex items-center gap-4">
             <Users className="w-6 h-6 text-[#4F46E5]" />
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                Manage Employees
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                View and manage employee information and roles
-              </p>
+              <h2 className="text-2xl font-bold text-gray-900">Manage Employees</h2>
+              <p className="text-sm text-gray-500 mt-1">View and manage employee information and roles</p>
             </div>
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors">
+          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors">
             <Plus className="w-5 h-5" />
             Add Employee
           </button>
@@ -51,55 +140,55 @@ export function ManageEmployees() {
 
       {/* Employee Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockEmployees.map((employee) => (
-          <div
-            key={employee.id}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center text-white text-lg font-medium">
-                  {employee.name.charAt(0)}
+        {employees.length === 0 ? (
+          <div className="col-span-full text-gray-500">No employees added yet. Use "Add Employee" to include a user from Supabase.</div>
+        ) : (
+          employees.map((employee) => (
+            <div key={employee.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center text-white text-lg font-medium">{(employee.name || "?").charAt(0)}</div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{employee.name}</h3>
+                    <p className="text-sm text-gray-500">{employee.position}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{employee.name}</h3>
-                  <p className="text-sm text-gray-500">{employee.position}</p>
-                </div>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${employee.role === "admin" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-700"}`}>{employee.role}</span>
               </div>
-              <span
-                className={`px-2 py-1 rounded text-xs font-medium ${
-                  employee.role === "admin"
-                    ? "bg-purple-100 text-purple-700"
-                    : "bg-gray-100 text-gray-700"
-                }`}
-              >
-                {employee.role}
-              </span>
-            </div>
 
-            <div className="space-y-2 mb-4">
-              <p className="text-sm text-gray-600">{employee.email}</p>
-              {employee.phone && (
-                <p className="text-sm text-gray-600">{employee.phone}</p>
-              )}
-              <p className="text-sm text-gray-500">
-                Started: {new Date(employee.startDate).toLocaleDateString()}
-              </p>
-            </div>
+              <div className="space-y-2 mb-4">
+                <p className="text-sm text-gray-600">{employee.email}</p>
+                {employee.phone && (<p className="text-sm text-gray-600">{employee.phone}</p>)}
+                <p className="text-sm text-gray-500">Started: {new Date(employee.startDate).toLocaleDateString()}</p>
+              </div>
 
-            <div className="flex gap-2 pt-4 border-t border-gray-200">
-              <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                <Pencil className="w-4 h-4" />
-                Edit
-              </button>
-              <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
-                <Trash2 className="w-4 h-4" />
-                Remove
-              </button>
+              <div className="flex gap-2 pt-4 border-t border-gray-200">
+                <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"><Pencil className="w-4 h-4" />Edit</button>
+                <button onClick={() => handleRemove(employee.id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" />Remove</button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Add Employee Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-auto">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+          <div className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6 z-50">
+            <h3 className="text-lg font-semibold mb-4">Add Employee by Email</h3>
+            <p className="text-sm text-gray-500 mb-3">Enter the email address of the existing Supabase user you want to add to Shiftly HQ.</p>
+            <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} placeholder="user@example.com" className="w-full border p-2 rounded mb-3" />
+            {message && <p className="text-sm text-red-500 mb-3">{message}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowModal(false)} className="px-3 py-2 rounded border">Cancel</button>
+              <button type="button" onClick={handleAddByEmail} disabled={loading} className="px-3 py-2 rounded bg-[#4F46E5] text-white">Add</button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
+
+export default ManageEmployees;

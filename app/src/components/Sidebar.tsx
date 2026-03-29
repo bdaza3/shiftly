@@ -11,6 +11,7 @@ import {
   ClipboardList,
   BarChart3,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 import CompanySelector from "./CompanySelector";
 import { useAuth } from "../contexts/AuthContext";
@@ -23,8 +24,14 @@ export function Sidebar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = async () => {
-    await signOut();
-    router.push("/");
+    try {
+      await signOut();
+    } catch (err) {
+      console.warn("signOut error", err);
+    }
+    // navigate to login so user sees sign-in prompt
+    try { router.replace("/login"); } catch (e) { /* ignore */ }
+    try { window.location.assign("/login"); } catch (e) { try { window.location.href = "/login"; } catch(e){/*ignore*/} }
   };
   const roleFromProfile = profile?.role ?? user?.user_metadata?.role ?? user?.role
   const isAdmin = String(roleFromProfile || "").toLowerCase().includes("manager") || String(roleFromProfile || "").toLowerCase().includes("company");
@@ -65,7 +72,7 @@ export function Sidebar() {
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
-        <Link href="/employees" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+        <Link href="/team" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
           <span className="flex items-center gap-2">
             <Users className="w-4 h-4" />
             Team
@@ -113,25 +120,44 @@ export function Sidebar() {
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
+          <Link href="/createsampleuser" className="flex items-center gap-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+            <Plus className="w-4 h-4" />
+            Create Sample User
+          </Link>
       </nav>
 
-      <div className="p-4 border-t border-gray-200">
-        <Link href="/profile" className="block">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-700">
-              {user?.user_metadata?.full_name?.charAt(0) ?? user?.email?.charAt(0) ?? "U"}
-            </div>
-            <div className="flex-1">
-              <div className="text-sm font-medium text-gray-800">
-                {displayName ?? "Guest"}
+      <div className="p-3 border-t border-gray-200">
+        <div className="flex items-center gap-3">
+          <Link href="/profile" className="flex-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-700">
+                {user?.user_metadata?.full_name?.charAt(0) ?? user?.email?.charAt(0) ?? "U"}
               </div>
-              <div className="text-xs text-gray-500">{roleFromProfile ?? user?.role ?? "Employee"}</div>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-gray-800">{displayName ?? "Guest"}</div>
+                <div className="text-xs text-gray-500">{roleFromProfile ?? user?.role ?? "Employee"}</div>
+              </div>
             </div>
-          </div>
-        </Link>
+          </Link>
 
-        <div className="mt-3">
-          <button onClick={handleLogout} className="w-full text-sm text-red-600 hover:text-red-700 text-left">Logout</button>
+
+          <div className="ml-2">
+            <button
+              onClick={async () => {
+                console.log("Sidebar: logout clicked");
+                try {
+                  await handleLogout();
+                  console.log("Sidebar: handleLogout completed");
+                } catch (err) {
+                  console.warn("Sidebar: logout failed", err);
+                  try { await handleLogout(); } catch (e) { console.warn("Sidebar: retry logout failed", e); }
+                }
+              }}
+              className="px-3 py-1 text-sm text-red-600 hover:text-red-700 rounded-lg"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
 

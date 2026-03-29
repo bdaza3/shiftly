@@ -15,13 +15,28 @@ export function Signup() {
 
   const handleSignUp = async () => {
     setLoading(true);
-    const res = await signUp(email, password);
-    setLoading(false);
-    if (res.error) {
-      alert(res.error.message);
-      return;
+    try {
+      const res = await signUp(email, password);
+      console.log("signUp response", res);
+      setLoading(false);
+      // handle v2 return shape { data, error } or legacy
+      const err = (res && (res.error || res?.data?.error)) ?? null;
+      if (err) {
+        alert(err.message || String(err));
+        return;
+      }
+      // If user/session available, go to dashboard; otherwise go to register or notify
+      const hasUser = !!(res?.data?.user || res?.user || res?.data?.session?.user);
+      if (hasUser) router.push("/dashboard");
+      else {
+        alert("Check your email for a confirmation link to complete signup.");
+        router.push("/register");
+      }
+    } catch (err: any) {
+      console.error("signup error", err);
+      alert(err?.message || String(err) || "Signup failed");
+      setLoading(false);
     }
-    router.push("/dashboard");
   };
 
   const handleGoogle = async () => {
