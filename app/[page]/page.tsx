@@ -16,6 +16,7 @@ import { ManageEmployees } from "../src/pages/admin/ManageEmployees";
 import { ManageShifts } from "../src/pages/admin/ManageShifts";
 import { Overview } from "../src/pages/admin/Overview";
 import CreateSampleUser from "../src/pages/admin/CreateSampleUser";
+import OnboardingCompany from "../src/pages/OnboardingCompany";
 
 const PAGES: Record<string, React.ComponentType<any>> = {
   settings: Settings,
@@ -33,6 +34,7 @@ const PAGES: Record<string, React.ComponentType<any>> = {
   manageshifts: ManageShifts,
   overview: Overview,
   createsampleuser: CreateSampleUser,
+  onboardingcompany: OnboardingCompany,
 };
 
 export default async function Page({ params }: { params: Promise<{ page: string }> | { page: string } }) {

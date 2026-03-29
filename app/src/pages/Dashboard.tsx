@@ -2,10 +2,22 @@
 
 import { Clock, MapPin, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useCompany } from "../contexts/CompanyContext";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useShifts } from "../hooks/useShifts";
 
 export function Dashboard() {
   const { user } = useAuth();
+  const { companies } = useCompany();
+  const router = useRouter();
+
+  useEffect(() => {
+    // if user is signed in but has no companies, send to company onboarding
+    if (user?.id && Array.isArray(companies) && companies.length === 0) {
+      router.replace('/onboardingcompany')
+    }
+  }, [user?.id, companies?.length]);
   const { shifts = [], loading } = useShifts();
 
   const today = new Date();

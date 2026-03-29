@@ -10,13 +10,9 @@ export function Register() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const [accountType, setAccountType] = useState("employee");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [companyAddress, setCompanyAddress] = useState("");
-  const [website, setWebsite] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -24,54 +20,47 @@ export function Register() {
     setFirstName(user.user_metadata?.firstName ?? "");
     setLastName(user.user_metadata?.lastName ?? "");
     setPhone(user.user_metadata?.phone ?? "");
-    setCompanyName(user.user_metadata?.companyName ?? "");
-    setCompanyAddress(user.user_metadata?.companyAddress ?? "");
-    setWebsite(user.user_metadata?.website ?? "");
-    const metaRole = user.user_metadata?.role;
-    if (metaRole) setAccountType(metaRole);
   }, [user]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setLoading(true);
     try {
-      // consolidate metadata
+      console.log('Register: submit', { firstName, lastName, phone })
+      // update user metadata with name/phone (no role)
       const newMeta: any = {
-        role: accountType,
+        firstName,
+        lastName,
+        phone,
       };
 
-      if (accountType === "employee" || accountType === "manager") {
-        newMeta.firstName = firstName;
-        newMeta.lastName = lastName;
-        newMeta.phone = phone;
+      const res = await supabase.auth.updateUser({ data: newMeta });
+      // supabase v2 returns { data, error }
+      const err = (res as any)?.error ?? null
+      if (err) {
+        console.warn('Register: updateUser error', err)
+        throw err
       }
 
-      if (accountType === "company") {
-        newMeta.companyName = companyName;
-        newMeta.companyAddress = companyAddress;
-        newMeta.website = website;
-      }
 
-      const { error } = await supabase.auth.updateUser({ data: newMeta });
-      if (error) throw error;
-
-      // Upsert into profiles table so role/profile is available for RLS
+      // Upsert into profiles table via server API (service role) to avoid RLS
       try {
         if (user?.id) {
-          await supabase.from('profiles').upsert({
-            id: user.id,
-            role: accountType,
-            first_name: newMeta.firstName ?? null,
-            last_name: newMeta.lastName ?? null,
-            phone: newMeta.phone ?? null
-          });
+          const resp = await fetch('/api/profiles/upsert', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ id: user.id, first_name: firstName ?? null, last_name: lastName ?? null, phone: phone ?? null })
+          })
+          const json = await resp.json()
+          if (!resp.ok) console.warn('server profiles upsert failed', json)
         }
       } catch (upsertErr) {
         console.error('profiles upsert failed', upsertErr);
       }
 
-      // After update, redirect to dashboard
-      router.push("/dashboard");
+      // Move to company onboarding step
+      console.log('Register: profile upsert complete, redirecting to onboarding/company')
+      router.push("/onboarding/company");
     } catch (err: any) {
       alert(err.message || String(err));
     } finally {
@@ -94,47 +83,17 @@ export function Register() {
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Account Type</label>
-          <select value={accountType} onChange={(e) => setAccountType(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2">
-            <option value="employee">Employee</option>
-            <option value="manager">Manager</option>
-            <option value="company">Company</option>
-          </select>
+          <label className="block text-sm font-medium text-gray-700">First name</label>
+          <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
         </div>
-
-        {(accountType === "employee" || accountType === "manager") && (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">First name</label>
-              <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Last name</label>
-              <input value={lastName} onChange={(e) => setLastName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Phone</label>
-              <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
-            </div>
-          </>
-        )}
-
-        {accountType === "company" && (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Company name</label>
-              <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Address</label>
-              <input value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Website</label>
-              <input value={website} onChange={(e) => setWebsite(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
-            </div>
-          </>
-        )}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Last name</label>
+          <input value={lastName} onChange={(e) => setLastName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Phone</label>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
+        </div>
 
         <div className="flex items-center gap-2">
           <button disabled={loading} type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded">

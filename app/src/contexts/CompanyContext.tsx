@@ -1,6 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import { supabase } from '../../../lib/supabaseClient'
+import { useAuth } from './AuthContext'
 
 type Team = { id: string; name: string; manager: string; members: number }
 export type Company = {
@@ -9,55 +11,92 @@ export type Company = {
   address?: string
   owner?: string
   website?: string
+  join_code?: string
   teams?: Team[]
 }
-
-const sampleCompanies: Company[] = [
-  {
-    id: 'c1',
-    name: 'Shiftly HQ',
-    address: '123 Main St, Townsville',
-    owner: 'Alice CEO',
-    website: 'https://shiftly.example',
-    teams: [
-      { id: 't1', name: 'Retail', manager: 'Bob', members: 12 },
-      { id: 't2', name: 'Support', manager: 'Carmen', members: 5 },
-    ],
-  },
-  {
-    id: 'c2',
-    name: 'North Branch',
-    address: '456 Side Rd, Villagetown',
-    owner: 'Dan Owner',
-    website: '',
-    teams: [{ id: 't3', name: 'Warehouse', manager: 'Eve', members: 7 }],
-  },
-]
 
 type CompanyContextValue = {
   companies: Company[]
   selected?: Company
   selectCompany: (id: string) => void
   addCompany: (c: Company) => void
+  refresh: () => Promise<void>
 }
 
 const CompanyContext = createContext<CompanyContextValue | undefined>(undefined)
 
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
-  const [companies, setCompanies] = useState<Company[]>(sampleCompanies)
-  const [selectedId, setSelectedId] = useState<string>(companies[0]?.id ?? '')
+  const { user } = useAuth()
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [selectedId, setSelectedId] = useState<string>(() => {
+    try {
+      return typeof window !== 'undefined' ? (localStorage.getItem('activeCompanyId') ?? '') : ''
+    } catch (e) {
+      return ''
+    }
+  })
 
-  const selectCompany = (id: string) => setSelectedId(id)
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      if (!user?.id) {
+        setCompanies([])
+        return
+      }
+      try {
+        const { data: memberships } = await supabase.from('company_members').select('company_id').eq('user_id', user.id)
+        const ids = (memberships || []).map((m: any) => m.company_id).filter(Boolean)
+        if (ids.length === 0) {
+          if (mounted) setCompanies([])
+          return
+        }
+        const { data: comps } = await supabase.from('companies').select('*').in('id', ids)
+        if (mounted) setCompanies(comps || [])
+        // if selectedId is empty, pick first or use stored
+        if (mounted && !selectedId && (comps && comps.length)) {
+          const pick = comps[0].id
+          setSelectedId(pick)
+          try { localStorage.setItem('activeCompanyId', pick) } catch(e){}
+        }
+      } catch (e) {
+        console.warn('failed loading companies', e)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [user?.id])
+
+  const selectCompany = (id: string) => {
+    setSelectedId(id)
+    try { localStorage.setItem('activeCompanyId', id) } catch (e) {}
+  }
 
   const addCompany = (company: Company) => {
     setCompanies((prev) => [...prev, company])
     setSelectedId(company.id)
+    try { localStorage.setItem('activeCompanyId', company.id) } catch (e) {}
+  }
+
+  const refresh = async () => {
+    if (!user?.id) return
+    try {
+      const { data: memberships } = await supabase.from('company_members').select('company_id').eq('user_id', user.id)
+      const ids = (memberships || []).map((m: any) => m.company_id).filter(Boolean)
+      if (ids.length === 0) {
+        setCompanies([])
+        return
+      }
+      const { data: comps } = await supabase.from('companies').select('*').in('id', ids)
+      setCompanies(comps || [])
+    } catch (e) {
+      console.warn('refresh companies failed', e)
+    }
   }
 
   const selected = companies.find((c) => c.id === selectedId)
 
   return (
-    <CompanyContext.Provider value={{ companies, selected, selectCompany, addCompany }}>
+    <CompanyContext.Provider value={{ companies, selected, selectCompany, addCompany, refresh }}>
       {children}
     </CompanyContext.Provider>
   )

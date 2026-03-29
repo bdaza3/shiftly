@@ -47,13 +47,21 @@ export function Profile() {
       if (phone) newMeta.phone = phone;
 
       // update auth user metadata
-      const { error: updErr } = await supabase.auth.updateUser({ data: newMeta });
-      if (updErr) throw updErr;
+      const res = await supabase.auth.updateUser({ data: newMeta });
+      const updErr = (res as any)?.error ?? null
+      if (updErr) console.warn('Profile: auth updateUser returned error', updErr)
 
-      // upsert profiles table
+      // upsert profiles via server API to avoid RLS
       if (user.id) {
-        const { error: pErr } = await supabase.from('profiles').upsert({ id: user.id, first_name: firstName || null, last_name: lastName || null, phone: phone || null, role: roleFromProfile || null });
-        if (pErr) throw pErr;
+        try {
+          const resp = await fetch('/api/profiles/upsert', {
+            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: user.id, first_name: firstName || null, last_name: lastName || null, phone: phone || null })
+          })
+          const j = await resp.json()
+          if (!resp.ok) console.warn('Profile upsert server error', j)
+        } catch (e) {
+          console.warn('Profile upsert request failed', e)
+        }
       }
 
       // refresh global profile state so header/sidebar reflect changes

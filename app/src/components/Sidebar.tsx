@@ -1,6 +1,5 @@
 "use client";
 
-import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,11 +15,14 @@ import {
 import CompanySelector from "./CompanySelector";
 import { useAuth } from "../contexts/AuthContext";
 import { useCompany } from "../contexts/CompanyContext";
+import { supabase } from '../../../lib/supabaseClient'
+import { useEffect, useState } from 'react'
 
 export function Sidebar() {
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
   const { companies, selected, selectCompany, addCompany } = useCompany();
+  const [isAdmin, setIsAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -33,8 +35,24 @@ export function Sidebar() {
     try { router.replace("/login"); } catch (e) { /* ignore */ }
     try { window.location.assign("/login"); } catch (e) { try { window.location.href = "/login"; } catch(e){/*ignore*/} }
   };
-  const roleFromProfile = profile?.role ?? user?.user_metadata?.role ?? user?.role;
-  const isAdmin = String(roleFromProfile || "").toLowerCase().includes("manager") || String(roleFromProfile || "").toLowerCase().includes("company");
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      if (!selected?.id || !user?.id) {
+        if (mounted) setIsAdmin(false)
+        return
+      }
+      try {
+        const { data } = await supabase.from('company_members').select('role').eq('company_id', selected.id).eq('user_id', user.id).limit(1)
+        const role = data && data[0] && data[0].role
+        if (mounted) setIsAdmin(String(role || '').toLowerCase().includes('manager') || String(role || '').toLowerCase().includes('admin'))
+      } catch (e) {
+        if (mounted) setIsAdmin(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [selected?.id, user?.id])
   const firstName = profile?.first_name ?? user?.user_metadata?.firstName ?? '';
   const lastName = profile?.last_name ?? user?.user_metadata?.lastName ?? '';
   const displayName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name || user?.email);
@@ -136,7 +154,7 @@ export function Sidebar() {
               </div>
               <div className="flex-1">
                 <div className="text-sm font-medium text-gray-800">{displayName ?? "Guest"}</div>
-                <div className="text-xs text-gray-500">{roleFromProfile ?? user?.role ?? "Employee"}</div>
+                <div className="text-xs text-gray-500">{user?.role ?? "Employee"}</div>
               </div>
             </div>
           </Link>
