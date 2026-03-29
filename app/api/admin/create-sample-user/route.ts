@@ -27,41 +27,58 @@ export async function POST(req: Request) {
       // ignore - we'll report below
     }
 
-    // upsert profile
-    const profile = { id, first_name: first_name || null, last_name: last_name || null, role: role || 'employee', phone: null };
+    // Ensure we have a profile id that matches an auth user.
+    // If caller didn't provide `id`, require `email` and create an auth user first so the profile can reference it.
+    let profileId = id;
+    if (!profileId) {
+      if (!body.email) {
+        return NextResponse.json({ error: 'Missing `id` or `email`. Provide an existing user id or an email to create a new auth user.' }, { status: 400 });
+      }
+      try {
+        const password = 'TempPass!' + Math.floor(Math.random() * 90000 + 10000);
+        const createRes: any = await (svc as any).auth?.admin?.createUser?.({ email: body.email, password, email_confirm: true });
+        if (createRes?.error) {
+          const msg = (createRes.error.message || createRes.error || '').toString();
+          // If the user already exists, try to look up their id and continue.
+          if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('registered')) {
+            try {
+              // Use Supabase Admin REST API to lookup user by email when admin.createUser reports already registered.
+              const adminUrl = `${svcUrl.replace(/\/$/, '')}/auth/v1/admin/users?email=${encodeURIComponent(body.email)}`;
+              const resp = await fetch(adminUrl, { headers: { Authorization: `Bearer ${svcKey}`, apikey: svcKey } });
+              if (!resp.ok) {
+                const text = await resp.text();
+                return NextResponse.json({ error: `Auth user exists but admin lookup failed: ${resp.status} ${text}` }, { status: 500 });
+              }
+              const list = await resp.json();
+              const first = Array.isArray(list) ? list[0] : list;
+              const existingId = first?.id;
+              if (!existingId) {
+                return NextResponse.json({ error: 'Auth user exists but could not determine user id from admin lookup.' }, { status: 500 });
+              }
+              profileId = existingId;
+            } catch (e: any) {
+              return NextResponse.json({ error: `Auth user exists but admin lookup failed: ${e?.message || String(e)}` }, { status: 500 });
+            }
+          } else {
+            return NextResponse.json({ error: `Failed to create auth user: ${msg}` }, { status: 500 });
+          }
+        } else {
+          const newUserId = createRes?.data?.user?.id || createRes?.data?.id || createRes?.user?.id;
+          if (!newUserId) {
+            return NextResponse.json({ error: 'Created auth user but could not read new user id.' }, { status: 500 });
+          }
+          profileId = newUserId;
+        }
+      } catch (e: any) {
+        return NextResponse.json({ error: `Failed to create auth user: ${e?.message || String(e)}` }, { status: 500 });
+      }
+    }
+
+    // upsert profile with resolved id
+    const profile = { id: profileId, first_name: first_name || null, last_name: last_name || null, role: role || 'employee', phone: null };
     const { data: up, error: upErr } = await svc.from('profiles').upsert(profile).select().maybeSingle();
     if (upErr) {
       console.warn('profiles upsert error (server):', upErr.message);
-      // If FK violation (profiles.id references auth.users) and we have an email, attempt to create an auth user
-      if (upErr.message && upErr.message.toLowerCase().includes('foreign key')) {
-        if (body.email) {
-          try {
-            const password = 'TempPass!' + Math.floor(Math.random() * 90000 + 10000);
-            // Attempt to create an auth user via admin API
-            // Note: admin API may return user as data.user or data
-            const createRes: any = await (svc as any).auth?.admin?.createUser?.({ email: body.email, password, email_confirm: true });
-            if (createRes?.error) {
-              return NextResponse.json({ error: `Failed to create auth user: ${createRes.error.message || createRes.error}` }, { status: 500 });
-            }
-            const newUserId = createRes?.data?.user?.id || createRes?.data?.id || createRes?.user?.id;
-            if (!newUserId) {
-              return NextResponse.json({ error: 'Created auth user but could not read new user id.' }, { status: 500 });
-            }
-            // retry upsert with new user id
-            const profile2 = { ...profile, id: newUserId };
-            const { data: up2, error: upErr2 } = await svc.from('profiles').upsert(profile2).select().maybeSingle();
-            if (upErr2) return NextResponse.json({ error: upErr2.message }, { status: 500 });
-            // also insert company_members if requested
-            if (company_id) {
-              const { error: cmErr } = await svc.from('company_members').insert([{ company_id, user_id: newUserId, role }]);
-              if (cmErr) return NextResponse.json({ error: cmErr.message }, { status: 400 });
-            }
-            return NextResponse.json({ ok: true, profile: up2, createdUserId: newUserId });
-          } catch (e: any) {
-            return NextResponse.json({ error: `Failed to create auth user: ${e?.message || String(e)}` }, { status: 500 });
-          }
-        }
-      }
       if (upErr.message && upErr.message.toLowerCase().includes('row-level security')) {
         return NextResponse.json({ error: 'Row-level security prevented writing to profiles. This usually means the server did not use the Supabase service-role key. Ensure `SUPABASE_SERVICE_ROLE_KEY` (server-only) is set and that you restarted the dev server after changing env vars.', diagnostics: { canSelectProfiles } }, { status: 500 });
       }
@@ -69,9 +86,9 @@ export async function POST(req: Request) {
     }
     
 
-    // insert company_members
+    // insert company_members (use the resolved profileId which matches an auth user id)
     if (company_id) {
-      const { error: cmErr } = await svc.from('company_members').insert([{ company_id, user_id: id, role }]);
+      const { error: cmErr } = await svc.from('company_members').insert([{ company_id, user_id: profileId, role }]);
       if (cmErr) return NextResponse.json({ error: cmErr.message }, { status: 400 });
     }
 

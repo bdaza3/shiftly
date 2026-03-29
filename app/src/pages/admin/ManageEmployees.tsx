@@ -9,6 +9,8 @@ export function ManageEmployees() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [emailInput, setEmailInput] = useState("");
+  const [firstNameInput, setFirstNameInput] = useState("");
+  const [lastNameInput, setLastNameInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -21,8 +23,13 @@ export function ManageEmployees() {
   };
 
   const handleAddByEmail = async () => {
+    console.debug('handleAddByEmail start', { emailInput, firstNameInput, lastNameInput, selected });
+    if (!emailInput || emailInput.trim() === '') {
+      setMessage('Enter an email address.');
+      return;
+    }
     setLoading(true);
-    setMessage(null);
+    setMessage('Adding...');
     try {
       // find user in auth 'users' view (may require appropriate RLS/permissions)
       let userRow: any = null;
@@ -33,9 +40,39 @@ export function ManageEmployees() {
       if (urow) userRow = urow;
 
       if (!userRow) {
-        setMessage("No user found with that email in profiles or users tables.");
-        setLoading(false);
-        return;
+        // try server-side create (creates profile + company_members using service role key)
+        try {
+          const res = await fetch('/api/admin/create-sample-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailInput, first_name: firstNameInput, last_name: lastNameInput, role: 'employee', company_id: selected?.id }),
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json?.error || 'server error');
+          const createdId = json?.createdUserId || json?.profile?.id;
+          const name = `${firstNameInput || ''} ${lastNameInput || ''}`.trim() || emailInput;
+          const newEmp = {
+            id: createdId || (json?.profile?.id) || emailInput,
+            name,
+            email: emailInput,
+            role: 'employee',
+            position: 'Employee',
+            startDate: new Date().toISOString().split('T')[0],
+          };
+          setEmployees((s) => [newEmp, ...s]);
+          setMessage('Created profile and added to company.');
+          setEmailInput('');
+          setFirstNameInput('');
+          setLastNameInput('');
+          setShowModal(false);
+          setLoading(false);
+          return;
+        } catch (e: any) {
+          console.error('server create failed', e);
+          setMessage(e?.message || String(e));
+          setLoading(false);
+          return;
+        }
       }
 
       if (!selected) {
@@ -179,10 +216,21 @@ export function ManageEmployees() {
             <h3 className="text-lg font-semibold mb-4">Add Employee by Email</h3>
             <p className="text-sm text-gray-500 mb-3">Enter the email address of the existing Supabase user you want to add to Shiftly HQ.</p>
             <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} placeholder="user@example.com" className="w-full border p-2 rounded mb-3" />
+            <input type="text" value={firstNameInput} onChange={(e) => setFirstNameInput(e.target.value)} placeholder="First name (optional)" className="w-full border p-2 rounded mb-3" />
+            <input type="text" value={lastNameInput} onChange={(e) => setLastNameInput(e.target.value)} placeholder="Last name (optional)" className="w-full border p-2 rounded mb-3" />
             {message && <p className="text-sm text-red-500 mb-3">{message}</p>}
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setShowModal(false)} className="px-3 py-2 rounded border">Cancel</button>
-              <button type="button" onClick={handleAddByEmail} disabled={loading} className="px-3 py-2 rounded bg-[#4F46E5] text-white">Add</button>
+              <button
+                type="button"
+                onClick={() => {
+                  console.log('Add button clicked');
+                  setMessage('Preparing to add...');
+                  handleAddByEmail();
+                }}
+                disabled={loading}
+                className="px-3 py-2 rounded bg-[#4F46E5] text-white"
+              >Add</button>
             </div>
           </div>
         </div>

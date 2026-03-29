@@ -9,6 +9,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<any>
   signUp: (email: string, password: string) => Promise<any>
   signOut: () => Promise<any>
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -59,6 +60,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const refreshProfile = async () => {
+    try {
+      const s = await supabase.auth.getSession();
+      const u = s?.data?.session?.user ?? null;
+      setUser(u);
+      if (u?.id) {
+        const { data: p } = await supabase.from('profiles').select('*').eq('id', u.id).single();
+        setProfile(p ?? null);
+      } else {
+        setProfile(null);
+      }
+    } catch (e) {
+      setProfile(null);
+    }
+  }
+
   const signIn = (email: string, password: string) =>
     supabase.auth.signInWithPassword({ email, password })
 
@@ -81,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, signIn, signUp, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

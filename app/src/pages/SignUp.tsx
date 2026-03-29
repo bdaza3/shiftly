@@ -16,7 +16,15 @@ export function Signup() {
   const handleSignUp = async () => {
     setLoading(true);
     try {
-      const res = await signUp(email, password);
+      const e = (email || '').trim().toLowerCase();
+      // basic client-side email validation
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRe.test(e)) {
+        alert('Please enter a valid email address.');
+        setLoading(false);
+        return;
+      }
+      const res = await signUp(e, password);
       console.log("signUp response", res);
       setLoading(false);
       // handle v2 return shape { data, error } or legacy
@@ -25,13 +33,9 @@ export function Signup() {
         alert(err.message || String(err));
         return;
       }
-      // If user/session available, go to dashboard; otherwise go to register or notify
-      const hasUser = !!(res?.data?.user || res?.user || res?.data?.session?.user);
-      if (hasUser) router.push("/dashboard");
-      else {
-        alert("Check your email for a confirmation link to complete signup.");
-        router.push("/register");
-      }
+      // Always send new signups to the registration flow so they complete their profile.
+      alert("Account created. Continue registration to complete your profile.");
+      router.push("/register");
     } catch (err: any) {
       console.error("signup error", err);
       alert(err?.message || String(err) || "Signup failed");
@@ -68,6 +72,7 @@ export function Signup() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                suppressHydrationWarning={true}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             </div>
@@ -80,6 +85,7 @@ export function Signup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                suppressHydrationWarning={true}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             </div>

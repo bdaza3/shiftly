@@ -25,13 +25,16 @@ export default function CreateSampleUser() {
     setLoading(true);
     setMessage(null);
     try {
-      const id = userId?.trim() || (crypto && (crypto as any).randomUUID ? (crypto as any).randomUUID() : undefined);
-      if (!id) throw new Error("Could not generate id; please provide a user id.");
+      // Only send `id` if the admin explicitly provided one. Otherwise let the server create the auth user and profile using `email`.
+      const explicitId = userId?.trim() || undefined;
+
+      const payload: any = { email, first_name: firstName, last_name: lastName, role, company_id: selected.id };
+      if (explicitId) payload.id = explicitId;
 
       const res = await fetch('/api/admin/create-sample-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, email, first_name: firstName, last_name: lastName, role, company_id: selected.id }),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'server error');

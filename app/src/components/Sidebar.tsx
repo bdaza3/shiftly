@@ -33,10 +33,11 @@ export function Sidebar() {
     try { router.replace("/login"); } catch (e) { /* ignore */ }
     try { window.location.assign("/login"); } catch (e) { try { window.location.href = "/login"; } catch(e){/*ignore*/} }
   };
-  const roleFromProfile = profile?.role ?? user?.user_metadata?.role ?? user?.role
+  const roleFromProfile = profile?.role ?? user?.user_metadata?.role ?? user?.role;
   const isAdmin = String(roleFromProfile || "").toLowerCase().includes("manager") || String(roleFromProfile || "").toLowerCase().includes("company");
-  const displayName = profile?.first_name + " " + profile?.last_name || user?.user_metadata?.full_name || user?.email
-
+  const firstName = profile?.first_name ?? user?.user_metadata?.firstName ?? '';
+  const lastName = profile?.last_name ?? user?.user_metadata?.lastName ?? '';
+  const displayName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name || user?.email);
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-6 border-b border-gray-200 flex items-center justify-between gap-4">
@@ -120,10 +121,10 @@ export function Sidebar() {
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
-          <Link href="/createsampleuser" className="flex items-center gap-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+          {/* <Link href="/createsampleuser" className="flex items-center gap-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
             <Plus className="w-4 h-4" />
             Create Sample User
-          </Link>
+          </Link> */}
       </nav>
 
       <div className="p-3 border-t border-gray-200">
@@ -131,7 +132,7 @@ export function Sidebar() {
           <Link href="/profile" className="flex-1">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-700">
-                {user?.user_metadata?.full_name?.charAt(0) ?? user?.email?.charAt(0) ?? "U"}
+                {(displayName?.charAt(0) ?? user?.email?.charAt(0) ?? "U").toUpperCase()}
               </div>
               <div className="flex-1">
                 <div className="text-sm font-medium text-gray-800">{displayName ?? "Guest"}</div>

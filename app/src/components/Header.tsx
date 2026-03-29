@@ -8,8 +8,9 @@ export function Header() {
 
   const { user, profile } = useAuth();
   const router = useRouter();
-  const displayName = profile?.first_name + " " + profile?.last_name || user?.user_metadata?.full_name || user?.email
-
+  const firstName = profile?.first_name ?? user?.user_metadata?.firstName ?? '';
+  const lastName = profile?.last_name ?? user?.user_metadata?.lastName ?? '';
+  const displayName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name || user?.email);
 
   const handleNotificationsClick = () => {
     router.push('/notifications');

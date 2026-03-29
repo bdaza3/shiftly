@@ -42,6 +42,7 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
+                suppressHydrationWarning={true}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             </div>
@@ -60,6 +61,7 @@ export function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
+                suppressHydrationWarning={true}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             </div>
