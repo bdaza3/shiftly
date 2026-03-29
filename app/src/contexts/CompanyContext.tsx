@@ -26,45 +26,70 @@ type CompanyContextValue = {
 const CompanyContext = createContext<CompanyContextValue | undefined>(undefined)
 
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
-  const [selectedId, setSelectedId] = useState<string>(() => {
+  
+  const [selectedId, setSelectedId] = useState<string>('')
+
+  // Hydration-safe: load cached companies and selectedId on client after mount
+  useEffect(() => {
     try {
-      return typeof window !== 'undefined' ? (localStorage.getItem('activeCompanyId') ?? '') : ''
+      if (typeof window !== 'undefined') {
+        const saved = window.localStorage.getItem('companies_cache')
+        if (saved) {
+          try { setCompanies(JSON.parse(saved)) } catch (e) { console.warn('CompanyContext: invalid companies_cache', e) }
+        }
+        const stored = window.localStorage.getItem('activeCompanyId')
+        if (stored) setSelectedId(stored)
+      }
     } catch (e) {
-      return ''
+      console.warn('CompanyContext: failed to load client cache', e)
     }
-  })
+  }, [])
 
   useEffect(() => {
     let mounted = true
+    console.log('CompanyProvider effect:', { userId: user?.id ?? null, loading })
+    // do nothing while auth is loading and we don't yet have a user
+    if (loading && !user?.id) return
+    // reset when signed out (only when not loading)
+    if (!user?.id) {
+      console.log('CompanyProvider effect: user missing -> resetting companies')
+      setCompanies([])
+      setSelectedId("")
+      return
+    }
+
     const load = async () => {
-      if (!user?.id) {
-        setCompanies([])
-        return
-      }
+      if (!mounted) return
       try {
-        const { data: memberships } = await supabase.from('company_members').select('company_id').eq('user_id', user.id)
-        const ids = (memberships || []).map((m: any) => m.company_id).filter(Boolean)
-        if (ids.length === 0) {
-          if (mounted) setCompanies([])
-          return
-        }
-        const { data: comps } = await supabase.from('companies').select('*').in('id', ids)
-        if (mounted) setCompanies(comps || [])
-        // if selectedId is empty, pick first or use stored
-        if (mounted && !selectedId && (comps && comps.length)) {
-          const pick = comps[0].id
-          setSelectedId(pick)
-          try { localStorage.setItem('activeCompanyId', pick) } catch(e){}
+        // prefer server API to avoid client-side caching/RLS timing issues
+        const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) })
+        if (resp.ok) {
+          const json = await resp.json()
+          const comps = json.companies ?? []
+          setCompanies(comps)
+          const stored = typeof window !== 'undefined' ? window.localStorage.getItem('activeCompanyId') : null
+          if (stored && comps.find((c: any) => c.id === stored)) {
+            setSelectedId(stored)
+          } else if (comps.length > 0) {
+            setSelectedId(comps[0].id)
+          } else {
+            setSelectedId("")
+          }
+        } else {
+          setCompanies([])
+          setSelectedId("")
         }
       } catch (e) {
-        console.warn('failed loading companies', e)
+        console.warn('CompanyProvider load failed', e)
+        setCompanies([])
+        setSelectedId("")
       }
     }
     load()
     return () => { mounted = false }
-  }, [user?.id])
+  }, [user?.id, loading])
 
   const selectCompany = (id: string) => {
     setSelectedId(id)
@@ -72,6 +97,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   }
 
   const addCompany = (company: Company) => {
+    console.log('CompanyContext.addCompany: adding', company)
     setCompanies((prev) => [...prev, company])
     setSelectedId(company.id)
     try { localStorage.setItem('activeCompanyId', company.id) } catch (e) {}
@@ -80,18 +106,25 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const refresh = async () => {
     if (!user?.id) return
     try {
-      const { data: memberships } = await supabase.from('company_members').select('company_id').eq('user_id', user.id)
-      const ids = (memberships || []).map((m: any) => m.company_id).filter(Boolean)
-      if (ids.length === 0) {
+      const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) })
+      if (resp.ok) {
+        const json = await resp.json()
+        console.log('CompanyContext.refresh: server response', json)
+        setCompanies(json.companies || [])
+      } else {
         setCompanies([])
-        return
       }
-      const { data: comps } = await supabase.from('companies').select('*').in('id', ids)
-      setCompanies(comps || [])
     } catch (e) {
       console.warn('refresh companies failed', e)
     }
   }
+
+  useEffect(() => {
+    console.log('CompanyContext: companies state changed', companies)
+    if (typeof window !== 'undefined') {
+      try { window.localStorage.setItem('companies_cache', JSON.stringify(companies)) } catch (e) { console.warn('CompanyContext: failed to write companies_cache', e) }
+    }
+  }, [companies])
 
   const selected = companies.find((c) => c.id === selectedId)
 

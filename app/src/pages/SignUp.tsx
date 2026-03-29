@@ -7,7 +7,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import { LogIn, Chrome } from "lucide-react";
 
 export function Signup() {
-  const { signUp } = useAuth();
+  const { signUp, userloading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -15,6 +15,7 @@ export function Signup() {
 
   const handleSignUp = async () => {
     setLoading(true);
+    console.log('SignUp.handleSignUp: start', { email })
     try {
       const e = (email || '').trim().toLowerCase();
       // basic client-side email validation
@@ -24,8 +25,9 @@ export function Signup() {
         setLoading(false);
         return;
       }
+      console.log('SignUp.handleSignUp: calling signUp', { email: e })
       const res = await signUp(e, password);
-      console.log("signUp response", res);
+      console.log('SignUp.handleSignUp: signUp response', res)
       setLoading(false);
       // handle v2 return shape { data, error } or legacy
       const err = (res && (res.error || res?.data?.error)) ?? null;
@@ -35,6 +37,9 @@ export function Signup() {
       }
       // Always send new signups to the registration flow so they complete their profile.
       alert("Account created. Continue registration to complete your profile.");
+      // Supabase may take a short moment to update session; wait briefly before redirecting
+      await new Promise((res) => setTimeout(res, 500));
+      console.log('SignUp.handleSignUp: navigating to /register')
       router.push("/register");
     } catch (err: any) {
       console.error("signup error", err);
@@ -45,11 +50,14 @@ export function Signup() {
 
   const handleGoogle = async () => {
     try {
+      console.log('SignUp.handleGoogle: starting oauth')
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: `${window.location.origin}/register` },
       });
+      console.log('SignUp.handleGoogle: oauth triggered')
     } catch (err: any) {
+      console.warn('SignUp.handleGoogle: error', err)
       alert(err.message || String(err));
     }
   };
@@ -90,7 +98,7 @@ export function Signup() {
               />
             </div>
 
-            <button onClick={handleSignUp} disabled={loading} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors">
+            <button onClick={handleSignUp} disabled={loading || userloading} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors">
               <LogIn className="w-5 h-5" />
               Create account
             </button>

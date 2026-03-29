@@ -16,25 +16,34 @@ export async function POST(req: Request) {
 
     const svc = createClient(svcUrl, svcKey, { auth: { persistSession: false } })
 
-    // insert company
-    const { data: created, error: createErr } = await svc.from('companies').insert({ name: name?.trim(), join_code: join_code ?? null }).select('*').maybeSingle()
-    if (createErr) {
-      // detect RLS-style error
-      if (createErr.message && createErr.message.toLowerCase().includes('row-level security')) {
-        return NextResponse.json({ error: 'Row-level security prevented writing to companies. Ensure service role key is used.' }, { status: 500 })
-      }
-      return NextResponse.json({ error: createErr.message || String(createErr) }, { status: 400 })
-    }
+// create company
+const { data: company, error: createErr } = await svc
+  .from('companies')
+  .insert({
+    name: body.name,
+    join_code: (body.join_code || '').toUpperCase()
+  })
+  .select()
+  .single()
 
-    // add membership if user_id provided
-    if (user_id && created?.id) {
-      const { error: cmErr } = await svc.from('company_members').insert({ company_id: created.id, user_id, role: 'manager' })
-      if (cmErr) {
-        return NextResponse.json({ error: cmErr.message || String(cmErr) }, { status: 400 })
-      }
-    }
+if (createErr) {
+  return NextResponse.json({ error: createErr.message }, { status: 400 })
+}
 
-    return NextResponse.json({ ok: true, company: created })
+// add membership as manager
+const { error: memberErr } = await svc
+  .from('company_members')
+  .insert({
+    company_id: company.id,
+    user_id,
+    role: 'manager'
+  })
+
+if (memberErr) {
+  return NextResponse.json({ error: memberErr.message }, { status: 400 })
+}
+
+return NextResponse.json({ ok: true, company })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || String(err) }, { status: 500 })
   }

@@ -41,34 +41,46 @@ export function useShifts() {
   useEffect(() => {
     fetchShifts();
 
-    // subscribe to realtime changes
-    // supabase-js v2 channel API
-    const channel = supabase
-      .channel("public:shifts")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "shifts" },
-        (payload) => {
-          try {
-            const ev = payload.eventType; // INSERT, UPDATE, DELETE
-            const row = payload.new ?? payload.old;
-            if (!row) return;
-            if (ev === "INSERT") setShifts((s) => [...s, mapRow(row)]);
-            if (ev === "UPDATE") setShifts((s) => s.map((sh) => (sh.id === row.id ? mapRow(row) : sh)));
-            if (ev === "DELETE") setShifts((s) => s.filter((sh) => sh.id !== row.id));
-          } catch (err) {
-            console.error("realtime handler", err);
+    // subscribe to realtime changes (supabase-js v2 channel API)
+    // guard subscribe/remove logic to avoid unhandled promise rejections
+    let channel: any = null;
+    try {
+      channel = supabase
+        .channel("public:shifts")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "shifts" },
+          (payload: any) => {
+            try {
+              const ev = payload.eventType; // INSERT, UPDATE, DELETE
+              const row = payload.new ?? payload.old;
+              if (!row) return;
+              if (ev === "INSERT") setShifts((s) => [...s, mapRow(row)]);
+              if (ev === "UPDATE") setShifts((s) => s.map((sh) => (sh.id === row.id ? mapRow(row) : sh)));
+              if (ev === "DELETE") setShifts((s) => s.filter((sh) => sh.id !== row.id));
+            } catch (err) {
+              console.error("realtime handler", err);
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn("useShifts: realtime subscribe failed", err);
+      channel = null;
+    }
 
     return () => {
+      // attempt to unsubscribe and remove channel without awaiting to avoid async cleanup issues
       try {
-        supabase.removeChannel(channel);
+        if (channel && typeof channel.unsubscribe === 'function') {
+          // unsubscribe returns a promise; attach catch to avoid unhandled rejection
+          try { channel.unsubscribe().catch(() => {}); } catch (e) { /* ignore */ }
+        }
+        if (channel && typeof (supabase as any).removeChannel === 'function') {
+          try { (supabase as any).removeChannel(channel).catch(() => {}); } catch (e) { /* ignore */ }
+        }
       } catch (err) {
-        // older clients might not have removeChannel
-        // ignore
+        // ignore any cleanup errors
       }
     };
   }, [fetchShifts]);

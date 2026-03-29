@@ -11,7 +11,7 @@ function generateJoinCode() {
 }
 
 export default function OnboardingCompany() {
-  const { user } = useAuth()
+  const { user, userloading, refreshProfile } = useAuth()
   const router = useRouter()
   const { addCompany, refresh } = useCompany()
 
@@ -21,36 +21,54 @@ export default function OnboardingCompany() {
   const [companyName, setCompanyName] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
 
   const handleCreate = async (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!companyName?.trim()) return alert('Please enter a company name')
     setLoading(true)
     try {
+      console.log('OnboardingCompany.handleCreate: start', { companyName, userId: user?.id })
+      if (!user?.id) {
+        setLoading(false)
+        alert('User not loaded yet. Please wait a moment and try again.')
+        return
+      }
       let created: any = null
       for (let i = 0; i < 5; i++) {
         const code = generateJoinCode()
+        console.log('OnboardingCompany.handleCreate: trying code', code)
         const resp = await fetch('/api/companies/create', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ name: companyName.trim(), join_code: code, user_id: user?.id })
         })
         const json = await resp.json()
+        console.log('OnboardingCompany.handleCreate: create response', resp.status, json)
         if (!resp.ok) {
           const msg = (json?.error || '').toString().toLowerCase()
           if (msg.includes('duplicate') || msg.includes('unique') || msg.includes('already')) continue
           throw new Error(json?.error || 'failed creating company')
         }
         created = json.company
+        console.log('OnboardingCompany.handleCreate: created', created)
         break
       }
       if (!created) throw new Error('Could not create company, try again')
 
-      // update client state
+      // refresh profile so UI reflects manager role set by server
+      try { await refreshProfile(); console.log('OnboardingCompany.handleCreate: refreshProfile done') } catch (e) { console.warn('refreshProfile failed', e) }
+      // update client state from the created company we already have
+      console.log('OnboardingCompany.handleCreate: addCompany', created)
       addCompany(created)
+      // ensure server and client are synced
+      try { await refresh(); console.log('OnboardingCompany.handleCreate: refresh done') } catch (e) { console.warn('OnboardingCompany.handleCreate: refresh failed', e) }
+      console.log('OnboardingCompany.handleCreate: navigating to /dashboard')
       router.push('/dashboard')
     } catch (err: any) {
-      alert(err?.message || String(err))
+      const text = err?.message || String(err)
+      setMessage(text)
+      alert(text)
     } finally {
       setLoading(false)
     }
@@ -62,6 +80,39 @@ export default function OnboardingCompany() {
     setLoading(true)
     try {
       const code = joinCode.trim().toUpperCase()
+      console.log('OnboardingCompany.handleJoin: start', { code, userId: user?.id })
+      if (!user?.id) {
+        setLoading(false)
+        alert('User not loaded yet. Please wait a moment and try again.')
+        return
+      }
+      // prefer server-side join to avoid RLS issues
+      try {
+        if (!user?.id) {
+          // try refreshing auth/profile
+          await refreshProfile()
+        }
+        const resp = await fetch('/api/companies/join', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ join_code: code, user_id: user?.id }) })
+        const json = await resp.json()
+        console.log('OnboardingCompany.handleJoin: join response', resp.status, json)
+        if (!resp.ok) {
+          throw new Error(json?.error || 'failed to join company')
+        }
+        const company = json.company
+        console.log('OnboardingCompany.handleJoin: joined company', company)
+        // update client state from the returned company
+        addCompany(company)
+        // ensure server and client are synced
+        try { await refresh(); console.log('OnboardingCompany.handleJoin: refresh done') } catch (e) { console.warn('OnboardingCompany.handleJoin: refresh failed', e) }
+        console.log('OnboardingCompany.handleJoin: navigating to /dashboard')
+        router.push('/dashboard')
+        return
+      } catch (serverJoinErr) {
+        // fallback to client-side join
+        console.warn('OnboardingCompany.handleJoin: server join failed, falling back', serverJoinErr)
+      }
+
+      // fallback: client-side lookup/insert
       const { data: companies } = await supabase.from('companies').select('*').eq('join_code', code).limit(1)
       const company = companies && companies[0]
       if (!company) {
@@ -69,30 +120,28 @@ export default function OnboardingCompany() {
         setLoading(false)
         return
       }
-
-      // check membership exists
       const { data: existing } = await supabase.from('company_members').select('*').eq('company_id', company.id).eq('user_id', user?.id).limit(1)
       if (existing && existing.length > 0) {
-        // already a member
         addCompany(company)
+        try { await refresh(); console.log('OnboardingCompany.handleJoin: refresh done (existing)') } catch (e) { console.warn('OnboardingCompany.handleJoin: refresh failed', e) }
         router.push('/dashboard')
         return
       }
-
-      // insert membership as employee
       await supabase.from('company_members').insert({ company_id: company.id, user_id: user?.id, role: 'employee' })
-
-      // make company active in client state
       addCompany(company)
+      try { await refresh(); console.log('OnboardingCompany.handleJoin: refresh done (fallback)') } catch (e) { console.warn('OnboardingCompany.handleJoin: refresh failed', e) }
       router.push('/dashboard')
     } catch (err: any) {
-      alert(err?.message || String(err))
+      const text = err?.message || String(err)
+      setMessage(text)
+      alert(text)
     } finally {
       setLoading(false)
     }
   }
 
   return (
+    userloading ? <div className="p-6">Loading...</div> :
     <div className="max-w-2xl mx-auto p-6">
       <h1 className="text-2xl font-semibold">Create or Join a Company</h1>
       <p className="text-sm text-gray-600 mt-1">Choose whether to create a new company or join with a code.</p>
@@ -115,8 +164,8 @@ export default function OnboardingCompany() {
             <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
           </div>
           <div className="flex gap-2">
-            <button disabled={loading} type="submit" className="px-4 py-2 bg-green-600 text-white rounded">Create</button>
-            <button type="button" onClick={() => { setMode('choose'); setRole(null) }} className="px-4 py-2 border rounded">Back</button>
+            <button disabled={loading} type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 hover:cursor-pointer">Create</button>
+            <button type="button" onClick={() => { setMode('choose'); setRole(null) }} className="px-4 py-2 border rounded hover:bg-gray-100 hover:cursor-pointer">Back</button>
           </div>
         </form>
       )}
@@ -133,6 +182,7 @@ export default function OnboardingCompany() {
           </div>
         </form>
       )}
+      {message && <div className="mt-2 text-sm text-red-600">{message}</div>}
     </div>
   )
 }

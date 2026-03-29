@@ -23,7 +23,13 @@ export function Sidebar() {
   const { user, profile, signOut } = useAuth();
   const { companies, selected, selectCompany, addCompany } = useCompany();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [membershipRole, setMembershipRole] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleLogout = async () => {
     try {
@@ -45,9 +51,27 @@ export function Sidebar() {
       try {
         const { data } = await supabase.from('company_members').select('role').eq('company_id', selected.id).eq('user_id', user.id).limit(1)
         const role = data && data[0] && data[0].role
-        if (mounted) setIsAdmin(String(role || '').toLowerCase().includes('manager') || String(role || '').toLowerCase().includes('admin'))
+        if (mounted) {
+          setMembershipRole(role ?? null)
+          setIsAdmin(String(role || '').toLowerCase().includes('manager') || String(role || '').toLowerCase().includes('admin'))
+        }
       } catch (e) {
-        if (mounted) setIsAdmin(false)
+        // fallback to server-side lookup when client read is blocked
+        try {
+          const resp = await fetch('/api/company_members/get', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected?.id, user_id: user?.id }) })
+          if (resp.ok) {
+            const json = await resp.json()
+            const role = json?.membership?.role
+            if (mounted) {
+              setMembershipRole(role ?? null)
+              setIsAdmin(String(role || '').toLowerCase().includes('manager') || String(role || '').toLowerCase().includes('admin'))
+            }
+          } else {
+            if (mounted) setIsAdmin(false)
+          }
+        } catch (e2) {
+          if (mounted) setIsAdmin(false)
+        }
       }
     }
     load()
@@ -56,6 +80,9 @@ export function Sidebar() {
   const firstName = profile?.first_name ?? user?.user_metadata?.firstName ?? '';
   const lastName = profile?.last_name ?? user?.user_metadata?.lastName ?? '';
   const displayName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name || user?.email);
+  // avoid showing raw auth role like 'authenticated' to users
+  const rawRole = membershipRole ?? profile?.role ?? user?.user_metadata?.role ?? user?.role
+  const displayRole = rawRole && String(rawRole).toLowerCase() === 'authenticated' ? null : rawRole
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-6 border-b border-gray-200 flex items-center justify-between gap-4">
@@ -70,7 +97,9 @@ export function Sidebar() {
             aria-haspopup="dialog"
             aria-expanded={menuOpen}
           >
-            <span>{selected?.name ?? "Select company"}</span>
+            <span>
+              {mounted ? (selected?.name ?? "Select company") : "Select company"}
+            </span>            
             <ChevronRight className="w-4 h-4 text-gray-400" />
           </button>
         </div>
@@ -154,7 +183,7 @@ export function Sidebar() {
               </div>
               <div className="flex-1">
                 <div className="text-sm font-medium text-gray-800">{displayName ?? "Guest"}</div>
-                <div className="text-xs text-gray-500">{user?.role ?? "Employee"}</div>
+                <div className="text-xs text-gray-500">{displayRole ?? 'Employee'}</div>
               </div>
             </div>
           </Link>

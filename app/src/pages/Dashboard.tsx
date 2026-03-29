@@ -3,21 +3,50 @@
 import { Clock, MapPin, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useCompany } from "../contexts/CompanyContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "../../../lib/supabaseClient";
 import { useShifts } from "../hooks/useShifts";
 
 export function Dashboard() {
-  const { user } = useAuth();
-  const { companies } = useCompany();
+  const { user, userloading } = useAuth();
+  const { companies, selected } = useCompany();
   const router = useRouter();
+  const [ready, setReady] = useState(false)
+  const [membershipRole, setMembershipRole] = useState<string | null>(null)
 
   useEffect(() => {
     // if user is signed in but has no companies, send to company onboarding
-    if (user?.id && Array.isArray(companies) && companies.length === 0) {
+    if (ready && user?.id && Array.isArray(companies) && companies.length === 0) {
       router.replace('/onboardingcompany')
     }
   }, [user?.id, companies?.length]);
+
+  useEffect(() => { setReady(true) }, [])
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      if (!user?.id || !selected?.id) {
+        if (mounted) setMembershipRole(null)
+        return
+      }
+      try {
+        const { data, error } = await supabase.from('company_members').select('role').eq('company_id', selected.id).eq('user_id', user.id).limit(1)
+        if (error) {
+          console.warn('failed loading membership role', error)
+          if (mounted) setMembershipRole(null)
+          return
+        }
+        const role = data && data[0] && data[0].role
+        if (mounted) setMembershipRole(role ?? null)
+      } catch (e) {
+        if (mounted) setMembershipRole(null)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [user?.id, selected?.id])
   const { shifts = [], loading } = useShifts();
 
   const today = new Date();
@@ -31,11 +60,12 @@ export function Dashboard() {
 
   // Compute derived lists from DB-backed shifts
   const todayShifts = (loading ? [] : shifts).filter((s: any) => s.date === todayDateStr);
-  const myShifts = user?.role === "employee" ? (shifts || []).filter((s: any) => Array.isArray(s.employees) && s.employees.includes(user.id)) : [];
+  const myShifts = membershipRole === "employee" ? (shifts || []).filter((s: any) => Array.isArray(s.employees) && s.employees.includes(user.id)) : [];
   const upcomingShift = myShifts.find((s) => new Date(s.date) >= new Date());
   const pendingRequests = sampleRequests.filter((r) => r.status === "pending");
 
   return (
+    userloading ? <div className="p-6">Loading...</div> :
     <div className="space-y-6">
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -142,7 +172,7 @@ export function Dashboard() {
       </div>
 
       {/* Notifications Panel */}
-      {user?.role === "employee" && upcomingShift && (
+      {membershipRole === "employee" && upcomingShift && (
         <div className="bg-gradient-to-r from-[#4F46E5] to-[#6366F1] rounded-xl p-6 shadow-sm text-white">
           <h3 className="text-lg font-semibold mb-2">Your Next Shift</h3>
           <div className="flex items-center justify-between">
@@ -166,7 +196,7 @@ export function Dashboard() {
       )}
 
       {/* Admin Notifications */}
-      {user?.role === "admin" && pendingRequests.length > 0 && (
+      {(membershipRole === "manager" || membershipRole === "admin") && pendingRequests.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900">
