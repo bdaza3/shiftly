@@ -24,6 +24,9 @@ export default function CreateShiftModal({
   const [customStart, setCustomStart] = useState<string>("09:00");
   const [customEnd, setCustomEnd] = useState<string>("17:00");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [role, setRole] = useState<string>("Staff");
+  const [location, setLocation] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -31,6 +34,8 @@ export default function CreateShiftModal({
       setCustomStart(initialData.startTime || "09:00");
       setCustomEnd(initialData.endTime || "17:00");
       setSelectedEmployees(initialData.employees || []);
+      setRole(initialData.role || "Staff");
+      setLocation(initialData.location || "");
       if (initialData.startTime === "07:00") setShiftType("morning");
       else if (initialData.startTime === "15:00") setShiftType("afternoon");
       else if (initialData.startTime === "23:00") setShiftType("night");
@@ -41,8 +46,20 @@ export default function CreateShiftModal({
       setCustomStart("09:00");
       setCustomEnd("17:00");
       setSelectedEmployees([]);
+      setRole("Staff");
+      setLocation("");
     }
+    // trigger enter animation
+    setMounted(true);
   }, [initialData]);
+
+  // when primary employee changes, prefer their role as default
+  useEffect(() => {
+    if (selectedEmployees && selectedEmployees.length > 0) {
+      const primary = employees.find((e) => e.id === selectedEmployees[0]);
+      if (primary?.role) setRole(primary.role);
+    }
+  }, [selectedEmployees, employees]);
 
   if (!visible) return null;
 
@@ -60,21 +77,37 @@ export default function CreateShiftModal({
       end = "07:00";
     }
 
+    const primaryEmployeeId = selectedEmployees && selectedEmployees.length > 0 ? selectedEmployees[0] : null;
+    const primaryEmployee = primaryEmployeeId ? employees.find((e) => e.id === primaryEmployeeId) : undefined;
     const payload = {
       ...(initialData?.id ? { id: initialData.id } : {}),
       date,
       startTime: start,
       endTime: end,
       employees: selectedEmployees,
+      // include a primary employee id for DB FK if available
+      ...(primaryEmployeeId ? { employeeId: primaryEmployeeId } : {}),
+      // include primary employee name for DB if schema requires it
+      ...(primaryEmployee?.name ? { employeeName: primaryEmployee.name } : {}),
+      // include role/location required by DB
+      role,
+      ...(location ? { location } : {}),
     };
 
     onSave(payload);
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6 z-50">
+    <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-auto">
+      <div
+        className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-200"
+        onClick={onClose}
+      />
+      <div
+        className={`relative bg-white rounded-lg shadow-lg w-full max-w-md p-6 z-50 transform transition-all duration-200 ease-out ${
+          mounted ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        }`}
+      >
         <h3 className="text-lg font-semibold mb-4">{initialData ? "Edit Shift" : "Create Shift"}</h3>
 
         <label className="block text-sm text-gray-600">Date</label>

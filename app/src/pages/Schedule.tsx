@@ -3,6 +3,8 @@
 import { useState } from "react";
 import CreateShiftModal from "../components/CreateShiftModal";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { useShifts } from "../hooks/useShifts";
+import React from "react";
 
 // Sample shifts used for frontend-only schedule view
 const initialShifts = [
@@ -26,22 +28,23 @@ const initialShifts = [
   }
 ];
 
-// sample employees for assignment
+// sample employees for assignment (use UUIDs to match DB `users.id`)
 const sampleEmployees = [
-  { id: "e1", name: "Alice Johnson", role: "Cashier" },
-  { id: "e2", name: "Bob Smith", role: "Stock" },
-  { id: "e3", name: "Carlos Diaz", role: "Manager" },
-  { id: "e4", name: "Dana Lee", role: "Barista" },
+  { id: "a3c9f3a8-1c4b-4f1a-9d2c-2b3a4f5e6d7f", name: "Alice Johnson", role: "Cashier" },
+  { id: "b4d9e4b9-2d5c-4f2b-8e3d-3c4b5f6a7b8c", name: "Bob Smith", role: "Stock" },
+  { id: "c5e0f5c0-3e6d-4f3c-9f4e-4d5c6e7b8c9d", name: "Carlos Diaz", role: "Manager" },
+  { id: "d6f1g6d1-4f7e-4f4d-0g5f-5e6d7f8a9b0c", name: "Dana Lee", role: "Barista" },
 ];
 
 export function Schedule() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"week" | "month">("week");
-  const [shifts, setShifts] = useState(initialShifts as any[]);
+  const { shifts, loading, createShift, updateShift, deleteShift } = useShifts();
 
   // Create shift modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingShift, setEditingShift] = useState<any | null>(null);
+  const [dragPreview, setDragPreview] = useState<{ visible: boolean; x: number; y: number; title?: string }>({ visible: false, x: 0, y: 0 });
 
   const getWeekDates = (date: Date) => {
     const week = [];
@@ -90,31 +93,45 @@ export function Schedule() {
     });
   };
 
-  const handleSaveShift = (payload: any) => {
-    if (payload.id) {
-      // update existing
-      setShifts((s) => s.map((sh) => (sh.id === payload.id ? { ...sh, ...payload } : sh)));
-    } else {
-      const newShift = { id: `shift-${Date.now()}`, ...payload };
-      setShifts((s) => [...s, newShift]);
+  // shifts are provided by `useShifts` hook (includes fetch and realtime)
+
+  const handleSaveShift = async (payload: any) => {
+    try {
+      if (payload.id) {
+        await updateShift(payload.id, payload);
+      } else {
+        await createShift(payload);
+      }
+    } catch (err) {
+      console.error("save shift", err);
     }
     setEditingShift(null);
     setShowCreateModal(false);
   };
 
-  const handleDeleteShift = (id: string) => {
-    setShifts((s) => s.filter((sh) => sh.id !== id));
+  const handleDeleteShift = async (id: string) => {
+    try {
+      await deleteShift(id);
+    } catch (err) {
+      console.error("delete shift", err);
+    }
     setEditingShift(null);
     setShowCreateModal(false);
   };
 
-  const handleMoveShift = (shiftId: string, newDateStr: string) => {
-    setShifts((s) => s.map((sh) => (sh.id === shiftId ? { ...sh, date: newDateStr } : sh)));
+  const handleMoveShift = async (shiftId: string, newDateStr: string) => {
+    try {
+      await updateShift(shiftId, { date: newDateStr });
+    } catch (err) {
+      console.error("move shift", err);
+    }
   };
 
   const handleDragStart = (e: any, shiftId: string) => {
     e.dataTransfer.setData("text/plain", shiftId);
     e.dataTransfer.effectAllowed = "move";
+    const sh = shifts.find((x) => x.id === shiftId);
+    setDragPreview({ visible: true, x: e.clientX, y: e.clientY, title: sh?.employees?.[0] ?? sh?.employeeName });
   };
 
   const handleDropOnDate = (date: Date, e: any) => {
@@ -123,6 +140,11 @@ export function Schedule() {
     if (!id) return;
     const dateStr = date.toISOString().split("T")[0];
     handleMoveShift(id, dateStr);
+    setDragPreview((p) => ({ ...p, visible: false }));
+  };
+
+  const handleDragOverCell = (e: any) => {
+    setDragPreview((p) => ({ ...p, x: e.clientX + 12, y: e.clientY + 12 }));
   };
 
   const isToday = (date: Date) => {
@@ -235,7 +257,7 @@ export function Schedule() {
               return (
                 <div
                   key={index}
-                  onDragOver={(e) => e.preventDefault()}
+                  onDragOver={(e) => { e.preventDefault(); handleDragOverCell(e); }}
                   onDrop={(e) => handleDropOnDate(date, e)}
                   className={`min-h-[200px] p-3 border-r border-b border-gray-200 last:border-r-0 ${
                     today ? "bg-[#4F46E5] bg-opacity-5" : "bg-white"
@@ -309,6 +331,7 @@ export function Schedule() {
               setEditingShift(sh);
               setShowCreateModal(true);
             }}
+            onDragOverCell={handleDragOverCell}
           />
         </div>
       )}
@@ -322,12 +345,14 @@ function MonthGrid({
   isToday,
   onMoveShift,
   onEditShift,
+  onDragOverCell,
 }: {
   monthDate: Date;
-  getShiftsForDate: (d: Date) => typeof initialShifts;
+  getShiftsForDate: (d: Date) => any[];
   isToday: (d: Date) => boolean;
   onMoveShift: (shiftId: string, newDateStr: string) => void;
   onEditShift: (shift: any) => void;
+  onDragOverCell: (e: any) => void;
 }) {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -361,7 +386,7 @@ function MonthGrid({
         return (
           <div
             key={idx}
-            onDragOver={(e) => e.preventDefault()}
+            onDragOver={(e) => { e.preventDefault(); onDragOverCell(e); }}
             onDrop={(e) => {
               e.preventDefault();
               const id = e.dataTransfer.getData("text/plain");

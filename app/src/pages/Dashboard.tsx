@@ -2,49 +2,14 @@
 
 import { Clock, MapPin, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useShifts } from "../hooks/useShifts";
 
 export function Dashboard() {
   const { user } = useAuth();
+  const { shifts = [], loading } = useShifts();
 
   const today = new Date();
   const todayDateStr = today.toISOString().split("T")[0];
-
-  // Sample shifts (frontend-only)
-  const sampleShifts = [
-    {
-      id: "s1",
-      employeeId: "u1",
-      employeeName: "Alice Johnson",
-      role: "Cashier",
-      date: todayDateStr,
-      startTime: "09:00",
-      endTime: "17:00",
-      status: "Confirmed",
-      location: "Downtown"
-    },
-    {
-      id: "s2",
-      employeeId: "u2",
-      employeeName: "Bob Smith",
-      role: "Stock",
-      date: todayDateStr,
-      startTime: "12:00",
-      endTime: "20:00",
-      status: "Confirmed",
-      location: "Warehouse"
-    },
-    {
-      id: "s3",
-      employeeId: "u3",
-      employeeName: "Carmen Lee",
-      role: "Manager",
-      date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      startTime: "08:00",
-      endTime: "16:00",
-      status: "Pending",
-      location: "Uptown"
-    }
-  ];
 
   // Sample requests (frontend-only)
   const sampleRequests = [
@@ -52,9 +17,9 @@ export function Dashboard() {
     { id: "r2", employeeName: "Liam Brown", type: "swap", date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), status: "approved" }
   ];
 
-  // Compute derived lists from sample data
-  const todayShifts = sampleShifts.filter((s) => s.date === todayDateStr);
-  const myShifts = user?.role === "employee" ? sampleShifts.filter((s) => s.employeeId === user.id) : [];
+  // Compute derived lists from DB-backed shifts
+  const todayShifts = (loading ? [] : shifts).filter((s: any) => s.date === todayDateStr);
+  const myShifts = user?.role === "employee" ? (shifts || []).filter((s: any) => Array.isArray(s.employees) && s.employees.includes(user.id)) : [];
   const upcomingShift = myShifts.find((s) => new Date(s.date) >= new Date());
   const pendingRequests = sampleRequests.filter((r) => r.status === "pending");
 
