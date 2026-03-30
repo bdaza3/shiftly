@@ -89,21 +89,6 @@ export function Login() {
               Don't have an account? Sign up
             </Link>
           </div>
-
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs font-semibold text-gray-700 mb-2">Demo Accounts:</p>
-            <div className="space-y-1 text-xs text-gray-600">
-              <p>
-                <strong>Admin:</strong> admin@shiftly.com
-              </p>
-              <p>
-                <strong>Employee:</strong> employee@shiftly.com
-              </p>
-              <p className="text-gray-500 mt-2">
-                Password: any (demo mode)
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

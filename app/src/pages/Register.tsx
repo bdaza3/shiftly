@@ -118,18 +118,21 @@ export function Register() {
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">First name</label>
-          <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+          <label className="block text-sm font-medium text-gray-700">First name
+            <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+          </label>
           <input required value={firstName} onChange={(e) => setFirstName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Last name</label>
-          <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+          <label className="block text-sm font-medium text-gray-700">Last name
+            <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+          </label>
           <input required value={lastName} onChange={(e) => setLastName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Phone</label>
-          <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+          <label className="block text-sm font-medium text-gray-700">Phone
+            <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+          </label>
           <input required value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
         </div>
 
