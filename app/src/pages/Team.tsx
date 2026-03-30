@@ -27,15 +27,12 @@ export function Team() {
       try {// first try the simpler query to company_members with profile join, if that fails (e.g. due to RLS) then fall back to fetching members and then profiles separately
         console.log('Team: loading members for company', selected.id)
         setLoading(true)
-        // try to fetch members along with their profile row in one request
-                // 1. Get members
+        // 1. Get members
         const { data: membersData, error } = await supabase
           .from('company_members')
           .select('user_id, role')
           .eq('company_id', selected.id)
-
         console.log("membersData", membersData, "error", error)
-
         if (error) throw error
 
         // 2. Get all profiles in ONE query
@@ -47,12 +44,11 @@ export function Team() {
           .in('id', userIds)
 
         // 3. Map profiles
-        console.log("profilesData1", profilesData)
+        console.log("profilesData", profilesData)
         const profileMap = new Map(
           (profilesData || []).map(p => [p.id, p])
         )
-
-        console.log("profilesData2", profilesData)
+        
         // 4. Merge
         const out = membersData.map(m => {
           const p = profileMap.get(m.user_id)

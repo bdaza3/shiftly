@@ -1,45 +1,129 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CreateShiftModal from "../components/CreateShiftModal";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { useShifts } from "../hooks/useShifts";
 import React from "react";
-
-// Sample shifts used for frontend-only schedule view
-const initialShifts = [
-  {
-    id: "s1",
-    employeeName: "Alice Johnson",
-    role: "Cashier",
-    date: new Date().toISOString().split("T")[0],
-    startTime: "09:00",
-    endTime: "17:00",
-    employees: [],
-  },
-  {
-    id: "s2",
-    employeeName: "Bob Smith",
-    role: "Stock",
-    date: new Date().toISOString().split("T")[0],
-    startTime: "12:00",
-    endTime: "20:00",
-    employees: [],
-  }
-];
-
-// sample employees for assignment (use UUIDs to match DB `users.id`)
-const sampleEmployees = [
-  { id: "a3c9f3a8-1c4b-4f1a-9d2c-2b3a4f5e6d7f", name: "Alice Johnson", role: "Cashier" },
-  { id: "b4d9e4b9-2d5c-4f2b-8e3d-3c4b5f6a7b8c", name: "Bob Smith", role: "Stock" },
-  { id: "c5e0f5c0-3e6d-4f3c-9f4e-4d5c6e7b8c9d", name: "Carlos Diaz", role: "Manager" },
-  { id: "d6f1g6d1-4f7e-4f4d-0g5f-5e6d7f8a9b0c", name: "Dana Lee", role: "Barista" },
-];
+import { useCompany } from "../contexts/CompanyContext";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "@/lib/supabaseClient";
 
 export function Schedule() {
+  const { user, profile } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"week" | "month">("week");
   const { shifts, loading, createShift, updateShift, deleteShift } = useShifts();
+  const { selected } = useCompany();
+
+  const [companyMembers, setCompanyMembers] = useState<{ id: string; name: string; role?: string }[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!selected) {
+        if (mounted) setCompanyMembers([]);
+        return;
+      }
+      setMembersLoading(true);
+      try {
+        // 1) Client-side: fetch company_members and batch profiles (same approach as Team)
+        const { data: membersData, error: membersErr } = await supabase
+          .from('company_members')
+          .select('user_id, role')
+          .eq('company_id', selected.id)
+          .order('created_at', { ascending: false });
+        console.log('Schedule: membersData', membersData, 'error', membersErr);
+        if (membersErr) throw membersErr;
+
+        const userIds = (membersData || []).map((m: any) => m.user_id).filter(Boolean);
+        let profilesData: any[] = [];
+        if (userIds.length > 0) {
+          const { data: p, error: pErr } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .in('id', userIds);
+          if (pErr) console.log('Schedule: profiles fetch error', pErr);
+          profilesData = p || [];
+        }
+
+        const profileMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
+
+        const out = (membersData || [])
+          .map((m: any) => {
+            const p = profileMap.get(m.user_id);
+            const fullName = p ? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() : null;
+            return {
+              id: m.user_id,
+              user_id: m.user_id,
+              full_name: fullName,
+              name: fullName || m.user_id,
+              role: m.role,
+              email: p?.email ?? null,
+            };
+          })
+          .filter((m: any) => m.user_id !== user?.id);
+
+        // also filter out admin/owner from assignable list later; here keep full roster
+        if (mounted && (out || []).length > 0) {
+          setCompanyMembers(out);
+          setMembersLoading(false);
+          return;
+        }
+
+        // 2) Fallback: server-side endpoint (service role) when client cannot access members
+        try {
+          const resp = await fetch('/api/company_members/list', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id }) });
+          const json = await resp.json();
+          if (resp.ok && json?.members) {
+            const normalized = (json.members || []).map((m: any) => ({
+              id: m.id ?? m.user_id,
+              user_id: m.user_id ?? m.id,
+              name: m.name ?? m.full_name ?? m.email ?? String(m.id ?? m.user_id),
+              full_name: m.full_name ?? null,
+              first_name: m.first_name ?? null,
+              last_name: m.last_name ?? null,
+              role: m.role,
+            }));
+            if (mounted) setCompanyMembers(normalized.filter((mm: any) => mm.user_id !== user?.id));
+          } else {
+            if (mounted) setCompanyMembers([]);
+          }
+        } catch (e2) {
+          console.warn('Schedule: server fallback failed', e2);
+          if (mounted) setCompanyMembers([]);
+        }
+      } catch (err) {
+        console.warn('Schedule: could not load company members', err);
+        // final fallback: try server-side endpoint
+        try {
+          const resp = await fetch('/api/company_members/list', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id }) });
+          const json = await resp.json();
+          if (resp.ok && json?.members) {
+            const normalized = (json.members || []).map((m: any) => ({
+              id: m.id ?? m.user_id,
+              user_id: m.user_id ?? m.id,
+              name: m.name ?? m.full_name ?? m.email ?? String(m.id ?? m.user_id),
+              full_name: m.full_name ?? null,
+              first_name: m.first_name ?? null,
+              last_name: m.last_name ?? null,
+              role: m.role,
+            }));
+            if (mounted) setCompanyMembers(normalized.filter((mm: any) => mm.user_id !== user?.id));
+          } else {
+            if (mounted) setCompanyMembers([]);
+          }
+        } catch (e3) {
+          console.warn('Schedule: server fallback also failed', e3);
+          if (mounted) setCompanyMembers([]);
+        }
+      } finally {
+        if (mounted) setMembersLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [selected?.id, user?.id]);
 
   // Create shift modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -131,7 +215,13 @@ export function Schedule() {
     e.dataTransfer.setData("text/plain", shiftId);
     e.dataTransfer.effectAllowed = "move";
     const sh = shifts.find((x) => x.id === shiftId);
-    setDragPreview({ visible: true, x: e.clientX, y: e.clientY, title: sh?.employees?.[0] ?? sh?.employeeName });
+    let title = sh?.employeeName;
+    if (sh?.employees && sh.employees.length > 0) {
+      const firstId = sh.employees[0];
+      const m = companyMembers.find((cm) => cm.id === firstId);
+      title = m?.name ?? firstId;
+    }
+    setDragPreview({ visible: true, x: e.clientX, y: e.clientY, title });
   };
 
   const handleDropOnDate = (date: Date, e: any) => {
@@ -198,15 +288,22 @@ export function Schedule() {
               </button>
             </div>
 
-              <button
-                onClick={() => {
-                  setEditingShift(null);
-                  setShowCreateModal(true);
-                }}
-                className="ml-3 px-3 py-2 bg-[#10B981] text-white rounded-lg text-sm hover:bg-[#059669]"
-              >
-                New Shift
-              </button>
+              {(() => {
+                const role = (profile?.role || "").toString().toLowerCase();
+                const canCreate = role === "admin" || role === "manager";
+                if (!canCreate) return null;
+                return (
+                  <button
+                    onClick={() => {
+                      setEditingShift(null);
+                      setShowCreateModal(true);
+                    }}
+                    className="ml-3 px-3 py-2 bg-[#10B981] text-white rounded-lg text-sm hover:bg-[#059669]"
+                  >
+                    New Shift
+                  </button>
+                );
+              })()}
 
             <div className="flex gap-2">
               <button
@@ -226,14 +323,24 @@ export function Schedule() {
         </div>
       </div>
 
-      <CreateShiftModal
-        visible={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSave={handleSaveShift}
-        onDelete={handleDeleteShift}
-        initialData={editingShift}
-        employees={sampleEmployees}
-      />
+      {(() => {
+        const assignable = (companyMembers.length > 0 ? companyMembers : []).filter((m) => {
+          const role = (m.role || "").toString().toLowerCase();
+          if (role === "admin" || role === "manager") return false;
+          if (user?.id && m.id === user.id) return false;
+          return true;
+        });
+        return (
+          <CreateShiftModal
+            visible={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSave={handleSaveShift}
+            onDelete={handleDeleteShift}
+            initialData={editingShift}
+            employees={assignable}
+          />
+        );
+      })()}
 
       {/* Calendar Grid */}
       {view === "week" && (
@@ -289,9 +396,11 @@ export function Schedule() {
                       >
                         {shift.employees && shift.employees.length > 0 ? (
                           <div className="space-y-1">
-                            {shift.employees.map((emp: string, i: number) => (
-                              <p key={i} className="font-semibold truncate">{emp}</p>
-                            ))}
+                            {shift.employees.map((emp: string, i: number) => {
+                              const found = companyMembers.find((cm) => cm.id === emp);
+                              const display = found?.name ?? emp;
+                              return <p key={i} className="font-semibold truncate">{display}</p>;
+                            })}
                             <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
                           </div>
                         ) : (
@@ -332,6 +441,7 @@ export function Schedule() {
               setShowCreateModal(true);
             }}
             onDragOverCell={handleDragOverCell}
+            companyMembers={companyMembers}
           />
         </div>
       )}
@@ -346,6 +456,7 @@ function MonthGrid({
   onMoveShift,
   onEditShift,
   onDragOverCell,
+  companyMembers,
 }: {
   monthDate: Date;
   getShiftsForDate: (d: Date) => any[];
@@ -353,6 +464,7 @@ function MonthGrid({
   onMoveShift: (shiftId: string, newDateStr: string) => void;
   onEditShift: (shift: any) => void;
   onDragOverCell: (e: any) => void;
+  companyMembers: { id: string; name: string; role?: string }[];
 }) {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -420,9 +532,11 @@ function MonthGrid({
                 >
                   {shift.employees && shift.employees.length > 0 ? (
                     <div className="space-y-1">
-                      {shift.employees.map((emp: string, i: number) => (
-                        <p key={i} className="font-semibold truncate">{emp}</p>
-                      ))}
+                      {shift.employees.map((emp: string, i: number) => {
+                        const found = companyMembers.find((cm) => cm.id === emp);
+                        const display = found?.name ?? emp;
+                        return <p key={i} className="font-semibold truncate">{display}</p>;
+                      })}
                       <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
                     </div>
                   ) : (
