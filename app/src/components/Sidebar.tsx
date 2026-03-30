@@ -64,8 +64,12 @@ export function Sidebar() {
           }
         }
         if (mounted) {
+          console.log('Sidebar: fetched membership role (client)', { role, companyId: selected.id, userId: user.id })
           setMembershipRole(role ?? null)
-          setIsAdmin(String(role || '').toLowerCase().includes('manager') || String(role || '').toLowerCase().includes('admin'))
+          const normalized = String(role || '').toLowerCase()
+          const adminMatch = /manager|admin|owner|company/.test(normalized)
+          setIsAdmin(adminMatch)
+          console.log('Sidebar: isAdmin set ->', adminMatch)
         }
       } catch (e) {
         // fallback to server-side lookup when client read is blocked
@@ -75,8 +79,12 @@ export function Sidebar() {
             const json = await resp.json()
             const role = json?.membership?.role
             if (mounted) {
+              console.log('Sidebar: fetched membership role (server fallback)', { role, companyId: selected?.id, userId: user?.id })
               setMembershipRole(role ?? null)
-              setIsAdmin(String(role || '').toLowerCase().includes('manager') || String(role || '').toLowerCase().includes('admin'))
+              const normalized = String(role || '').toLowerCase()
+              const adminMatch = /manager|admin|owner|company/.test(normalized)
+              setIsAdmin(adminMatch)
+              console.log('Sidebar: isAdmin set (fallback) ->', adminMatch)
             }
           } else {
             if (mounted) setIsAdmin(false)
