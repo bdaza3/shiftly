@@ -50,7 +50,19 @@ export function Sidebar() {
       }
       try {
         const { data } = await supabase.from('company_members').select('role').eq('company_id', selected.id).eq('user_id', user.id).limit(1)
-        const role = data && data[0] && data[0].role
+        let role = data && data[0] && data[0].role
+        // if client-side read returns no role (common with RLS until server sync), fallback to server API
+        if (!role) {
+          try {
+            const resp = await fetch('/api/company_members/get', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id, user_id: user.id }) })
+            if (resp.ok) {
+              const json = await resp.json()
+              role = json?.membership?.role
+            }
+          } catch (e) {
+            // ignore fallback error; will treat as no role
+          }
+        }
         if (mounted) {
           setMembershipRole(role ?? null)
           setIsAdmin(String(role || '').toLowerCase().includes('manager') || String(role || '').toLowerCase().includes('admin'))
@@ -82,7 +94,9 @@ export function Sidebar() {
   const displayName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name || user?.email);
   // avoid showing raw auth role like 'authenticated' to users
   const rawRole = membershipRole ?? profile?.role ?? user?.user_metadata?.role ?? user?.role
-  const displayRole = rawRole && String(rawRole).toLowerCase() === 'authenticated' ? null : rawRole
+  let displayRole = rawRole && String(rawRole).toLowerCase() === 'authenticated' ? null : rawRole
+  displayRole = displayRole && displayRole.at(0)?.toString().toUpperCase() + displayRole.slice(1) // capitalize first letter for nicer display
+
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-6 border-b border-gray-200 flex items-center justify-between gap-4">

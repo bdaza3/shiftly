@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from "../contexts/AuthContext";
+import { useCompany } from "../contexts/CompanyContext";
 import { User, Mail, Calendar, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
@@ -9,6 +10,10 @@ import { supabase } from "../../../lib/supabaseClient";
 export function Profile() {
   const router = useRouter();
   const { user, profile, signOut, refreshProfile } = useAuth();
+  const { selected } = useCompany();
+
+  const [membershipRole, setMembershipRole] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -23,6 +28,50 @@ export function Profile() {
     setPhone(profile?.phone ?? user.user_metadata?.phone ?? '');
   }, [user, profile]);
 
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    let mountedLocal = true
+    const load = async () => {
+      if (!selected?.id || !user?.id) {
+        if (mountedLocal) setMembershipRole(null)
+        return
+      }
+      try {
+        const { data } = await supabase.from('company_members').select('role').eq('company_id', selected.id).eq('user_id', user.id).limit(1)
+        let role = data && data[0] && data[0].role
+        if (!role) {
+          try {
+            const resp = await fetch('/api/company_members/get', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id, user_id: user.id }) })
+            if (resp.ok) {
+              const json = await resp.json()
+              role = json?.membership?.role
+            }
+          } catch (e) {
+            // ignore fallback error
+          }
+        }
+        if (mountedLocal) setMembershipRole(role ?? null)
+      } catch (e) {
+        try {
+          const resp = await fetch('/api/company_members/get', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected?.id, user_id: user?.id }) })
+          if (resp.ok) {
+            const json = await resp.json()
+            if (mountedLocal) setMembershipRole(json?.membership?.role ?? null)
+          } else {
+            if (mountedLocal) setMembershipRole(null)
+          }
+        } catch (e2) {
+          if (mountedLocal) setMembershipRole(null)
+        }
+      }
+    }
+    load()
+    return () => { mountedLocal = false }
+  }, [selected?.id, user?.id])
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -35,7 +84,9 @@ export function Profile() {
 
   if (!user) return null;
 
-  const roleFromProfile = profile?.role ?? user?.user_metadata?.role ?? user?.role;
+  const rawRole = membershipRole ?? profile?.role ?? user?.user_metadata?.role ?? user?.role
+  let displayRole = rawRole && String(rawRole).toLowerCase() === 'authenticated' ? null : rawRole
+  displayRole = displayRole && displayRole.at(0)?.toString().toUpperCase() + displayRole.slice(1) // capitalize first letter for nicer display
   const displayName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name || user?.email);
 
   const handleSave = async () => {
@@ -99,7 +150,7 @@ export function Profile() {
             </div>
             <div className="pb-2">
               <h3 className="text-2xl font-bold text-gray-900">{displayName ?? 'Guest'}</h3>
-              <p className="text-gray-500 capitalize">{roleFromProfile ?? user?.role ?? 'Employee'}</p>
+              <p className="text-gray-500 capitalize">{displayRole ?? 'Employee'}</p>
             </div>
             <div className="ml-auto">
               {!editing ? (

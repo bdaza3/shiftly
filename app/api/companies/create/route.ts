@@ -30,13 +30,13 @@ if (createErr) {
   return NextResponse.json({ error: createErr.message }, { status: 400 })
 }
 
-// add membership as manager
+// add membership as admin if creating a company, otherwise just return the company info (user can join from dashboard)
 const { error: memberErr } = await svc
   .from('company_members')
   .insert({
     company_id: company.id,
     user_id,
-    role: 'manager'
+    role: 'admin'
   })
 
 if (memberErr) {

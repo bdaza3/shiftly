@@ -94,17 +94,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = async () => {
     console.log('AuthContext.refreshProfile: start')
+    const GET_SESSION_TIMEOUT = 3000
+    const getSessionWithTimeout = (timeout = GET_SESSION_TIMEOUT) =>
+      Promise.race([
+        supabase.auth.getSession(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('supabase.auth.getSession timeout')), timeout)),
+      ])
+
     try {
-      const s = await supabase.auth.getSession();
-      const u = (s as any)?.data?.session?.user ?? null;
+      let s: any = null
+      try {
+        s = await getSessionWithTimeout()
+      } catch (e) {
+        console.warn('AuthContext.refreshProfile: getSession timed out or failed', e)
+        // don't clear existing user/profile on transient getSession failures; try getUser fallback
+        try {
+          const gu = await supabase.auth.getUser()
+          s = { data: { user: (gu as any)?.data?.user ?? null } }
+          console.log('AuthContext.refreshProfile: getUser fallback success', (s as any)?.data?.user?.id)
+        } catch (e2) {
+          console.warn('AuthContext.refreshProfile: getUser fallback failed', e2)
+          console.log('AuthContext.refreshProfile: done')
+          return
+        }
+      }
+
+      const u = (s as any)?.data?.session?.user ?? null
       console.log('AuthContext.refreshProfile: session user', u)
-      setUser(u);
+      setUser(u)
       if (u?.id) {
         try {
-          const { data: p, error } = await supabase.from('profiles').select('*').eq('id', u.id).maybeSingle();
+          const { data: p, error } = await supabase.from('profiles').select('*').eq('id', u.id).maybeSingle()
           if (error) throw error
           console.log('AuthContext.refreshProfile: profile from client', p)
-          setProfile(p ?? null);
+          setProfile(p ?? null)
         } catch (e) {
           console.warn('AuthContext.refreshProfile: client profiles read failed, falling back to server API', e)
           try {
@@ -119,11 +142,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } else {
-        setProfile(null);
+        setProfile(null)
       }
     } catch (e) {
       console.warn('AuthContext.refreshProfile: failed', e)
-      setProfile(null);
+      setProfile(null)
     } finally {
       console.log('AuthContext.refreshProfile: done')
     }

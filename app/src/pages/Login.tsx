@@ -7,7 +7,7 @@ import { useAuth } from "../contexts/AuthContext";
 import React from "react";
 
 export function Login() {
-  const { signIn, loading } = useAuth()
+  const { signIn } = useAuth()
   const router = useRouter();
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
@@ -19,7 +19,6 @@ export function Login() {
   }
 
   return (
-    loading ? <div className="p-6">Loading...</div> :
     <div className="min-h-screen bg-gradient-to-br from-[#4F46E5] to-[#6366F1] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="p-8">
