@@ -15,8 +15,7 @@ export function Dashboard() {
   const [ready, setReady] = useState(false)
   const [membershipRole, setMembershipRole] = useState<string | null>(null)
 
-  useEffect(() => {
-    // if user is signed in but has no companies, send to company onboarding
+  useEffect(() => {//if user is signed in but has no companies, send to company onboarding (case where user goes directly to dashboard)
     if (ready && user?.id && Array.isArray(companies) && companies.length === 0) {
       router.replace('/onboardingcompany')
     }
@@ -52,17 +51,15 @@ export function Dashboard() {
   const today = new Date();
   const todayDateStr = today.toISOString().split("T")[0];
 
-  // Sample requests (frontend-only)
-  const sampleRequests = [
-    { id: "r1", employeeName: "Eve Torres", type: "time-off", date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), status: "pending" },
-    { id: "r2", employeeName: "Liam Brown", type: "swap", date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), status: "approved" }
-  ];
-
   // Compute derived lists from DB-backed shifts
   const todayShifts = (loading ? [] : shifts).filter((s: any) => s.date === todayDateStr);
   const myShifts = membershipRole === "employee" ? (shifts || []).filter((s: any) => Array.isArray(s.employees) && s.employees.includes(user.id)) : [];
   const upcomingShift = myShifts.find((s) => new Date(s.date) >= new Date());
-  const pendingRequests = sampleRequests.filter((r) => r.status === "pending");
+  
+  //get pending requests for manager/admin view from database (filtering for pending status and future dates)
+  //const pendingRequests = sampleRequests.filter((r) => r.status === "pending");
+
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
 
   return (
     userloading ? <div className="p-6">Loading...</div> :

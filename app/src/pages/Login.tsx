@@ -15,7 +15,16 @@ export function Login() {
 
   const handleSignIn = async () => {
     const res = await signIn(email, password)
-    if (res.error) {alert(res.error.message)} else { router.push('/dashboard') }
+    if (res.error) {
+      alert(res.error.message)
+    } else {
+      // force a full reload so server-rendered pages pick up the new session
+      try {
+        window.location.assign('/dashboard')
+      } catch (e) {
+        router.push('/dashboard')
+      }
+    }
   }
 
   return (

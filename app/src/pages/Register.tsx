@@ -30,7 +30,6 @@ export function Register() {
     setLoading(true); 
     try {
       console.log('HANDLE SUBMIT: Trying to register: submit', { firstName, lastName, phone })
-      // update user metadata with name/phone (no role)
       const newMeta: any = {
         firstName,
         lastName,
@@ -120,15 +119,18 @@ export function Register() {
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700">First name</label>
-          <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
+          <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+          <input required value={firstName} onChange={(e) => setFirstName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Last name</label>
-          <input value={lastName} onChange={(e) => setLastName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
+          <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+          <input required value={lastName} onChange={(e) => setLastName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Phone</label>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
+          <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+          <input required value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
         </div>
 
         <div className="flex items-center gap-2">

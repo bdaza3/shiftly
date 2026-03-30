@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const u = session?.user ?? null
         console.log('AuthContext.onAuthStateChange', _event, !!u, u?.id)
         setUser(u)
-        if (u?.id) {
+        if (u?.id) {//if user is signed in, try to get profile; if any step fails, clear profile to avoid stale data
           try {
             const { data: p, error } = await supabase.from('profiles').select('*').eq('id', u.id).maybeSingle()
             if (error) throw error
