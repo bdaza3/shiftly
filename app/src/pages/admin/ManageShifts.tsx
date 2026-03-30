@@ -23,14 +23,21 @@ export function ManageShifts() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const { data, error } = await supabase.from("users").select("id, full_name, role, email");
-      if (error) {
-        console.warn("could not fetch users for ManageShifts", error);
-        return;
+      console.log('ManageShifts: loading employees (raw users)')
+      try {
+        const { data, error } = await supabase.from("users").select("id, full_name, role, email");
+        console.log('ManageShifts: users query result', { dataLength: (data || []).length, error })
+        if (error) {
+          console.warn("could not fetch users for ManageShifts", error);
+          return;
+        }
+        if (!mounted) return;
+        const mapped = (data || []).map((u: any) => ({ id: u.id, name: u.full_name ?? u.name ?? u.email ?? "Unknown", role: u.role }));
+        console.log('ManageShifts: resolved employees', mapped.map(m => ({ id: m.id, name: m.name, role: m.role })))
+        setEmployees(mapped);
+      } catch (e) {
+        console.warn('ManageShifts: users lookup failed', e)
       }
-      if (!mounted) return;
-      const mapped = (data || []).map((u: any) => ({ id: u.id, name: u.full_name ?? u.name ?? u.email ?? "Unknown", role: u.role }));
-      setEmployees(mapped);
     })();
     return () => { mounted = false; };
   }, []);

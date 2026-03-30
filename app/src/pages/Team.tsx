@@ -2,30 +2,84 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useCompany } from "../contexts/CompanyContext";
+import { useAuth } from "../contexts/AuthContext";
 
 export function Team() {
+
+  const { user } = useAuth();
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { selected } = useCompany();
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const { data, error } = await supabase.from("users").select("id, full_name, role, email");
-      if (error) {
-        console.warn("could not fetch users for Team", error);
-        // fallback: empty
+      console.log('Team: effect run, selected=', selected)
+      if (!selected) {
         if (mounted) {
           setMembers([]);
           setLoading(false);
         }
-        return;
+        return
       }
-      if (!mounted) return;
-      setMembers((data || []).map((u: any) => ({ id: u.id, name: u.full_name ?? u.email ?? "Unknown", role: u.role, email: u.email })));
-      setLoading(false);
+      try {// first try the simpler query to company_members with profile join, if that fails (e.g. due to RLS) then fall back to fetching members and then profiles separately
+        console.log('Team: loading members for company', selected.id)
+        setLoading(true)
+        // try to fetch members along with their profile row in one request
+                // 1. Get members
+        const { data: membersData, error } = await supabase
+          .from('company_members')
+          .select('user_id, role')
+          .eq('company_id', selected.id)
+
+        console.log("membersData", membersData, "error", error)
+
+        if (error) throw error
+
+        // 2. Get all profiles in ONE query
+        const userIds = membersData.map(m => m.user_id)
+
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', userIds)
+
+        // 3. Map profiles
+        console.log("profilesData1", profilesData)
+        const profileMap = new Map(
+          (profilesData || []).map(p => [p.id, p])
+        )
+
+        console.log("profilesData2", profilesData)
+        // 4. Merge
+        const out = membersData.map(m => {
+          const p = profileMap.get(m.user_id)
+
+          const fullName = p
+            ? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim()
+            : null
+
+          return {
+            id: m.user_id,
+            user_id: m.user_id,
+            full_name: fullName,
+            name: fullName || m.user_id,
+            role: m.role,
+          }
+        }).filter(m => m.user_id !== user?.id) //filter out current user from team list
+
+        setMembers(out)
+      } catch (err) {
+        console.warn('Team: could not load company members', err)
+        if (mounted) setMembers([])
+      } finally {
+        if (mounted) setLoading(false)
+      }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [selected?.id]);
 
   return (
     <div className="space-y-6">
@@ -43,17 +97,27 @@ export function Team() {
           <p className="text-gray-500">No team members found.</p>
         ) : (
           <div className="space-y-3">
-            {members.map((m) => (
-              <div key={m.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#4F46E5] flex items-center justify-center text-white font-medium">{(m.name || "?").charAt(0)}</div>
-                  <div>
-                    <p className="font-semibold text-gray-900">{m.name}</p>
-                    <p className="text-sm text-gray-500">{m.role ?? "Employee"} • {m.email}</p>
+            {members.map((m) => {
+              const fullName =
+                m.full_name ||
+                (m.first_name || m.last_name ? `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim() : null) ||
+                m.name ||
+                m.email ||
+                m.id ||
+                m.user_id ||
+                "Unknown";
+              return (
+                <div key={m.id ?? fullName} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#4F46E5] flex items-center justify-center text-white font-medium">{(fullName || "?").charAt(0)}</div>
+                    <div>
+                      <p className="font-semibold text-gray-900">{fullName}</p>
+                      <p className="text-sm text-gray-500">{m.role ?? "Employee"}{m.email ? ` • ${m.email}` : ""}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
