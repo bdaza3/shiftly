@@ -21,7 +21,6 @@ export function Signup() {
       // basic client-side email validation
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRe.test(e)) {
-        alert('Please enter a valid email address.');
         setLoading(false);
         return;
       }
@@ -98,7 +97,7 @@ export function Signup() {
               />
             </div>
 
-            <button onClick={handleSignUp} disabled={loading || userloading} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors">
+            <button onClick={handleSignUp} disabled={loading || userloading} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer">
               <LogIn className="w-5 h-5" />
               Create account
             </button>
@@ -109,13 +108,16 @@ export function Signup() {
               <hr className="flex-1 border-gray-200" />
             </div>
 
-            <button onClick={handleGoogle} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+            <button onClick={handleGoogle} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:cursor-pointer">
               <Chrome className="w-5 h-5" />
               Continue with Google
             </button>
 
             <div className="text-center text-sm text-gray-500">
-              Already have an account? <a href="/" className="text-[#4F46E5]">Sign in</a>
+              Already have an account? 
+              <a href="/" className="text-[#4F46E5] hover:text-[#6366F1] font-medium">
+                Sign in
+              </a>
             </div>
           </div>
         </div>

@@ -248,7 +248,7 @@ export function ManageEmployees() {
                     <p className="text-sm text-gray-500">{employee.position}</p>
                   </div>
                 </div>
-                <span className={`px-2 py-1 rounded text-xs font-medium ${employee.role === "admin" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-700"}`}>{employee.role}</span>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${employee.role === "admin" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-700"}`}>{employee.role.charAt(0).toUpperCase() + employee.role.slice(1)}</span>
               </div>
 
               <div className="space-y-2 mb-4">

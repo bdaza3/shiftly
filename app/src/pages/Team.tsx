@@ -48,7 +48,7 @@ export function Team() {
         const profileMap = new Map(
           (profilesData || []).map(p => [p.id, p])
         )
-        
+
         // 4. Merge
         const out = membersData.map(m => {
           const p = profileMap.get(m.user_id)
@@ -62,7 +62,7 @@ export function Team() {
             user_id: m.user_id,
             full_name: fullName,
             name: fullName || m.user_id,
-            role: m.role,
+            role: m.role.charAt(0).toUpperCase() + m.role.slice(1),
           }
         }).filter(m => m.user_id !== user?.id) //filter out current user from team list
 
