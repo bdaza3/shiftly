@@ -10,10 +10,12 @@ export async function POST(req: Request) {
     if (!svcKey || !svcUrl) return NextResponse.json({ error: 'missing service role key or url' }, { status: 500 })
 
     const svc = createClient(svcUrl, svcKey, { auth: { persistSession: false } })
+    console.log('API /company_members/get: received request with body', body)
 
     if (!company_id || !user_id) return NextResponse.json({ error: 'missing company_id or user_id' }, { status: 400 })
 
     const { data, error } = await svc.from('company_members').select('role').eq('company_id', company_id).eq('user_id', user_id).limit(1).maybeSingle()
+    console.log('API /company_members/get: query result', { data, error })
     if (error) return NextResponse.json({ error: error.message || String(error) }, { status: 400 })
     return NextResponse.json({ ok: true, membership: data })
   } catch (err: any) {

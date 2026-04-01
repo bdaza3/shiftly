@@ -91,8 +91,7 @@ export function useShifts() {
       date: payload.date,
       start_time: payload.startTime,
       end_time: payload.endTime,
-      // include role (required by schema)
-      role: payload.role ?? "Staff",
+      role: payload.role ?? "Employee",
     };
     if (payload.employees) row.employees = payload.employees;
     if (payload.location) row.location = payload.location;
@@ -147,7 +146,7 @@ export function useShifts() {
     if (payload.employeeId && isUUID2(payload.employeeId)) upd.employee_id = payload.employeeId;
     else if (payload.employees && payload.employees.length > 0 && isUUID2(payload.employees[0])) upd.employee_id = payload.employees[0];
     if (payload.employeeName) upd.employee_name = payload.employeeName;
-    upd.role = payload.role ?? "Staff";
+    upd.role = payload.role ?? "Employee";
     if (payload.location) upd.location = payload.location;
 
     // verify employee exists before updating to avoid FK violation
@@ -179,6 +178,7 @@ export function useShifts() {
     if (error) throw error;
     const mapped = mapRow(data);
     setShifts((s) => s.map((sh) => (sh.id === mapped.id ? mapped : sh)));
+    console.log("updateShift: UPDATED SHIFT", mapped);
     return mapped;
   };
 

@@ -17,34 +17,38 @@ export function Team() {
     let mounted = true;
     (async () => {
       console.log('Team: effect run, selected=', selected)
-      if (!selected) {
+      if (!selected) {//only runs when no company selected 
         if (mounted) {
           setMembers([]);
           setLoading(false);
+          console.log("Loading false (no company selected), members set to empty []");
         }
         return
       }
       try {// first try the simpler query to company_members with profile join, if that fails (e.g. due to RLS) then fall back to fetching members and then profiles separately
         console.log('Team: loading members for company', selected.id)
         setLoading(true)
+        console.log("Loading true")
+
         // 1. Get members
         const { data: membersData, error } = await supabase
           .from('company_members')
           .select('user_id, role')
           .eq('company_id', selected.id)
-        console.log("membersData", membersData, "error", error)
+        console.log("Retrieved membersData", membersData, "error", error)
         if (error) throw error
 
         // 2. Get all profiles in ONE query
         const userIds = membersData.map(m => m.user_id)
 
+        console.log("Fetching profiles for userIds", userIds)
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('id, first_name, last_name')
           .in('id', userIds)
 
         // 3. Map profiles
-        console.log("profilesData", profilesData)
+        console.log(" Retrieved profilesData", profilesData)
         const profileMap = new Map(
           (profilesData || []).map(p => [p.id, p])
         )
@@ -67,6 +71,7 @@ export function Team() {
         }).filter(m => m.user_id !== user?.id) //filter out current user from team list
 
         setMembers(out)
+        console.log('Team: loaded and set members', out)
       } catch (err) {
         console.warn('Team: could not load company members', err)
         if (mounted) setMembers([])

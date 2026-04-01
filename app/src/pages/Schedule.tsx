@@ -264,7 +264,7 @@ export function Schedule() {
             </div>
           </div>
 
-            <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <div className="flex border border-gray-200 rounded-lg overflow-hidden">
               <button
                 onClick={() => setView("week")}

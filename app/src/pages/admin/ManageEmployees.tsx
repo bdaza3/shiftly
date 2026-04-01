@@ -40,43 +40,6 @@ export function ManageEmployees() {
       if (uErr) {
         console.warn("could not query users view", uErr);
       }
-      if (urow) userRow = urow;
-
-      if (!userRow) {
-        // try server-side create (creates profile + company_members using service role key)
-        try {
-          const res = await fetch('/api/admin/create-sample-user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: emailInput, first_name: firstNameInput, last_name: lastNameInput, role: 'employee', company_id: selected?.id }),
-          });
-          const json = await res.json();
-          if (!res.ok) throw new Error(json?.error || 'server error');
-          const createdId = json?.createdUserId || json?.profile?.id;
-          const name = `${firstNameInput || ''} ${lastNameInput || ''}`.trim() || emailInput;
-          const newEmp = {
-            id: createdId || (json?.profile?.id) || emailInput,
-            name,
-            email: emailInput,
-            role: 'employee',
-            position: 'Employee',
-            startDate: new Date().toISOString().split('T')[0],
-          };
-          setEmployees((s) => [newEmp, ...s]);
-          setMessage('Created profile and added to company.');
-          setEmailInput('');
-          setFirstNameInput('');
-          setLastNameInput('');
-          setShowModal(false);
-          setLoading(false);
-          return;
-        } catch (e: any) {
-          console.error('server create failed', e);
-          setMessage(e?.message || String(e));
-          setLoading(false);
-          return;
-        }
-      }
 
       if (!selected) {
         setMessage("No company selected.");

@@ -65,6 +65,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       try {
         // prefer server API to avoid client-side caching/RLS timing issues
         const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) })
+        console.log('CompanyProvider load: server response fetching companies/mine', resp)
         if (resp.ok) {
           const json = await resp.json()
           const comps = json.companies ?? []
@@ -78,6 +79,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
             setSelectedId("")
           }
         } else {
+          console.log('CompanyProvider load: server response failed, setting companies and selected to empty', resp)
           setCompanies([])
           setSelectedId("")
         }

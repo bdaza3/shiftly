@@ -9,16 +9,9 @@ import { supabase } from "@/lib/supabaseClient";
 export function ManageShifts() {
   const [showModal, setShowModal] = useState(false);
   const [editingShift, setEditingShift] = useState<any | null>(null);
-  const { shifts, loading, createShift, updateShift, deleteShift } = useShifts();
+  const {shifts, loading, createShift, updateShift, deleteShift } = useShifts();
 
   const [employees, setEmployees] = useState<{ id: string; name: string; role?: string }[]>([]);
-
-  // fallback local sample (only used if no users in DB)
-  const sampleEmployees = [
-    { id: "a3c9f3a8-1c4b-4f1a-9d2c-2b3a4f5e6d7f", name: "Alice Johnson", role: "Cashier" },
-    { id: "b4d9e4b9-2d5c-4f2b-8e3d-3c4b5f6a7b8c", name: "Bob Smith", role: "Stock" },
-    { id: "c5e0f5c0-3e6d-4f3c-9f4e-4d5c6e7b8c9d", name: "Carmen Lee", role: "Manager" },
-  ];
 
   useEffect(() => {
     let mounted = true;
@@ -136,7 +129,7 @@ export function ManageShifts() {
         onSave={handleSave}
         onDelete={handleDelete}
         initialData={editingShift}
-        employees={employees.length > 0 ? employees : sampleEmployees}
+        employees={employees.length > 0 ? employees : []}
       />
     </div>
   );

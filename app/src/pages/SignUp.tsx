@@ -15,7 +15,7 @@ export function Signup() {
 
   const handleSignUp = async () => {
     setLoading(true);
-    console.log('SignUp.handleSignUp: start', { email })
+    console.log('SignUp.handleSignUp: loading true and start', { email })
     try {
       const e = (email || '').trim().toLowerCase();
       // basic client-side email validation
@@ -28,6 +28,7 @@ export function Signup() {
       const res = await signUp(e, password);
       console.log('SignUp.handleSignUp: signUp response', res)
       setLoading(false);
+      console.log('SignUp.handleSignUp: loading false')
       // handle v2 return shape { data, error } or legacy
       const err = (res && (res.error || res?.data?.error)) ?? null;
       if (err) {

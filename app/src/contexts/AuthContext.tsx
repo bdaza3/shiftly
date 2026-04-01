@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } finally {
         if (mounted) setLoading(false)
+        console .log('AuthContext: init done, loading false')
       }
     }
 
@@ -88,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const subscription = (data as any)?.subscription
     return () => {
       mounted = false
+      console.log('AuthContext: mounted false, unsubscribing from auth changes')
       try { subscription?.unsubscribe() } catch (e) { console.warn('AuthContext: unsubscribe failed', e) }
     }
   }, [])
