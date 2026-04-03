@@ -4,82 +4,87 @@ import { useAuth } from './useAuth';
 import { useCompany } from './useCompany';
 
 export function useCompanyMembers(companyId: string | null) {
-    const { user } = useAuth();
-      const [members, setMembers] = useState<any[]>([]);
-      const [loading, setLoading] = useState(true);
-    
-      const { selected } = useCompany();
-    
-      useEffect(() => {
-        let mounted = true;
-        (async () => {
-          console.log('Team: effect run, selected=', selected)
-          if (!selected) {//only runs when no company selected 
-            if (mounted) {
-              setMembers([]);
-              setLoading(false);
-              console.log("Loading false (no company selected), members set to empty []");
-            }
-            return
+  const { user } = useAuth();
+  const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const { selected } = useCompany();
+  const targetId = companyId ?? selected?.id ?? null;
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      console.log('Team: effect run, selected=', selected, 'companyId param=', companyId, 'targetId=', targetId)
+      if (!targetId) {
+        if (mounted) {
+          setMembers([]);
+          setLoading(false);
+          console.log("Team: no target company selected — set members=[] and loading=false");
+        }
+        return
+      }
+
+      try {
+        console.log('Team: loading members for company', targetId)
+        setLoading(true)
+        console.log("Team: loading true — querying company_members")
+
+        const { data: membersData, error: membersError } = await supabase
+          .from('company_members')
+          .select('user_id, role')
+          .eq('company_id', targetId)
+
+        console.log('Team: company_members response', { membersData, membersError })
+        if (membersError) throw membersError
+        const rows = membersData || []
+
+        const userIds = rows.map((m: any) => m.user_id).filter(Boolean)
+        if (userIds.length === 0) {
+          if (mounted) setMembers([])
+          console.log('Team: no other members found for company', targetId)
+          return
+        }
+
+        console.log('Team: fetching profiles for userIds', userIds)
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', userIds)
+
+        console.log('Team: profiles response', { profilesData, profilesError })
+        if (profilesError) throw profilesError
+
+        const profileMap = new Map((profilesData || []).map((p: any) => [p.id, p]))
+
+        const out = rows.map((m: any) => {
+          const p = profileMap.get(m.user_id)
+          const fullName = p ? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() : null
+          return {
+            id: m.user_id,
+            user_id: m.user_id,
+            full_name: fullName,
+            name: fullName || m.user_id,
+            role: (m.role || 'employee').charAt(0).toUpperCase() + (m.role || 'employee').slice(1),
           }
-          try {// first try the simpler query to company_members with profile join, if that fails (e.g. due to RLS) then fall back to fetching members and then profiles separately
-            console.log('Team: loading members for company', selected.id)
-            setLoading(true)
-            console.log("Loading true")
-    
-            // 1. Get members
-            const { data: membersData, error } = await supabase
-              .from('company_members')
-              .select('user_id, role')
-              .eq('company_id', selected.id)
-            console.log("Retrieved membersData", membersData, "error", error)
-            if (error) throw error
-    
-            // 2. Get all profiles in ONE query
-            const userIds = membersData.map(m => m.user_id)
-    
-            console.log("Fetching profiles for userIds", userIds)
-            const { data: profilesData } = await supabase
-              .from('profiles')
-              .select('id, first_name, last_name')
-              .in('id', userIds)
-    
-            // 3. Map profiles
-            console.log(" Retrieved profilesData", profilesData)
-            const profileMap = new Map(
-              (profilesData || []).map(p => [p.id, p])
-            )
-    
-            // 4. Merge
-            const out = membersData.map(m => {
-              const p = profileMap.get(m.user_id)
-    
-              const fullName = p
-                ? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim()
-                : null
-    
-              return {
-                id: m.user_id,
-                user_id: m.user_id,
-                full_name: fullName,
-                name: fullName || m.user_id,
-                role: m.role.charAt(0).toUpperCase() + m.role.slice(1),
-              }
-            }).filter(m => m.user_id !== user?.id) //filter out current user from team list
-    
-            setMembers(out)
-            console.log('Team: loaded and set members', out)
-          } catch (err) {
-            console.warn('Team: could not load company members', err)
-            if (mounted) setMembers([])
-          } finally {
-            if (mounted) setLoading(false)
-          }
-        })();
-        return () => { mounted = false; };
-      }, [selected?.id]);
-      //returns members and loading state; members is an array of { id, user_id, full_name, name, role } for each member of the company except the current user
-        return { members, loading };
+        }).filter((m: any) => m.user_id !== user?.id)
+
+        if (mounted) {
+          setMembers(out)
+          console.log('Team: loaded and set members', out)
+        }
+      } catch (err) {
+        console.warn('Team: could not load company members', err)
+        if (mounted) setMembers([])
+      } finally {
+        if (mounted) setLoading(false)
+        console.log('Team: loading false (finished)')
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, [companyId, selected?.id, user?.id, targetId]);
+
+  return { members, loading };
 }
 
 export default useCompanyMembers;
