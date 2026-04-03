@@ -100,7 +100,7 @@ export function ManageEmployees() {
           }
           out.push({ id: r.user_id, name: info?.full_name ?? info?.email ?? r.user_id, email: info?.email ?? null, role: r.role ?? "employee", startDate: r.created_at });
         }
-        if (mounted) setEmployees(out);
+        if (mounted) setEmployees(out.filter(e => e.id !== user?.id));
         // if client read returned no members, try server fallback
         if ((out || []).length === 0) {
           try {
@@ -109,7 +109,7 @@ export function ManageEmployees() {
             const json = await resp.json()
             console.log('ManageEmployees: server fallback response', json)
             if (resp.ok && json?.members) {
-              if (mounted) setEmployees(json.members.map((m:any) => ({ id: m.id, name: m.name, email: m.email, role: m.role ?? 'employee', startDate: m.startDate })))
+              if (mounted) setEmployees(json.members.map((m:any) => ({ id: m.id, name: m.name, email: m.email, role: m.role ?? 'employee', startDate: m.startDate })).filter((e:any) => e.id !== user?.id))
             }
           } catch (e) { console.warn('ManageEmployees: server fallback failed', e) }
         }

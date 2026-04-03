@@ -136,15 +136,15 @@ export function Dashboard() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#4F46E5] flex items-center justify-center text-white font-medium">
-                        {shift.employeeName.charAt(0)}
+                        {((shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "—"))||"—").charAt(0)}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{shift.employeeName}</p>
+                        <p className="font-semibold text-gray-900">{shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "—")}</p>
                         <p className="text-sm text-gray-500">{shift.role}</p>
                       </div>
                     </div>
                     <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                      {shift.status}
+                      {shift.status ?? "scheduled"}
                     </span>
                   </div>
                   <div className="mt-4 space-y-2">

@@ -33,7 +33,58 @@ export function useShifts() {
       console.error("useShifts fetch", error);
       setShifts([]);
     } else {
-      setShifts((data || []).map(mapRow));
+      // enrich shifts with assignments -> employee ids -> profile names when possible
+      const rows = (data || []);
+      try {
+        const shiftIds = rows.map((r: any) => r.id).filter(Boolean);
+        if (shiftIds.length > 0) {
+          let assignments: any[] = [];
+          try {
+            const { data: aData } = await supabase.from('shift_assignments').select('shift_id, user_id').in('shift_id', shiftIds);
+            assignments = aData || [];
+          } catch (e) {
+            // ignore assignment read errors (RLS or missing table)
+            assignments = [];
+          }
+
+          const assignMap = new Map<string, string[]>();
+          const userIdsSet = new Set<string>();
+          for (const a of assignments) {
+            if (!a?.shift_id || !a?.user_id) continue;
+            const arr = assignMap.get(a.shift_id) || [];
+            arr.push(a.user_id);
+            assignMap.set(a.shift_id, arr);
+            userIdsSet.add(a.user_id);
+          }
+
+          const userIds = Array.from(userIdsSet);
+          let profiles: any[] = [];
+          if (userIds.length > 0) {
+            try {
+              const { data: pData } = await supabase.from('profiles').select('id, first_name, last_name').in('id', userIds);
+              profiles = pData || [];
+            } catch (e) {
+              profiles = [];
+            }
+          }
+          const profileMap = new Map((profiles || []).map((p:any) => [p.id, `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim()]));
+
+          const enriched = rows.map((r: any) => {
+            const empIds = assignMap.get(r.id) || [];
+            const employees = Array.isArray(r.employees) && r.employees.length > 0 ? r.employees : empIds;
+            const firstEmp = employees && employees.length > 0 ? employees[0] : undefined;
+            const employeeName = r.employee_name ?? r.employeeName ?? (firstEmp ? (profileMap.get(firstEmp) || firstEmp) : undefined);
+            return { ...r, employees, employee_name: employeeName, employeeName };
+          });
+
+          setShifts(enriched.map(mapRow));
+        } else {
+          setShifts(rows.map(mapRow));
+        }
+      } catch (e) {
+        console.warn('useShifts: enrichment failed', e);
+        setShifts(rows.map(mapRow));
+      }
     }
     setLoading(false);
   }, []);
@@ -101,16 +152,15 @@ export function useShifts() {
     // include employee_name if provided (some schemas require it)
     if (payload.employeeName) row.employee_name = payload.employeeName;
 
-    // verify employee_id refers to an existing user to avoid foreign key violations
+    // verify employee_id refers to an existing profile (avoid querying protected `users` view)
     if (row.employee_id) {
       try {
-        const { data: userExists, error: uErr } = await supabase.from("users").select("id").eq("id", row.employee_id).maybeSingle();
-        if (uErr) {
-          console.warn("could not verify user existence for employee_id", uErr);
+        const { data: profileExists, error: pErr } = await supabase.from("profiles").select("id").eq("id", row.employee_id).maybeSingle();
+        if (pErr) {
+          console.warn("could not verify profile existence for employee_id", pErr);
         }
-        // if not found, remove employee_id to avoid FK constraint; leave employee_name if present
-        if (!userExists) {
-          console.warn("employee_id not found in users table, removing employee_id to avoid FK error", row.employee_id);
+        if (!profileExists) {
+          console.warn("employee_id not found in profiles table, removing employee_id to avoid FK error", row.employee_id);
           delete row.employee_id;
         }
       } catch (err) {
@@ -119,20 +169,40 @@ export function useShifts() {
     }
 
     let { data, error } = await supabase.from("shifts").insert([row]).select().single();
-    // handle case where DB doesn't have employees column yet
-    if (error && error.code === "PGRST204" && /employees/.test(String(error.message))) {
-      const retry = await supabase
-        .from("shifts")
-        .insert([
-          { date: payload.date, start_time: payload.startTime, end_time: payload.endTime },
-        ])
-        .select()
-        .single();
-      data = retry.data;
-      error = retry.error;
+    // handle case where DB doesn't have `employees`, `employee_name` or `employee_id` columns yet
+    if (error && error.code === "PGRST204") {
+      const msg = String(error.message || "");
+      if (/employees/.test(msg) || /employee_name/.test(msg) || /employee_id/.test(msg)) {
+        const insertRow: any = { date: payload.date, start_time: payload.startTime, end_time: payload.endTime, role: payload.role ?? "Employee" };
+        if (payload.company_id) insertRow.company_id = payload.company_id;
+        if (payload.location) insertRow.location = payload.location;
+        const retry = await supabase
+          .from("shifts")
+          .insert([insertRow])
+          .select()
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
     }
     if (error) throw error;
-    const mapped = mapRow(data);
+    let mapped = mapRow(data);
+    // If client provided employees but DB schema doesn't store them on shifts,
+    // try to persist assignments in `shift_assignments` and ensure returned shift
+    // object contains `employees` and a usable `employeeName` to avoid UI crashes.
+    if (payload.employees && Array.isArray(payload.employees) && payload.employees.length > 0) {
+      try {
+        const assignments = payload.employees.map((uid: string) => ({ shift_id: mapped.id, user_id: uid }));
+        try {
+          await supabase.from('shift_assignments').insert(assignments);
+        } catch (e) {
+          // ignore assignment creation errors (RLS/missing table/etc.)
+        }
+        mapped = { ...mapped, employees: payload.employees, employeeName: payload.employeeName ?? payload.employees[0] };
+      } catch (e) {
+        // ignore
+      }
+    }
     // ensure local state contains it (realtime may also add it)
     setShifts((s) => (s.some((x) => x.id === mapped.id) ? s : [...s, mapped]));
     return mapped;
@@ -149,12 +219,12 @@ export function useShifts() {
     upd.role = payload.role ?? "Employee";
     if (payload.location) upd.location = payload.location;
 
-    // verify employee exists before updating to avoid FK violation
+    // verify employee exists before updating to avoid FK violation (check `profiles` not `users`)
     if (upd.employee_id) {
       try {
-        const { data: userExists, error: uErr } = await supabase.from("users").select("id").eq("id", upd.employee_id).maybeSingle();
-        if (uErr) console.warn("could not verify user existence for employee_id (update)", uErr);
-        if (!userExists) {
+        const { data: profileExists, error: pErr } = await supabase.from("profiles").select("id").eq("id", upd.employee_id).maybeSingle();
+        if (pErr) console.warn("could not verify profile existence for employee_id (update)", pErr);
+        if (!profileExists) {
           console.warn("employee_id not found for update, removing employee_id to avoid FK error", upd.employee_id);
           delete upd.employee_id;
         }
@@ -164,19 +234,45 @@ export function useShifts() {
     }
 
     let { data, error } = await supabase.from("shifts").update(upd).eq("id", id).select().single();
-    // if employees column missing, retry without it
-    if (error && error.code === "PGRST204" && /employees/.test(String(error.message))) {
-      const retry = await supabase
-        .from("shifts")
-        .update({ date: payload.date, start_time: payload.startTime, end_time: payload.endTime })
-        .eq("id", id)
-        .select()
-        .single();
-      data = retry.data;
-      error = retry.error;
+    // if employees, employee_name or employee_id column missing, retry without them
+    if (error && error.code === "PGRST204") {
+      const msg = String(error.message || "");
+      if (/employees/.test(msg) || /employee_name/.test(msg) || /employee_id/.test(msg)) {
+        const updRow: any = { date: payload.date, start_time: payload.startTime, end_time: payload.endTime, role: payload.role ?? "Employee" };
+        if ((payload as any).company_id) updRow.company_id = (payload as any).company_id;
+        if ((payload as any).location) updRow.location = (payload as any).location;
+        const retry = await supabase
+          .from("shifts")
+          .update(updRow)
+          .eq("id", id)
+          .select()
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
     }
     if (error) throw error;
-    const mapped = mapRow(data);
+    let mapped = mapRow(data);
+    // sync shift_assignments if employees provided in payload
+    if (payload.employees && Array.isArray(payload.employees)) {
+      try {
+        // remove existing assignments for this shift then add new ones
+        try {
+          await supabase.from('shift_assignments').delete().eq('shift_id', id);
+        } catch (e) {
+          // ignore
+        }
+        const assignments = (payload.employees || []).map((uid: string) => ({ shift_id: id, user_id: uid }));
+        try {
+          if (assignments.length > 0) await supabase.from('shift_assignments').insert(assignments);
+        } catch (e) {
+          // ignore
+        }
+        mapped = { ...mapped, employees: payload.employees, employeeName: payload.employeeName ?? (Array.isArray(payload.employees) && payload.employees.length > 0 ? payload.employees[0] : mapped.employeeName) };
+      } catch (e) {
+        // ignore
+      }
+    }
     setShifts((s) => s.map((sh) => (sh.id === mapped.id ? mapped : sh)));
     console.log("updateShift: UPDATED SHIFT", mapped);
     return mapped;

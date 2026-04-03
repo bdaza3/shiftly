@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import CreateShiftModal from "../../components/CreateShiftModal";
 import { useShifts } from "../../hooks/useShifts";
 import { ClipboardList, Plus, Pencil, Trash2 } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "../../hooks/useAuth";
+import { useCompany } from "../../hooks/useCompany";
+import { useCompanyMembers } from "../../hooks/useCompanyMembers";
 
 export function ManageShifts() {
   const [showModal, setShowModal] = useState(false);
@@ -12,38 +14,37 @@ export function ManageShifts() {
   const {shifts, loading, createShift, updateShift, deleteShift } = useShifts();
 
   const [employees, setEmployees] = useState<{ id: string; name: string; role?: string }[]>([]);
+  const { user } = useAuth();
+  const { selected } = useCompany();
+  const { members, loading: membersLoading } = useCompanyMembers(selected?.id ?? null);
 
+  // mirror Team / ManageEmployees: derive local `employees` from company members
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      console.log('ManageShifts: loading employees (raw users)')
-      try {
-        const { data, error } = await supabase.from("users").select("id, full_name, role, email");
-        console.log('ManageShifts: users query result', { dataLength: (data || []).length, error })
-        if (error) {
-          console.warn("could not fetch users for ManageShifts", error);
-          return;
-        }
-        if (!mounted) return;
-        const mapped = (data || []).map((u: any) => ({ id: u.id, name: u.full_name ?? u.name ?? u.email ?? "Unknown", role: u.role }));
-        console.log('ManageShifts: resolved employees', mapped.map(m => ({ id: m.id, name: m.name, role: m.role })))
-        setEmployees(mapped);
-      } catch (e) {
-        console.warn('ManageShifts: users lookup failed', e)
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+    const mapped = (members || []).map((m: any) => ({ id: m.id, name: m.full_name ?? m.name ?? m.email ?? m.user_id ?? "Unknown", role: m.role ?? "Employee" }));
+    setEmployees(mapped.filter((e: any) => e.id !== user?.id));
+  }, [members, user?.id]);
 
   const handleOpenNew = () => {
+    if (!selected?.id) {
+      console.warn('ManageShifts: cannot create shift without a selected company');
+      alert('Please select a company before creating a shift.');
+      return;
+    }
     setEditingShift(null);
     setShowModal(true);
   };
 
   const handleSave = async (payload: any) => {
     try {
-      if (payload.id) await updateShift(payload.id, payload);
-      else await createShift(payload);
+      if (!selected?.id) {
+        console.error('ManageShifts: aborting save - no company selected');
+        alert('Cannot save shift: no company selected');
+        return;
+      }
+      // ensure company_id is included so DB NOT NULL + RLS checks can pass
+      const withCompany = { ...payload, company_id: selected.id };
+      if (payload.id) await updateShift(payload.id, withCompany);
+      else await createShift(withCompany);
     } catch (err) {
       console.error("manage shifts save", err);
     }
