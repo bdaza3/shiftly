@@ -22,13 +22,15 @@ const mapRow = (r: any): Shift => ({
   ...r,
 });
 
-export function useShifts() {
+export function useShifts(companyId?: string | null) {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchShifts = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.from("shifts").select("*").order("date", { ascending: true });
+    let q = supabase.from("shifts").select("*").order("date", { ascending: true });
+    if (companyId) q = q.eq('company_id', companyId);
+    const { data, error } = await q;
     if (error) {
       console.error("useShifts fetch", error);
       setShifts([]);
@@ -106,6 +108,8 @@ export function useShifts() {
               const ev = payload.eventType; // INSERT, UPDATE, DELETE
               const row = payload.new ?? payload.old;
               if (!row) return;
+              // ignore events for other companies
+              if (companyId && row.company_id && row.company_id !== companyId) return;
               if (ev === "INSERT") setShifts((s) => [...s, mapRow(row)]);
               if (ev === "UPDATE") setShifts((s) => s.map((sh) => (sh.id === row.id ? mapRow(row) : sh)));
               if (ev === "DELETE") setShifts((s) => s.filter((sh) => sh.id !== row.id));
@@ -134,7 +138,7 @@ export function useShifts() {
         // ignore any cleanup errors
       }
     };
-  }, [fetchShifts]);
+  }, [fetchShifts, companyId]);
 
   const createShift = async (payload: Partial<Shift>) => {
     // build row payload; include employee_id if we have at least one employee selected
@@ -144,6 +148,8 @@ export function useShifts() {
       end_time: payload.endTime,
       role: payload.role ?? "Employee",
     };
+    // attach company if available
+    if (!row.company_id && companyId) row.company_id = companyId;
     if (payload.employees) row.employees = payload.employees;
     if (payload.location) row.location = payload.location;
     const isUUID = (v: any) => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
@@ -217,6 +223,9 @@ export function useShifts() {
     else if (payload.employees && payload.employees.length > 0 && isUUID2(payload.employees[0])) upd.employee_id = payload.employees[0];
     if (payload.employeeName) upd.employee_name = payload.employeeName;
     upd.role = payload.role ?? "Employee";
+    // ensure company stays associated when updating
+    if (!upd.company_id && (payload as any).company_id) upd.company_id = (payload as any).company_id;
+    if (!upd.company_id && companyId) upd.company_id = companyId;
     if (payload.location) upd.location = payload.location;
 
     // verify employee exists before updating to avoid FK violation (check `profiles` not `users`)

@@ -46,7 +46,7 @@ export function Dashboard() {
     load()
     return () => { mounted = false }
   }, [user?.id, selected?.id])
-  const { shifts = [], loading } = useShifts();
+  const { shifts = [], loading } = useShifts(selected?.id);
 
   const today = new Date();
   const todayDateStr = today.toISOString().split("T")[0];

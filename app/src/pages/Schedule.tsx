@@ -13,8 +13,8 @@ export function Schedule() {
   const { user, profile } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"week" | "month">("week");
-  const { shifts, loading, createShift, updateShift, deleteShift } = useShifts();
   const { selected } = useCompany();
+  const { shifts, loading, createShift, updateShift, deleteShift } = useShifts(selected?.id);
 
   const [companyMembers, setCompanyMembers] = useState<{ id: string; name: string; role?: string }[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);

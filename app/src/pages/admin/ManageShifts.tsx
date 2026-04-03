@@ -11,11 +11,11 @@ import { useCompanyMembers } from "../../hooks/useCompanyMembers";
 export function ManageShifts() {
   const [showModal, setShowModal] = useState(false);
   const [editingShift, setEditingShift] = useState<any | null>(null);
-  const {shifts, loading, createShift, updateShift, deleteShift } = useShifts();
+  const { selected } = useCompany();
+  const {shifts, loading, createShift, updateShift, deleteShift } = useShifts(selected?.id);
 
   const [employees, setEmployees] = useState<{ id: string; name: string; role?: string }[]>([]);
   const { user } = useAuth();
-  const { selected } = useCompany();
   const { members, loading: membersLoading } = useCompanyMembers(selected?.id ?? null);
 
   // mirror Team / ManageEmployees: derive local `employees` from company members

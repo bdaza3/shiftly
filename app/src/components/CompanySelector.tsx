@@ -3,10 +3,18 @@
 import React, { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { useCompany } from "../hooks/useCompany";
+import { useAuth } from "../hooks/useAuth";
 
 export default function CompanySelector({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { companies, selectCompany, addCompany } = useCompany();
   const [newName, setNewName] = useState("");
+  const { user } = useAuth();
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function generateJoinCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
 
   if (!open) return null;
 
@@ -45,17 +53,39 @@ export default function CompanySelector({ open, onClose }: { open: boolean; onCl
               placeholder="Company name"
             />
             <button
-              onClick={() => {
+              onClick={async () => {
                 const name = newName.trim();
                 if (!name) return;
-                const id = `c${Date.now()}`;
-                addCompany({ id, name });
-                setNewName("");
-                onClose();
+                setError(null);
+                setCreating(true);
+                try {
+                  const join_code = generateJoinCode();
+                  const resp = await fetch('/api/companies/create', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ name, user_id: user?.id, join_code })
+                  });
+                  const json = await resp.json();
+                  if (!resp.ok) {
+                    const msg = json?.error || 'failed creating company';
+                    setError(msg);
+                    setCreating(false);
+                    return;
+                  }
+                  const created = json.company;
+                  if (created) addCompany(created);
+                  setNewName("");
+                  onClose();
+                } catch (e: any) {
+                  setError(e?.message || String(e));
+                } finally {
+                  setCreating(false);
+                }
               }}
-              className="bg-indigo-600 text-white px-3 py-1 rounded text-sm"
+              disabled={creating}
+              className="bg-indigo-600 text-white px-3 py-1 rounded text-sm disabled:opacity-60"
             >
-              Create
+              {creating ? 'Creating…' : 'Create'}
             </button>
           </div>
         </div>
