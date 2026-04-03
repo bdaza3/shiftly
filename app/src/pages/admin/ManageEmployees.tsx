@@ -3,8 +3,8 @@
 import { Users, Plus, Pencil, Trash2 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useCompany } from "../../contexts/CompanyContext";
-import { useAuth } from "../../contexts/AuthContext";
+import { useCompany } from "../../hooks/useCompany";
+import { useAuth } from "../../hooks/useAuth";
 
 export function ManageEmployees() {
   const [employees, setEmployees] = useState<any[]>([]);

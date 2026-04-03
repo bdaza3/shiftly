@@ -5,8 +5,8 @@ import CreateShiftModal from "../components/CreateShiftModal";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { useShifts } from "../hooks/useShifts";
 import React from "react";
-import { useCompany } from "../contexts/CompanyContext";
-import { useAuth } from "../contexts/AuthContext";
+import { useCompany } from "../hooks/useCompany";
+import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/lib/supabaseClient";
 
 export function Schedule() {

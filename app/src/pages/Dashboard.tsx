@@ -1,8 +1,8 @@
 "use client";
 
 import { Clock, MapPin, AlertCircle, CheckCircle2 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
-import { useCompany } from "../contexts/CompanyContext";
+import { useAuth } from "../hooks/useAuth";
+import { useCompany } from "../hooks/useCompany";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";

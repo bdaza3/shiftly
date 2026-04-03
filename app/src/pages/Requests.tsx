@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { FileText, Plus, X, Check, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 

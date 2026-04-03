@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from "../contexts/AuthContext";
-import { useCompany } from "../contexts/CompanyContext";
+import { useAuth } from "../hooks/useAuth";
+import { useCompany } from "../hooks/useCompany";
 import { User, Mail, Calendar, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";

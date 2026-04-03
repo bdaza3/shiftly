@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../../../lib/supabaseClient'
-import { useAuth } from './AuthContext'
+import { useAuth } from '../hooks/useAuth'
+
+//company context to store company info and selected company across the app, including company members 
 
 type Team = { id: string; name: string; manager: string; members: number }
 export type Company = {
@@ -23,12 +24,11 @@ type CompanyContextValue = {
   refresh: () => Promise<void>
 }
 
-const CompanyContext = createContext<CompanyContextValue | undefined>(undefined)
+export const CompanyContext = createContext<CompanyContextValue | undefined>(undefined)
 
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
-  
   const [selectedId, setSelectedId] = useState<string>('')
 
   // Hydration-safe: load cached companies and selectedId on client after mount
@@ -127,7 +127,6 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       try { window.localStorage.setItem('companies_cache', JSON.stringify(companies)) } catch (e) { console.warn('CompanyContext: failed to write companies_cache', e) }
     }
   }, [companies])
-
   const selected = companies.find((c) => c.id === selectedId)
 
   return (
@@ -137,8 +136,5 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export const useCompany = () => {
-  const ctx = useContext(CompanyContext)
-  if (!ctx) throw new Error('useCompany must be used within CompanyProvider')
-  return ctx
-}
+// NOTE: hook `useCompany` has been moved to `app/src/hooks/useCompany.ts`
+// NOTE: hook `useCompanyMembers` has been moved to `app/src/hooks/useCompanyMembers.ts`

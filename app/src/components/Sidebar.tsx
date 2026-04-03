@@ -14,8 +14,8 @@ import {
   Building
 } from "lucide-react";
 import CompanySelector from "./CompanySelector";
-import { useAuth } from "../contexts/AuthContext";
-import { useCompany } from "../contexts/CompanyContext";
+import { useAuth } from "../hooks/useAuth";
+import { useCompany } from "../hooks/useCompany";
 import { supabase } from '../../../lib/supabaseClient'
 import { useEffect, useState } from 'react'
 

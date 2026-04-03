@@ -11,7 +11,7 @@ import {
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { useCompany } from "../../contexts/CompanyContext";
+import { useCompany } from "../../hooks/useCompany";
 
 export function Overview() {
   const { selected } = useCompany();

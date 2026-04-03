@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useCompany } from "../contexts/CompanyContext";
+import { useCompany } from "../hooks/useCompany";
 
 export function Company() {
   const { selected } = useCompany();

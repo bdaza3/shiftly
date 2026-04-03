@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { useCompany } from "../../contexts/CompanyContext";
+import { useCompany } from "../../hooks/useCompany";
 
 export default function CreateSampleUser() {
   const router = useRouter();

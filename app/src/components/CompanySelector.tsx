@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { useCompany } from "../contexts/CompanyContext";
+import { useCompany } from "../hooks/useCompany";
 
 export default function CompanySelector({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { companies, selectCompany, addCompany } = useCompany();
