@@ -148,13 +148,13 @@ export default function CreateShiftModal({
         <div className="flex justify-between">
           <div>
             {initialData?.id && onDelete && (
-              <button className="px-3 py-2 rounded border text-red-600" onClick={() => onDelete(initialData.id)}>Delete</button>
+              <button className="px-3 py-2 rounded border text-red-600 hover:bg-red-200 hover:cursor-pointer" onClick={() => onDelete(initialData.id)}>Delete</button>
             )}
           </div>
 
           <div className="flex gap-2">
-            <button className="px-3 py-2 rounded border" onClick={onClose}>Cancel</button>
-            <button className="px-3 py-2 rounded bg-[#4F46E5] text-white" onClick={handleSave}>{initialData ? 'Save' : 'Create'}</button>
+            <button className="px-3 py-2 rounded border hover:bg-gray-200 hover:cursor-pointer" onClick={onClose}>Cancel</button>
+            <button className="px-3 py-2 rounded bg-[#4F46E5] text-white hover:bg-[#4338CA] hover:cursor-pointer" onClick={handleSave}>{initialData ? 'Save' : 'Create'}</button>
           </div>
         </div>
       </div>

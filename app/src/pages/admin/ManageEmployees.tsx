@@ -15,7 +15,7 @@ export function ManageEmployees() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const { selected } = useCompany();
+  const { selected, loading: companiesLoading } = useCompany();
   const { user } = useAuth();
   const [joinCode, setJoinCode] = useState<string | null>(null);
 
@@ -135,6 +135,8 @@ export function ManageEmployees() {
         if (mounted) setJoinCode((selected as any).join_code)
         return
       }
+      // If the CompanyProvider is still loading companies, wait for it instead
+      if (companiesLoading) return
       // fallback: request companies for this user and find the selected company
       try {
         if (!user?.id) return
@@ -150,7 +152,7 @@ export function ManageEmployees() {
     }
     loadJoin()
     return () => { mounted = false }
-  }, [selected?.id, user?.id])
+  }, [selected?.id, user?.id, companiesLoading])
 
   const handleRemove = async (userId: string) => {
     if (!selected) return;

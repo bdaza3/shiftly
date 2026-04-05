@@ -22,6 +22,7 @@ type CompanyContextValue = {
   selectCompany: (id: string) => void
   addCompany: (c: Company) => void
   refresh: () => Promise<void>
+  loading?: boolean
 }
 
 export const CompanyContext = createContext<CompanyContextValue | undefined>(undefined)
@@ -29,6 +30,7 @@ export const CompanyContext = createContext<CompanyContextValue | undefined>(und
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
+  const [loadingCompanies, setLoadingCompanies] = useState<boolean>(false)
   const [selectedId, setSelectedId] = useState<string>('')
 
   // Hydration-safe: load cached companies and selectedId on client after mount
@@ -61,6 +63,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     }
 
     const load = async () => {
+      setLoadingCompanies(true)
       if (!mounted) return
       try {
         // prefer server API to avoid client-side caching/RLS timing issues
@@ -88,6 +91,9 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
         setCompanies([])
         setSelectedId("")
       }
+      finally {
+        setLoadingCompanies(false)
+      }
     }
     load()
     return () => { mounted = false }
@@ -108,6 +114,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const refresh = async () => {
     if (!user?.id) return
     try {
+      setLoadingCompanies(true)
       const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) })
       if (resp.ok) {
         const json = await resp.json()
@@ -118,6 +125,9 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (e) {
       console.warn('refresh companies failed', e)
+    }
+    finally {
+      setLoadingCompanies(false)
     }
   }
 
@@ -130,7 +140,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const selected = companies.find((c) => c.id === selectedId)
 
   return (
-    <CompanyContext.Provider value={{ companies, selected, selectCompany, addCompany, refresh }}>
+    <CompanyContext.Provider value={{ companies, selected, selectCompany, addCompany, refresh, loading: loadingCompanies }}>
       {children}
     </CompanyContext.Provider>
   )

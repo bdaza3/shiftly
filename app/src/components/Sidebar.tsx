@@ -116,7 +116,7 @@ export function Sidebar() {
         <div>
           <button
             onClick={() => setMenuOpen(true)}
-            className="flex items-center gap-2 border rounded px-3 py-1 text-sm bg-white hover:bg-gray-50"
+            className="flex items-center gap-2 border rounded px-3 py-1 text-sm bg-white hover:bg-gray-50 hover:cursor-pointer"
             aria-haspopup="dialog"
             aria-expanded={menuOpen}
           >

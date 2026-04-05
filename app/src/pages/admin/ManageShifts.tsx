@@ -74,7 +74,7 @@ export function ManageShifts() {
             </div>
           </div>
 
-          <button onClick={handleOpenNew} className="flex items-center gap-2 px-4 py-2 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] transition-colors">
+          <button onClick={handleOpenNew} className="flex items-center gap-2 px-4 py-2 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] transition-colors hover:cursor-pointer">
             <Plus className="w-5 h-5" />
             New Shift
           </button>
@@ -113,8 +113,8 @@ export function ManageShifts() {
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2">
-                      <button onClick={() => { setEditingShift(shift); setShowModal(true); }} className="p-2 text-[#4F46E5] hover:bg-[#4F46E5] hover:bg-opacity-10 rounded transition-colors"><Pencil className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(shift.id)} className="p-2 text-red-500 hover:bg-red-50 rounded transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => { setEditingShift(shift); setShowModal(true); }} className="p-2 text-[#4F46E5] hover:bg-blue-200 hover:bg-opacity-10 rounded transition-colors hover:cursor-pointer"><Pencil className="w-4 h-4" /></button>
+                      <button onClick={() => handleDelete(shift.id)} className="p-2 text-red-500 hover:bg-red-200 rounded transition-colors hover:cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>
