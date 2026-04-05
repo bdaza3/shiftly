@@ -217,7 +217,7 @@ export function Schedule() {
     }
   };
 
-  const handleDragStart = (e: any, shiftId: string) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, shiftId: string) => {
     e.dataTransfer.setData("text/plain", shiftId);
     e.dataTransfer.effectAllowed = "move";
     const sh = shifts.find((x) => x.id === shiftId);
@@ -245,7 +245,7 @@ export function Schedule() {
     });
   }, [shifts]);
 
-  const handleDropOnDate = (date: Date, e: any) => {
+  const handleDropOnDate = (date: Date, e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const id = e.dataTransfer.getData("text/plain");
     if (!id) return;
@@ -254,7 +254,7 @@ export function Schedule() {
     setDragPreview((p) => ({ ...p, visible: false }));
   };
 
-  const handleDragOverCell = (e: any) => {
+  const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
     setDragPreview((p) => ({ ...p, x: e.clientX + 12, y: e.clientY + 12 }));
   };
 
@@ -395,8 +395,8 @@ export function Schedule() {
               return (
                 <div
                   key={index}
-                  onDragOver={(e) => { e.preventDefault(); handleDragOverCell(e); }}
-                  onDrop={(e) => handleDropOnDate(date, e)}
+                  onDragOver={(e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); handleDragOverCell(e); }}
+                  onDrop={(e: React.DragEvent<HTMLDivElement>) => handleDropOnDate(date, e)}
                   className={`min-h-[200px] p-3 border-r border-b border-gray-200 last:border-r-0 ${
                     today ? "bg-[#4F46E5] bg-opacity-5" : "bg-white"
                   }`}
@@ -420,7 +420,7 @@ export function Schedule() {
                         key={shift.id}
                         layoutId={shift.id ? `shift-${shift.id}` : undefined}
                         draggable
-                        onDragStart={(e) => handleDragStart(e, shift.id)}
+                        onDragStartCapture={(e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, shift.id)}
                         onClick={() => {
                           setEditingShift(shift);
                           setShowCreateModal(true);
@@ -484,6 +484,7 @@ export function Schedule() {
             }}
             onDragOverCell={handleDragOverCell}
             companyMembers={companyMembers}
+            shiftMeta={shiftMeta}
           />
         </div>
       )}
@@ -499,14 +500,16 @@ function MonthGrid({
   onEditShift,
   onDragOverCell,
   companyMembers,
+  shiftMeta,
 }: {
   monthDate: Date;
   getShiftsForDate: (d: Date) => any[];
   isToday: (d: Date) => boolean;
   onMoveShift: (shiftId: string, newDateStr: string) => void;
   onEditShift: (shift: any) => void;
-  onDragOverCell: (e: any) => void;
+  onDragOverCell: (e: React.DragEvent<HTMLDivElement>) => void;
   companyMembers: { id: string; name: string; role?: string }[];
+  shiftMeta: Record<string, { employees?: string[]; employeeName?: string }>;
 }) {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -549,8 +552,8 @@ function MonthGrid({
         return (
           <div
             key={idx}
-            onDragOver={(e) => { e.preventDefault(); onDragOverCell(e); }}
-            onDrop={(e) => {
+            onDragOver={(e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); onDragOverCell(e); }}
+            onDrop={(e: React.DragEvent<HTMLDivElement>) => {
               e.preventDefault();
               const id = e.dataTransfer.getData("text/plain");
               if (id) onMoveShift(id, date.toISOString().split("T")[0]);
@@ -576,7 +579,7 @@ function MonthGrid({
                   key={shift.id}
                   layoutId={shift.id ? `shift-${shift.id}` : undefined}
                   draggable
-                  onDragStart={(e) => {
+                  onDragStartCapture={(e: React.DragEvent<HTMLDivElement>) => {
                     e.dataTransfer.setData("text/plain", shift.id);
                     e.dataTransfer.effectAllowed = "move";
                   }}
