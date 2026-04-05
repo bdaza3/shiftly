@@ -193,7 +193,7 @@ export function Profile() {
               <Calendar className="w-5 h-5 text-gray-400" />
               <div>
                 <p className="text-sm text-gray-500">Member Since</p>
-                <p className="font-medium text-gray-900">{new Date().toLocaleDateString()}</p>
+                <p className="font-medium text-gray-900">{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '—'}</p>
               </div>
             </div>
           </div>

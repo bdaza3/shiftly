@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import CreateShiftModal from "../components/CreateShiftModal";
+import GanttDayDetail from "../components/GanttDayDetail";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { useShifts } from "../hooks/useShifts";
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCompany } from "../hooks/useCompany";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "@/lib/supabaseClient";
@@ -129,6 +131,7 @@ export function Schedule() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingShift, setEditingShift] = useState<any | null>(null);
   const [dragPreview, setDragPreview] = useState<{ visible: boolean; x: number; y: number; title?: string }>({ visible: false, x: 0, y: 0 });
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
 
   const getWeekDates = (date: Date) => {
     const week = [];
@@ -342,8 +345,18 @@ export function Schedule() {
         );
       })()}
 
+      {expandedDate && (
+        <GanttDayDetail
+          date={new Date(expandedDate)}
+          shifts={getShiftsForDate(new Date(expandedDate))}
+          onClose={() => setExpandedDate(null)}
+          companyMembers={companyMembers}
+          onUpdateShift={(id: string, startTime: string, endTime: string) => updateShift(id, { startTime, endTime })}
+        />
+      )}
+
       {/* Calendar Grid */}
-      {view === "week" && (
+      {view === "week" && !expandedDate && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="grid grid-cols-7 border-b border-gray-200">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
@@ -372,6 +385,7 @@ export function Schedule() {
                 >
                   <div className="flex items-center justify-center mb-2">
                     <span
+                      onClick={(e) => { e.stopPropagation(); setExpandedDate(date.toISOString().split("T")[0]); }}
                       className={`w-8 h-8 flex items-center justify-center rounded-full ${
                         today
                           ? "bg-[#4F46E5] text-white font-bold"
@@ -384,8 +398,9 @@ export function Schedule() {
 
                   <div className="space-y-2">
                     {shifts.map((shift) => (
-                      <div
+                      <motion.div
                         key={shift.id}
+                        layoutId={shift.id ? `shift-${shift.id}` : undefined}
                         draggable
                         onDragStart={(e) => handleDragStart(e, shift.id)}
                         onClick={() => {
@@ -393,6 +408,9 @@ export function Schedule() {
                           setShowCreateModal(true);
                         }}
                         className="bg-[#4F46E5] text-white p-2 rounded text-xs cursor-pointer hover:bg-[#6366F1] transition-colors"
+                        initial={{ opacity: 1 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.18 }}
                       >
                         {shift.employees && shift.employees.length > 0 ? (
                           <div className="space-y-1">
@@ -410,7 +428,7 @@ export function Schedule() {
                             <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
                           </>
                         )}
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
@@ -421,7 +439,7 @@ export function Schedule() {
       )}
 
       {/* Month view */}
-      {view === "month" && (
+      {view === "month" && !expandedDate && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="grid grid-cols-7 border-b border-gray-200">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
@@ -495,6 +513,15 @@ function MonthGrid({
         const today = isToday(date);
         const inMonth = date.getMonth() === month;
 
+        function setExpandedDate(dateStr: string) {
+          // MonthGrid does not own expanded-date state.
+          // Use the existing edit flow as a safe fallback:
+          const dayShifts = getShiftsForDate(new Date(dateStr));
+          if (dayShifts.length > 0) {
+            onEditShift(dayShifts[0]);
+          }
+        }
+
         return (
           <div
             key={idx}
@@ -510,6 +537,7 @@ function MonthGrid({
           >
             <div className="flex items-center justify-center mb-2">
               <span
+                onClick={(e) => { e.stopPropagation(); setExpandedDate(date.toISOString().split("T")[0]); }}
                 className={`w-8 h-8 flex items-center justify-center rounded-full ${
                   today ? "bg-[#4F46E5] text-white font-bold" : "text-gray-700"
                 }`}
@@ -520,8 +548,9 @@ function MonthGrid({
 
             <div className="space-y-2">
               {shifts.map((shift) => (
-                <div
+                <motion.div
                   key={shift.id}
+                  layoutId={shift.id ? `shift-${shift.id}` : undefined}
                   draggable
                   onDragStart={(e) => {
                     e.dataTransfer.setData("text/plain", shift.id);
@@ -546,7 +575,7 @@ function MonthGrid({
                       <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
                     </>
                   )}
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
