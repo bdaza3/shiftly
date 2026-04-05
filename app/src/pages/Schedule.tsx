@@ -132,6 +132,9 @@ export function Schedule() {
   const [editingShift, setEditingShift] = useState<any | null>(null);
   const [dragPreview, setDragPreview] = useState<{ visible: boolean; x: number; y: number; title?: string }>({ visible: false, x: 0, y: 0 });
   const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  // preserve shift metadata (employees / employeeName) locally so moving a shift
+  // doesn't momentarily lose assignment if backend response omits those fields
+  const [shiftMeta, setShiftMeta] = useState<Record<string, { employees?: string[]; employeeName?: string }>>({});
 
   const getWeekDates = (date: Date) => {
     const week = [];
@@ -226,6 +229,21 @@ export function Schedule() {
     }
     setDragPreview({ visible: true, x: e.clientX, y: e.clientY, title });
   };
+
+  // keep local shift metadata in sync but prefer existing meta when present
+  useEffect(() => {
+    setShiftMeta((prev) => {
+      const out: Record<string, { employees?: string[]; employeeName?: string }> = { ...prev };
+      (shifts || []).forEach((s) => {
+        if (!s?.id) return;
+        out[s.id] = {
+          employees: s.employees ?? prev[s.id]?.employees,
+          employeeName: s.employeeName ?? s.name ?? prev[s.id]?.employeeName,
+        };
+      });
+      return out;
+    });
+  }, [shifts]);
 
   const handleDropOnDate = (date: Date, e: any) => {
     e.preventDefault();
@@ -412,22 +430,28 @@ export function Schedule() {
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.18 }}
                       >
-                        {shift.employees && shift.employees.length > 0 ? (
-                          <div className="space-y-1">
-                            {shift.employees.map((emp: string, i: number) => {
-                              const found = companyMembers.find((cm) => cm.id === emp);
-                              const display = found?.name ?? emp;
-                              return <p key={i} className="font-semibold truncate">{display}</p>;
-                            })}
-                            <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
-                          </div>
-                        ) : (
-                          <>
-                            <p className="font-semibold truncate">{shift.employeeName}</p>
-                            <p className="text-white/80 truncate">{shift.role}</p>
-                            <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
-                          </>
-                        )}
+                        {(() => {
+                          const meta = shiftMeta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };
+                          if (meta.employees && meta.employees.length > 0) {
+                            return (
+                              <div className="space-y-1">
+                                {meta.employees.map((emp: string, i: number) => {
+                                  const found = companyMembers.find((cm) => cm.id === emp);
+                                  const display = found?.name ?? emp;
+                                  return <p key={i} className="font-semibold truncate">{display}</p>;
+                                })}
+                                <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
+                              </div>
+                            );
+                          }
+                          return (
+                            <>
+                              <p className="font-semibold truncate">{meta.employeeName}</p>
+                              <p className="text-white/80 truncate">{shift.role}</p>
+                              <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
+                            </>
+                          );
+                        })()}
                       </motion.div>
                     ))}
                   </div>
@@ -559,22 +583,28 @@ function MonthGrid({
                   onClick={() => onEditShift(shift)}
                   className="bg-[#4F46E5] text-white p-2 rounded text-xs cursor-pointer hover:bg-[#6366F1] transition-colors"
                 >
-                  {shift.employees && shift.employees.length > 0 ? (
-                    <div className="space-y-1">
-                      {shift.employees.map((emp: string, i: number) => {
-                        const found = companyMembers.find((cm) => cm.id === emp);
-                        const display = found?.name ?? emp;
-                        return <p key={i} className="font-semibold truncate">{display}</p>;
-                      })}
-                      <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="font-semibold truncate">{shift.employeeName}</p>
-                      <p className="text-white/80 truncate">{shift.role}</p>
-                      <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
-                    </>
-                  )}
+                  {(() => {
+                    const meta = shiftMeta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };
+                    if (meta.employees && meta.employees.length > 0) {
+                      return (
+                        <div className="space-y-1">
+                          {meta.employees.map((emp: string, i: number) => {
+                            const found = companyMembers.find((cm) => cm.id === emp);
+                            const display = found?.name ?? emp;
+                            return <p key={i} className="font-semibold truncate">{display}</p>;
+                          })}
+                          <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <>
+                        <p className="font-semibold truncate">{meta.employeeName}</p>
+                        <p className="text-white/80 truncate">{shift.role}</p>
+                        <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
+                      </>
+                    );
+                  })()}
                 </motion.div>
               ))}
             </div>

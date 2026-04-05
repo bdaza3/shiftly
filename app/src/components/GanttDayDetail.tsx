@@ -75,15 +75,25 @@ export default function GanttDayDetail({
   const [viewStartMinutes, setViewStartMinutes] = useState<number>(0);
   
   // local copy of shifts in minutes for live updates
-  const [localShifts, setLocalShifts] = useState<Record<string, { start: number; end: number }>>({});
+  // include employee metadata so assignment persists when moving days
+  const [localShifts, setLocalShifts] = useState<Record<string, { start: number; end: number; employees?: string[]; employeeName?: string }>>({});
   useEffect(() => {
-    const map: Record<string, { start: number; end: number }> = {};
-    (shifts || []).forEach((s: any) => {
-      const st = parseTimeToMinutes(s.startTime || s.start || "00:00");
-      const en = parseTimeToMinutes(s.endTime || s.end || "00:00");
-      map[s.id ?? `${Math.random()}`] = { start: st, end: en };
+    setLocalShifts((prev) => {
+      const map: Record<string, { start: number; end: number; employees?: string[]; employeeName?: string }> = {};
+      (shifts || []).forEach((s: any, idx: number) => {
+        const st = parseTimeToMinutes(s.startTime || s.start || "00:00");
+        const en = parseTimeToMinutes(s.endTime || s.end || "00:00");
+        const key = s.id ?? `idx-${idx}`;
+        const existing = prev[key];
+        map[key] = {
+          start: st,
+          end: en,
+          employees: existing?.employees ?? s.employees,
+          employeeName: existing?.employeeName ?? s.employeeName ?? s.name,
+        };
+      });
+      return map;
     });
-    setLocalShifts(map);
   }, [shifts]);
 
   // recompute view window based on local shift ranges
@@ -155,9 +165,14 @@ export default function GanttDayDetail({
                   const left = ((ls.start - viewStartMinutes) / (viewHours * 60)) * 100;
                   const width = (dur / (viewHours * 60)) * 100;
                   const right = 100 - (left + width);
-                  const empName = (s.employees && s.employees.length > 0 && companyMembers)
-                    ? (companyMembers.find((c) => c.id === s.employees[0])?.name ?? s.employees[0])
-                    : s.employeeName ?? s.name ?? 'Unassigned';
+                  const assignedEmployees = (localShifts[id]?.employees ?? s.employees);
+                  const assignedEmployeeName = localShifts[id]?.employeeName ?? s.employeeName ?? s.name;
+                  let empName = 'Unassigned';
+                  if (assignedEmployees && assignedEmployees.length > 0 && companyMembers) {
+                    empName = companyMembers.find((c) => c.id === assignedEmployees[0])?.name ?? assignedEmployees[0];
+                  } else if (assignedEmployeeName) {
+                    empName = assignedEmployeeName;
+                  }
 
                   const top = 16 + idx * perShift; // simple stacking
 
@@ -193,7 +208,7 @@ export default function GanttDayDetail({
                           setLocalShifts((prev) => {
                             const cur = prev[id] ?? { start: st0, end: en0 };
                             if (cur.start === newStart && cur.end === newEnd) return prev;
-                            return { ...prev, [id]: { start: newStart, end: newEnd } };
+                            return { ...prev, [id]: { ...(prev[id] ?? { employees: s.employees, employeeName: s.employeeName ?? s.name }), start: newStart, end: newEnd } };
                           });
                           if (newStart < viewStartMinutes || newEnd > viewStartMinutes + viewHours * 60) {
                             const minStart = Math.min(newStart, viewStartMinutes);
@@ -215,7 +230,7 @@ export default function GanttDayDetail({
                           setLocalShifts((prevMap) => {
                             const cur = prevMap[id] ?? { start: st0, end: en0 };
                             if (cur.start === newStart && cur.end === newEnd) return prevMap;
-                            return { ...prevMap, [id]: { start: newStart, end: newEnd } };
+                            return { ...prevMap, [id]: { ...(prevMap[id] ?? { employees: s.employees, employeeName: s.employeeName ?? s.name }), start: newStart, end: newEnd } };
                           });
                           const newStartStr = normalizeClock(newStart);
                           const newEndStr = normalizeClock(newEnd);
@@ -252,7 +267,7 @@ export default function GanttDayDetail({
                                 setLocalShifts((prev) => {
                                   const cur = prev[id] ?? { start: state.initStart, end: state.initEnd };
                                   if (cur.start === newStart && cur.end === state.initEnd) return prev;
-                                  return { ...prev, [id]: { start: newStart, end: state.initEnd } };
+                                  return { ...prev, [id]: { ...(prev[id] ?? { employees: s.employees, employeeName: s.employeeName ?? s.name }), start: newStart, end: state.initEnd } };
                                 });
                                 if (newStart < viewStartMinutes) {
                                   setViewStartMinutes(Math.min(0, newStart));
@@ -266,7 +281,7 @@ export default function GanttDayDetail({
                                 const minutes = Math.round(pxToMinutes(dx) / 15) * 15;
                                 let newStart = state.initStart + minutes;
                                 newStart = Math.max(-1440, Math.min(state.initEnd - 15, newStart));
-                                setLocalShifts((prev) => ({ ...prev, [id]: { start: newStart, end: state.initEnd } }));
+                                setLocalShifts((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { employees: s.employees, employeeName: s.employeeName ?? s.name }), start: newStart, end: state.initEnd } }));
                                 const newStartStr = normalizeClock(newStart);
                                 const newEndStr = normalizeClock(state.initEnd);
                                 if (onUpdateShift && s.id) onUpdateShift(s.id, newStartStr, newEndStr);
@@ -301,7 +316,7 @@ export default function GanttDayDetail({
                             setLocalShifts((prev) => {
                               const cur = prev[id] ?? { start: state.initStart, end: state.initEnd };
                               if (cur.start === state.initStart && cur.end === newEnd) return prev;
-                              return { ...prev, [id]: { start: state.initStart, end: newEnd } };
+                              return { ...prev, [id]: { ...(prev[id] ?? { employees: s.employees, employeeName: s.employeeName ?? s.name }), start: state.initStart, end: newEnd } };
                             });
                             if (newEnd > viewStartMinutes + viewHours * 60) {
                               setViewHours(48);
@@ -314,7 +329,7 @@ export default function GanttDayDetail({
                             const minutes = Math.round(pxToMinutes(dx) / 15) * 15;
                             let newEnd = Math.max(state.initStart + 15, state.initEnd + minutes);
                             newEnd = Math.max(state.initStart + 15, Math.min(2880, newEnd));
-                            setLocalShifts((prev) => ({ ...prev, [id]: { start: state.initStart, end: newEnd } }));
+                            setLocalShifts((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { employees: s.employees, employeeName: s.employeeName ?? s.name }), start: state.initStart, end: newEnd } }));
                             const newStartStr = normalizeClock(state.initStart);
                             const newEndStr = normalizeClock(newEnd);
                             if (onUpdateShift && s.id) onUpdateShift(s.id, newStartStr, newEndStr);
