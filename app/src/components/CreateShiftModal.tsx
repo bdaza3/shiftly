@@ -130,6 +130,7 @@ export default function CreateShiftModal({
 
         <label className="block text-sm text-gray-600 mb-2">Assign Employees</label>
         <div className="max-h-40 overflow-auto border p-2 rounded mb-4">
+          {employees.length === 0 && <div className="text-sm text-gray-500">No employees available</div>}
           {employees.map((emp) => (
             <label key={emp.id} className="flex items-center gap-2 p-1">
               <input

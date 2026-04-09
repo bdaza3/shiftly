@@ -74,7 +74,7 @@ export function ManageShifts() {
             </div>
           </div>
 
-          <button onClick={handleOpenNew} className="flex items-center gap-2 px-4 py-2 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] transition-colors hover:cursor-pointer">
+          <button onClick={handleOpenNew} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer">
             <Plus className="w-5 h-5" />
             New Shift
           </button>
