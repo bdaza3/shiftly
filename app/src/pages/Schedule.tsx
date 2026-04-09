@@ -273,7 +273,7 @@ export function Schedule() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <CalendarIcon className="w-6 h-6 text-[#4F46E5]" />
+            <CalendarIcon className="w-6 h-6 text-blue-600" />
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Schedule</h2>
               <p className="text-sm text-gray-500 mt-1">
@@ -291,8 +291,8 @@ export function Schedule() {
                 onClick={() => setView("week")}
                 className={`px-4 py-2 transition-colors ${
                   view === "week"
-                    ? "bg-[#4F46E5] text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50 hover:cursor-pointer"
                 }`}
               >
                 Week
@@ -301,8 +301,8 @@ export function Schedule() {
                 onClick={() => setView("month")}
                 className={`px-4 py-2 transition-colors ${
                   view === "month"
-                    ? "bg-[#4F46E5] text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50 hover:cursor-pointer"
                 }`}
               >
                 Month
@@ -319,7 +319,7 @@ export function Schedule() {
                       setEditingShift(null);
                       setShowCreateModal(true);
                     }}
-                    className="ml-3 px-3 py-2 bg-[#10B981] text-white rounded-lg text-sm hover:bg-[#059669]"
+                    className="ml-3 px-3 py-2 bg-[#10B981] text-white rounded-lg text-sm hover:bg-[#059669] hover:cursor-pointer"
                   >
                     New Shift
                   </button>
@@ -329,13 +329,13 @@ export function Schedule() {
             <div className="flex gap-2">
               <button
                 onClick={goToPrevious}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={goToNext}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -398,7 +398,7 @@ export function Schedule() {
                   onDragOver={(e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); handleDragOverCell(e); }}
                   onDrop={(e: React.DragEvent<HTMLDivElement>) => handleDropOnDate(date, e)}
                   className={`min-h-[200px] p-3 border-r border-b border-gray-200 last:border-r-0 ${
-                    today ? "bg-[#4F46E5] bg-opacity-5" : "bg-white"
+                    today ? "bg-blue-600 bg-opacity-5" : "bg-white"
                   }`}
                 >
                   <div className="flex items-center justify-center mb-2">
@@ -406,7 +406,7 @@ export function Schedule() {
                       onClick={(e) => { e.stopPropagation(); setExpandedDate(date.toISOString().split("T")[0]); }}
                       className={`w-8 h-8 flex items-center justify-center rounded-full ${
                         today
-                          ? "bg-[#4F46E5] text-white font-bold"
+                          ? "bg-blue-600 text-white font-bold"
                           : "text-gray-700"
                       }`}
                     >
@@ -425,7 +425,7 @@ export function Schedule() {
                           setEditingShift(shift);
                           setShowCreateModal(true);
                         }}
-                        className="bg-[#4F46E5] text-white p-2 rounded text-xs cursor-pointer hover:bg-[#6366F1] transition-colors"
+                        className="bg-blue-600 text-white p-2 rounded text-xs cursor-pointer hover:bg-blue-700 transition-colors"
                         initial={{ opacity: 1 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.18 }}
@@ -559,14 +559,14 @@ function MonthGrid({
               if (id) onMoveShift(id, date.toISOString().split("T")[0]);
             }}
             className={`min-h-[140px] p-3 border-r border-b border-gray-200 last:border-r-0 ${
-              today ? "bg-[#4F46E5] bg-opacity-5" : "bg-white"
+              today ? "bg-blue-600 bg-opacity-5" : "bg-white"
             } ${inMonth ? "" : "bg-gray-50 text-gray-400"}`}
           >
             <div className="flex items-center justify-center mb-2">
               <span
                 onClick={(e) => { e.stopPropagation(); setExpandedDate(date.toISOString().split("T")[0]); }}
                 className={`w-8 h-8 flex items-center justify-center rounded-full ${
-                  today ? "bg-[#4F46E5] text-white font-bold" : "text-gray-700"
+                  today ? "bg-blue-600 text-white font-bold" : "text-gray-700"
                 }`}
               >
                 {date.getDate()}
@@ -584,7 +584,7 @@ function MonthGrid({
                     e.dataTransfer.effectAllowed = "move";
                   }}
                   onClick={() => onEditShift(shift)}
-                  className="bg-[#4F46E5] text-white p-2 rounded text-xs cursor-pointer hover:bg-[#6366F1] transition-colors"
+                  className="bg-blue-600 text-white p-2 rounded text-xs cursor-pointer hover:bg-[#6366F1] transition-colors"
                 >
                   {(() => {
                     const meta = shiftMeta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };

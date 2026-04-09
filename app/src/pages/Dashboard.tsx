@@ -74,8 +74,8 @@ export function Dashboard() {
                 {todayShifts.length}
               </p>
             </div>
-            <div className="w-12 h-12 bg-[#4F46E5] bg-opacity-10 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-[#4F46E5]" />
+            <div className="w-12 h-12 bg-blue-600 bg-opacity-10 rounded-lg flex items-center justify-center">
+              <Clock className="w-6 h-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -131,11 +131,11 @@ export function Dashboard() {
               {todayShifts.map((shift) => (
                 <div
                   key={shift.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-[#4F46E5] transition-colors cursor-pointer"
+                  className="border border-gray-200 rounded-lg p-4 hover:border-blue-600 transition-colors cursor-pointer"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#4F46E5] flex items-center justify-center text-white font-medium">
+                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
                         {((shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "—"))||"—").charAt(0)}
                       </div>
                       <div>
@@ -170,7 +170,7 @@ export function Dashboard() {
 
       {/* Notifications Panel */}
       {membershipRole === "employee" && upcomingShift && (
-        <div className="bg-gradient-to-r from-[#4F46E5] to-[#6366F1] rounded-xl p-6 shadow-sm text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-[#6366F1] rounded-xl p-6 shadow-sm text-white">
           <h3 className="text-lg font-semibold mb-2">Your Next Shift</h3>
           <div className="flex items-center justify-between">
             <div>

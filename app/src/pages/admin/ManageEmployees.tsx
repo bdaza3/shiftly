@@ -18,6 +18,8 @@ export function ManageEmployees() {
   const { selected, loading: companiesLoading } = useCompany();
   const { user } = useAuth();
   const [joinCode, setJoinCode] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [showJoinPopup, setShowJoinPopup] = useState(false);
 
   const openAdd = () => {
     setEmailInput("");
@@ -171,27 +173,60 @@ export function ManageEmployees() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Users className="w-6 h-6 text-[#4F46E5]" />
+            <Users className="w-6 h-6 text-blue-600" />
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Manage Employees</h2>
               <p className="text-sm text-gray-500 mt-1">View and manage employee information and roles</p>
             </div>
           </div>
-            <div className="ml-4 flex items-center gap-4">
+            <div className="ml-4 flex items-center gap-4 relative">
               {joinCode ? (
-                <div className="px-3 py-2 rounded bg-gray-50 border border-gray-200 text-sm">
-                  <div className="text-xs text-gray-500">Join Code</div>
-                  <div className="flex items-center gap-2">
-                    <div className="font-mono font-semibold">{joinCode}</div>
-                    <button onClick={() => { navigator.clipboard?.writeText(joinCode).then(()=>console.log('copied')).catch(()=>{}) }} className="text-xs text-blue-600 hover:underline">Copy</button>
-                  </div>
+                <div>
+                  {/* Button to open popup next to Add Employee */}
+                  <button
+                    onClick={() => setShowJoinPopup(true)}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors hover:cursor-pointer"
+                    aria-expanded={showJoinPopup}
+                  >
+                    Display Join Code
+                  </button>
                 </div>
               ) : (
                 <div className="px-3 py-2 rounded bg-gray-50 border border-gray-200 text-sm text-gray-500">Join code unavailable</div>
               )}
+
+              {/* Popup + overlay */}
+              {showJoinPopup && (
+                <>
+                  <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setShowJoinPopup(false)} />
+                  <div className="absolute z-50 right-0 top-full mt-2 w-64">
+                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="text-sm font-semibold">Company Join Code</div>
+                        <button onClick={() => setShowJoinPopup(false)} className="text-gray-400 hover:text-gray-600 hover:cursor-pointer">✕</button>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-mono font-semibold text-lg">{joinCode ?? "—"}</div>
+                        <button
+                          onClick={() => {
+                            if (!joinCode) return;
+                            navigator.clipboard?.writeText(joinCode).then(() => console.log("copied")).catch(() => {});
+                            setCodeCopied(true);
+                            setTimeout(() => setCodeCopied(false), 3000);
+                          }}
+                          className={`px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors ${codeCopied ? "bg-green-600 hover:bg-green-700" : "hover:cursor-pointer"}`}
+                        >
+                          {codeCopied ? <span className="text-white text-xs">Copied!</span> : <span className="text-white text-xs">Copy</span>}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">Share this code with employees to join the company.</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
-          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors">
+          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer">
             <Plus className="w-5 h-5" />
             Add Employee
           </button>
@@ -200,14 +235,15 @@ export function ManageEmployees() {
 
       {/* Employee Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* currently, employee invites do not work, and are only available for existing users via signed up emails */}
         {employees.length === 0 ? (
-          <div className="col-span-full text-gray-500">No employees added yet. Use "Add Employee" to include a user from Supabase.</div>
+          <div className="col-span-full text-gray-500">No employees added yet. Use "Add Employee" to invite a user.</div>
         ) : (
           employees.map((employee) => (
             <div key={employee.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-[#4F46E5] flex items-center justify-center text-white text-lg font-medium">{(employee.name || "?").charAt(0)}</div>
+                  <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg font-medium">{(employee.name || "?").charAt(0)}</div>
                   <div>
                     <h3 className="font-semibold text-gray-900">{employee.name}</h3>
                     <p className="text-sm text-gray-500">{employee.position}</p>
@@ -223,8 +259,8 @@ export function ManageEmployees() {
               </div>
 
               <div className="flex gap-2 pt-4 border-t border-gray-200">
-                <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"><Pencil className="w-4 h-4" />Edit</button>
-                <button onClick={() => handleRemove(employee.id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" />Remove</button>
+                <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer"><Pencil className="w-4 h-4" />Edit</button>
+                <button onClick={() => handleRemove(employee.id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors hover:cursor-pointer"><Trash2 className="w-4 h-4" />Remove</button>
               </div>
             </div>
           ))
@@ -243,7 +279,7 @@ export function ManageEmployees() {
             <input type="text" value={lastNameInput} onChange={(e) => setLastNameInput(e.target.value)} placeholder="Last name (optional)" className="w-full border p-2 rounded mb-3" />
             {message && <p className="text-sm text-red-500 mb-3">{message}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowModal(false)} className="px-3 py-2 rounded border">Cancel</button>
+              <button type="button" onClick={() => setShowModal(false)} className="px-3 py-2 rounded border hover:bg-gray-100 transition-colors hover:cursor-pointer">Cancel</button>
               <button
                 type="button"
                 onClick={() => {
@@ -252,7 +288,7 @@ export function ManageEmployees() {
                   handleAddByEmail();
                 }}
                 disabled={loading}
-                className="px-3 py-2 rounded bg-[#4F46E5] text-white"
+                className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors hover:cursor-pointer"
               >Add</button>
             </div>
           </div>

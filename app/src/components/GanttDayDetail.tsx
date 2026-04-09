@@ -237,7 +237,7 @@ export default function GanttDayDetail({
                           if (onUpdateShift && s.id) onUpdateShift(s.id, newStartStr, newEndStr);
                           setTimeout(() => ensureVisible(newStart), 40);
                         }}
-                        className="absolute rounded shadow-md bg-gradient-to-r from-[#4F46E5] to-[#6366F1] text-white flex items-center px-3 text-sm cursor-grab touch-none"
+                        className="absolute rounded shadow-md bg-gradient-to-r from-blue-600 to-[#6366F1] text-white flex items-center px-3 text-sm cursor-grab touch-none"
                         style={{ left: `${left}%`, width: `${width}%`, top: top, height: perShift - 10, zIndex: 20, touchAction: 'none' }}
                         whileTap={{ cursor: 'grabbing' }}
                       >

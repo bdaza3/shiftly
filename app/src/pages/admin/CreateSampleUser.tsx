@@ -82,7 +82,7 @@ export default function CreateSampleUser() {
         {message && <p className="text-sm text-red-500">{message}</p>}
         <div className="flex gap-2">
           <button type="button" onClick={() => router.push('/admin/manageemployees')} className="px-4 py-2 border rounded">Cancel</button>
-          <button type="submit" disabled={loading} className="px-4 py-2 bg-[#4F46E5] text-white rounded">Create & Add</button>
+          <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded">Create & Add</button>
         </div>
       </form>
     </div>

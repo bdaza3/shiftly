@@ -154,7 +154,7 @@ export default function CreateShiftModal({
 
           <div className="flex gap-2">
             <button className="px-3 py-2 rounded border hover:bg-gray-200 hover:cursor-pointer" onClick={onClose}>Cancel</button>
-            <button className="px-3 py-2 rounded bg-[#4F46E5] text-white hover:bg-[#4338CA] hover:cursor-pointer" onClick={handleSave}>{initialData ? 'Save' : 'Create'}</button>
+            <button className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 hover:cursor-pointer" onClick={handleSave}>{initialData ? 'Save' : 'Create'}</button>
           </div>
         </div>
       </div>

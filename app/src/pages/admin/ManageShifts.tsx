@@ -67,7 +67,7 @@ export function ManageShifts() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <ClipboardList className="w-6 h-6 text-[#4F46E5]" />
+            <ClipboardList className="w-6 h-6 text-blue-600" />
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Manage Shifts</h2>
               <p className="text-sm text-gray-500 mt-1">Create, edit, and delete employee shifts</p>
@@ -100,7 +100,7 @@ export function ManageShifts() {
                 <tr key={shift.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#4F46E5] flex items-center justify-center text-white text-sm font-medium">{((shift.employeeName ?? (shift.employees && shift.employees[0]) ?? "—").charAt(0))}</div>
+                      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">{((shift.employeeName ?? (shift.employees && shift.employees[0]) ?? "—").charAt(0))}</div>
                       <span className="font-medium text-gray-900">{shift.employeeName ?? (shift.employees && shift.employees[0]) ?? "—"}</span>
                     </div>
                   </td>
@@ -113,7 +113,7 @@ export function ManageShifts() {
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2">
-                      <button onClick={() => { setEditingShift(shift); setShowModal(true); }} className="p-2 text-[#4F46E5] hover:bg-blue-200 hover:bg-opacity-10 rounded transition-colors hover:cursor-pointer"><Pencil className="w-4 h-4" /></button>
+                      <button onClick={() => { setEditingShift(shift); setShowModal(true); }} className="p-2 text-blue-600 hover:bg-blue-200 hover:bg-opacity-10 rounded transition-colors hover:cursor-pointer"><Pencil className="w-4 h-4" /></button>
                       <button onClick={() => handleDelete(shift.id)} className="p-2 text-red-500 hover:bg-red-200 rounded transition-colors hover:cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </td>

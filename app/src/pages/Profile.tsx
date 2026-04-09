@@ -132,7 +132,7 @@ export function Profile() {
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-4">
-          <User className="w-6 h-6 text-[#4F46E5]" />
+          <User className="w-6 h-6 text-blue-600" />
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Profile</h2>
             <p className="text-sm text-gray-500 mt-1">Manage your account settings</p>
@@ -142,10 +142,10 @@ export function Profile() {
 
       {/* Profile Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-[#4F46E5] to-[#6366F1] h-32"></div>
+        <div className="bg-gradient-to-r from-blue-600 to-[#6366F1] h-32"></div>
         <div className="p-6 -mt-16">
           <div className="flex items-end gap-6 mb-6">
-            <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center text-[#4F46E5] text-3xl font-bold border-4 border-white shadow-lg">
+            <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center text-blue-600 text-3xl font-bold border-4 border-white shadow-lg">
               {(displayName || user.email || 'U').charAt(0).toUpperCase()}
             </div>
             <div className="pb-2">
@@ -157,7 +157,7 @@ export function Profile() {
                 <button onClick={() => setEditing(true)} className="px-3 py-2 bg-gray-100 rounded">Edit</button>
               ) : (
                 <div className="flex gap-2">
-                  <button onClick={handleSave} disabled={saving} className="px-3 py-2 bg-indigo-600 text-white rounded">Save</button>
+                  <button onClick={handleSave} disabled={saving} className="px-3 py-2 bg-blue-600 text-white rounded">Save</button>
                   <button onClick={() => setEditing(false)} className="px-3 py-2 border rounded">Cancel</button>
                 </div>
               )}

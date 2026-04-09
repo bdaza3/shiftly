@@ -110,7 +110,7 @@ export function Sidebar() {
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-6 border-b border-gray-200 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#4F46E5]">Shiftly</h1>
+          <h1 className="text-2xl font-bold text-black">Shiftly</h1>
           <p className="text-sm text-gray-500 mt-1">Shift Management</p>
         </div>
         <div>

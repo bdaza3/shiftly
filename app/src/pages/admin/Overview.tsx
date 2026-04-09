@@ -135,7 +135,7 @@ export function Overview() {
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-4">
-          <BarChart3 className="w-6 h-6 text-[#4F46E5]" />
+          <BarChart3 className="w-6 h-6 text-blue-600" />
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
             <p className="text-sm text-gray-500 mt-1">
@@ -159,8 +159,8 @@ export function Overview() {
                 <span>Active</span>
               </p>
             </div>
-            <div className="w-12 h-12 bg-[#4F46E5] bg-opacity-10 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-[#4F46E5]" />
+            <div className="w-12 h-12 bg-blue-600 bg-opacity-10 rounded-lg flex items-center justify-center">
+              <Users className="w-6 h-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -174,8 +174,8 @@ export function Overview() {
               </p>
               <p className="text-sm text-gray-500 mt-2">This week</p>
             </div>
-            <div className="w-12 h-12 bg-[#4F46E5] bg-opacity-10 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-[#4F46E5]" />
+            <div className="w-12 h-12 bg-blue-600 bg-opacity-10 rounded-lg flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -219,7 +219,7 @@ export function Overview() {
           </h3>
           <div className="space-y-4">
             {[
-              { role: "Server", count: 3, color: "bg-[#4F46E5]" },
+              { role: "Server", count: 3, color: "bg-blue-600" },
               { role: "Bartender", count: 2, color: "bg-[#6366F1]" },
               { role: "Host", count: 1, color: "bg-purple-400" },
             ].map((item) => (

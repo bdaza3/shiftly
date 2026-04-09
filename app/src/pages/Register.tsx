@@ -137,7 +137,7 @@ export function Register() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button disabled={loading} type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 hover:cursor-pointer">
+          <button disabled={loading} type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 hover:cursor-pointer">
             Save and continue
           </button>
           <button type="button" onClick={() => { console.log('Register: skip -> onboarding'); router.replace('/onboardingcompany') }} className="px-4 py-2 border rounded hover:bg-gray-100 hover:cursor-pointer">

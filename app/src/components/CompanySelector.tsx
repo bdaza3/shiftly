@@ -82,8 +82,8 @@ export default function CompanySelector({ open, onClose }: { open: boolean; onCl
                   setCreating(false);
                 }
               }}
-              disabled={creating}
-              className="bg-indigo-600 text-white px-3 py-1 rounded text-sm disabled:opacity-60"
+              disabled={creating || !newName.trim()}
+              className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-60 hover:bg-blue-700 disabled:bg-gray-500 transition-colors hover:cursor-pointer disabled:hover:cursor-not-allowed"
             >
               {creating ? 'Creating…' : 'Create'}
             </button>

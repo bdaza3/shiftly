@@ -105,7 +105,7 @@ export default function Settings() {
     <div className="max-w-4xl mx-auto py-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Settings</h1>
-        <Link href="/notifications" className="text-sm text-indigo-600 hover:underline">Notifications</Link>
+        <Link href="/notifications" className="text-sm text-blue-600 hover:underline">Notifications</Link>
       </div>
 
       <div className="mt-6 space-y-6">
@@ -125,7 +125,7 @@ export default function Settings() {
               <input value={user?.email ?? ''} disabled className="w-full border bg-gray-100 p-2 rounded" />
             </div>
             <div className="flex gap-3">
-              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
               <button type="button" onClick={() => { setFirstName(profile?.first_name ?? ''); setLastName(profile?.last_name ?? ''); setPhone(profile?.phone ?? '') }} className="px-4 py-2 border rounded">Reset</button>
             </div>
             {message && <div className="text-sm text-gray-700">{message}</div>}
@@ -135,7 +135,7 @@ export default function Settings() {
             <h3 className="font-medium">Change password</h3>
             <form className="mt-2 flex gap-2 max-w-md" onSubmit={changePassword}>
               <input value={newPassword} onChange={e => setNewPassword(e.target.value)} type="password" placeholder="New password" className="flex-1 border p-2 rounded" />
-              <button className="px-4 py-2 bg-indigo-600 text-white rounded">Update</button>
+              <button className="px-4 py-2 bg-blue-600 text-white rounded">Update</button>
             </form>
             {pwMessage && <div className="text-sm text-gray-700 mt-2">{pwMessage}</div>}
           </div>
@@ -176,7 +176,7 @@ export default function Settings() {
                 <div className="font-medium">{company.name}</div>
                 <div className="text-sm text-gray-600">ID: {company.id}</div>
                 <div className="mt-3">
-                  <Link href="/admin/ManageEmployees" className="text-sm text-indigo-600 hover:underline">Manage employees</Link>
+                  <Link href="/admin/ManageEmployees" className="text-sm text-blue-600 hover:underline">Manage employees</Link>
                 </div>
               </div>
             ) : (

@@ -42,7 +42,7 @@ export function Team() {
               return (
                 <div key={m.id ?? fullName} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#4F46E5] flex items-center justify-center text-white font-medium">{(fullName || "?").charAt(0)}</div>
+                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">{(fullName || "?").charAt(0)}</div>
                     <div>
                       <p className="font-semibold text-gray-900">{fullName}</p>
                       <p className="text-sm text-gray-500">{m.role ?? "Employee"}{m.email ? ` • ${m.email}` : ""}</p>

@@ -108,7 +108,7 @@ export function Requests() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <FileText className="w-6 h-6 text-[#4F46E5]" />
+            <FileText className="w-6 h-6 text-blue-600" />
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Requests</h2>
               <p className="text-sm text-gray-500 mt-1">
@@ -122,7 +122,7 @@ export function Requests() {
           {user?.role === "employee" && (
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-[#6366F1] transition-colors"
             >
               <Plus className="w-5 h-5" />
               New Request
@@ -156,7 +156,7 @@ export function Requests() {
                   {user?.role === "admin" && (
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#4F46E5] flex items-center justify-center text-white text-sm font-medium">
+                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
                           {(request.employee_name ?? request.employeeName ?? "?").charAt(0)}
                         </div>
                         <span className="font-medium text-gray-900">{request.employee_name ?? request.employeeName ?? "Unknown"}</span>
@@ -212,17 +212,17 @@ export function Requests() {
 
               <div>
                 <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                <input type="date" id="date" value={date} onChange={(e) => setDate(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+                <input type="date" id="date" value={date} onChange={(e) => setDate(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" />
               </div>
 
               <div>
                 <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-2">Reason</label>
-                <textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} required rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" placeholder="Please provide a reason for your request" />
+                <textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} required rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="Please provide a reason for your request" />
               </div>
 
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors">Submit Request</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-[#6366F1] transition-colors">Submit Request</button>
               </div>
             </form>
           </div>

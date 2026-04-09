@@ -63,11 +63,11 @@ export function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#4F46E5] to-[#6366F1] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-[#6366F1] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-[#4F46E5] mb-2">Create account</h1>
+            <h1 className="text-3xl font-bold text-blue-600 mb-2">Create account</h1>
             <p className="text-gray-500">Sign up to manage your shifts</p>
           </div>
 
@@ -81,7 +81,7 @@ export function Signup() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 suppressHydrationWarning={true}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
               />
             </div>
 
@@ -94,11 +94,11 @@ export function Signup() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 suppressHydrationWarning={true}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
               />
             </div>
 
-            <button onClick={handleSignUp} disabled={loading || userloading} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer">
+            <button onClick={handleSignUp} disabled={loading || userloading} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer">
               <LogIn className="w-5 h-5" />
               Create account
             </button>
@@ -116,7 +116,7 @@ export function Signup() {
 
             <div className="text-center text-sm text-gray-500">
               Already have an account? 
-              <a href="/" className="text-[#4F46E5] hover:text-[#6366F1] font-medium">
+              <a href="/" className="text-blue-600 hover:text-[#6366F1] font-medium">
                 Sign in
               </a>
             </div>
