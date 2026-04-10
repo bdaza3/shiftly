@@ -77,7 +77,7 @@ export function Login() {
 
             <button onClick={handleSignIn}
               type="button"
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogIn className="w-5 h-5" />
               Sign In
@@ -85,7 +85,7 @@ export function Login() {
           </div>
 
           <div className="mt-6 text-center">
-            <Link href="/signup" className="text-sm text-blue-600 hover:text-[#6366F1] font-medium">
+            <Link href="/signup" className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline hover:cursor-pointer">
               Don't have an account? Sign up
             </Link>
           </div>

@@ -191,10 +191,6 @@ export function Sidebar() {
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
-          {/* <Link href="/createsampleuser" className="flex items-center gap-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
-            <Plus className="w-4 h-4" />
-            Create Sample User
-          </Link> */}
       </nav>
 
       <div className="p-3 border-t border-gray-200">
@@ -224,7 +220,7 @@ export function Sidebar() {
                   try { await handleLogout(); } catch (e) { console.warn("Sidebar: retry logout failed", e); }
                 }
               }}
-              className="px-3 py-1 text-sm text-red-600 hover:text-red-700 rounded-lg"
+              className="px-3 py-1 text-sm text-red-600 hover:text-red-700 rounded-lg hover:cursor-pointer"
             >
               Logout
             </button>
