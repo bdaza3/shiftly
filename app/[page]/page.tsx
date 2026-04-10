@@ -18,6 +18,10 @@ import { Overview } from "../src/pages/admin/Overview";
 import OnboardingCompany from "../src/pages/register/OnboardingCompany";
 import JoinCompany from "../src/pages/register/JoinCompany";
 import Step2RoleSelection from "../src/pages/register/Step2RoleSelection";
+import { SetupWorkStructure } from "../src/pages/setup/SetupWorkStructure";
+import { SetupEmployees } from "../src/pages/setup/SetupEmployees";
+import { SetupSchedule } from "../src/pages/setup/SetupSchedule";
+import { SetupSuccess } from "../src/pages/setup/SetupSuccess";
 
 // Map of page names to components - add new pages here
 const PAGES: Record<string, React.ComponentType<any>> = {
@@ -28,7 +32,11 @@ const PAGES: Record<string, React.ComponentType<any>> = {
   step2roleselection: Step2RoleSelection,
   onboardingcompany: OnboardingCompany,
   joincompany: JoinCompany,
-  
+  setupworkstructure: SetupWorkStructure,
+  setupemployees: SetupEmployees,
+  setupschedule: SetupSchedule,
+  setupsuccess: SetupSuccess,
+
   // main
   settings: Settings,
   notifications: Notifications,
@@ -42,7 +50,7 @@ const PAGES: Record<string, React.ComponentType<any>> = {
   // admin
   manageemployees: ManageEmployees,
   manageshifts: ManageShifts,
-  overview: Overview,
+  overview: Overview,  
 };
 
 export default async function Page({ params }: { params: Promise<{ page: string }> | { page: string } }) {
