@@ -171,7 +171,7 @@ export function Dashboard() {
 
       {/* Notifications Panel */}
       {effectiveMembershipRole === "employee" && upcomingShift && (
-        <div className="bg-gradient-to-r from-blue-600 to-[#6366F1] rounded-xl p-6 shadow-sm text-white">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 shadow-sm text-white">
           <h3 className="text-lg font-semibold mb-2">Your Next Shift</h3>
           <div className="flex items-center justify-between">
             <div>

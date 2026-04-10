@@ -3,7 +3,7 @@ import React from "react";
 
 import { Login } from "../src/pages/Login";
 import { Signup } from "../src/pages/SignUp";
-import { Register } from "../src/pages/Register";
+import { Register } from "../src/pages/register/Register";
 import { Dashboard } from "../src/pages/Dashboard";
 import Settings from "../src/pages/Settings";
 import { Notifications } from "../src/pages/Notifications";
@@ -15,26 +15,34 @@ import { Profile } from "../src/pages/Profile";
 import { ManageEmployees } from "../src/pages/admin/ManageEmployees";
 import { ManageShifts } from "../src/pages/admin/ManageShifts";
 import { Overview } from "../src/pages/admin/Overview";
-import CreateSampleUser from "../src/pages/admin/CreateSampleUser";
-import OnboardingCompany from "../src/pages/OnboardingCompany";
+import OnboardingCompany from "../src/pages/register/OnboardingCompany";
+import JoinCompany from "../src/pages/register/JoinCompany";
+import Step2RoleSelection from "../src/pages/register/Step2RoleSelection";
 
+// Map of page names to components - add new pages here
 const PAGES: Record<string, React.ComponentType<any>> = {
+  // auth
+  login: Login,
+  signup: Signup,
+  register: Register,
+  step2roleselection: Step2RoleSelection,
+  onboardingcompany: OnboardingCompany,
+  joincompany: JoinCompany,
+  
+  // main
   settings: Settings,
   notifications: Notifications,
   company: Company,
   dashboard: Dashboard,
-  login: Login,
-  signup: Signup,
   schedule: Schedule,
   team: Team,
   requests: Requests,
-  register: Register,
   profile: Profile,
+
+  // admin
   manageemployees: ManageEmployees,
   manageshifts: ManageShifts,
   overview: Overview,
-  createsampleuser: CreateSampleUser,
-  onboardingcompany: OnboardingCompany,
 };
 
 export default async function Page({ params }: { params: Promise<{ page: string }> | { page: string } }) {

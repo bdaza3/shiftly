@@ -220,7 +220,7 @@ export function Overview() {
           <div className="space-y-4">
             {[
               { role: "Server", count: 3, color: "bg-blue-600" },
-              { role: "Bartender", count: 2, color: "bg-[#6366F1]" },
+              { role: "Bartender", count: 2, color: "bg-blue-700" },
               { role: "Host", count: 1, color: "bg-purple-400" },
             ].map((item) => (
               <div key={item.role}>

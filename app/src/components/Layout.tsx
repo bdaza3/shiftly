@@ -7,13 +7,11 @@ import { Header } from "./Header";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideSidebar = pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/register" || pathname === "/onboardingcompany";
-  
-  const hideHeader = pathname === "/" || pathname === "/login" || pathname === "/signup" || 
-  pathname === "/profile" || pathname === "/requests" || pathname === "/schedule" || pathname === "/team" || 
-  pathname === "/company" || pathname === "/register" || pathname === "/onboardingcompany";
-  
-  const isAuthPage = pathname === "/" || pathname === "/signup" || pathname === "/login";
+  const hideSidebar = !pathname ? false : (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname.startsWith("/register") || pathname === "/onboardingcompany");
+
+  const hideHeader = !pathname ? false : (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/profile" || pathname === "/requests" || pathname === "/schedule" || pathname === "/team" || pathname === "/company" || pathname.startsWith("/register") || pathname === "/onboardingcompany");
+
+  const isAuthPage = !pathname ? false : (pathname === "/" || pathname === "/signup" || pathname === "/login" || pathname.startsWith("/register") || pathname === "/onboardingcompany");
 
   return (
     <div className="min-h-screen flex bg-white text-gray-800">

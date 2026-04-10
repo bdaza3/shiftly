@@ -63,7 +63,7 @@ export function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-[#6366F1] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="p-8">
           <div className="text-center mb-8">
@@ -116,7 +116,7 @@ export function Signup() {
 
             <div className="text-center text-sm text-gray-500">
               Already have an account? 
-              <a href="/" className="text-blue-600 hover:text-[#6366F1] font-medium">
+              <a href="/" className="text-blue-600 hover:text-blue-700 font-medium">
                 Sign in
               </a>
             </div>

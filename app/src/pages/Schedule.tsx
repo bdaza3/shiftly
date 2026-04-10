@@ -584,7 +584,7 @@ function MonthGrid({
                     e.dataTransfer.effectAllowed = "move";
                   }}
                   onClick={() => onEditShift(shift)}
-                  className="bg-blue-600 text-white p-2 rounded text-xs cursor-pointer hover:bg-[#6366F1] transition-colors"
+                  className="bg-blue-600 text-white p-2 rounded text-xs cursor-pointer hover:bg-blue-700 transition-colors"
                 >
                   {(() => {
                     const meta = shiftMeta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };

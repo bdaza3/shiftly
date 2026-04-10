@@ -2,9 +2,9 @@
 
 import React, { startTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../../../lib/supabaseClient'
-import { useCompany } from '../hooks/useCompany'
+import { useAuth } from '../../hooks/useAuth'
+import { supabase } from '../../../../lib/supabaseClient'
+import { useCompany } from '../../hooks/useCompany'
 
 function generateJoinCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();

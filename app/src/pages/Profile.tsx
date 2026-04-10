@@ -143,7 +143,7 @@ export function Profile() {
 
       {/* Profile Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-[#6366F1] h-32"></div>
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 h-32"></div>
         <div className="p-6 -mt-16">
           <div className="flex items-end gap-6 mb-6">
             <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center text-blue-600 text-3xl font-bold border-4 border-white shadow-lg">
