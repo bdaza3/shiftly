@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react'
+import React, { startTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../../../lib/supabaseClient'
@@ -65,7 +65,10 @@ export default function OnboardingCompany() {
       // ensure server and client are synced
       try { await refresh(); console.log('OnboardingCompany.handleCreate: refresh done') } catch (e) { console.warn('OnboardingCompany.handleCreate: refresh failed', e) }
       console.log('OnboardingCompany.handleCreate: navigating to /dashboard')
-      router.push('/dashboard')
+      startTransition(() => {
+        router.replace('/dashboard')
+        router.refresh()
+      })
     } catch (err: any) {
       const text = err?.message || String(err)
       setMessage(text)
@@ -106,7 +109,10 @@ export default function OnboardingCompany() {
         // ensure server and client are synced
         try { await refresh(); console.log('OnboardingCompany.handleJoin: refresh done') } catch (e) { console.warn('OnboardingCompany.handleJoin: refresh failed', e) }
         console.log('OnboardingCompany.handleJoin: navigating to /dashboard')
-        router.push('/dashboard')
+        startTransition(() => {
+          router.replace('/dashboard')
+          router.refresh()
+        })
         return
       } catch (serverJoinErr) {
         // fallback to client-side join
@@ -125,13 +131,19 @@ export default function OnboardingCompany() {
       if (existing && existing.length > 0) {
         addCompany(company)
         try { await refresh(); console.log('OnboardingCompany.handleJoin: refresh done (existing)') } catch (e) { console.warn('OnboardingCompany.handleJoin: refresh failed', e) }
-        router.push('/dashboard')
+        startTransition(() => {
+          router.replace('/dashboard')
+          router.refresh()
+        })
         return
       }
       await supabase.from('company_members').insert({ company_id: company.id, user_id: user?.id, role: 'employee' })
       addCompany(company)
       try { await refresh(); console.log('OnboardingCompany.handleJoin: refresh done (fallback)') } catch (e) { console.warn('OnboardingCompany.handleJoin: refresh failed', e) }
-      router.push('/dashboard')
+      startTransition(() => {
+        router.replace('/dashboard')
+        router.refresh()
+      })
     } catch (err: any) {
       const text = err?.message || String(err)
       setMessage(text)
@@ -152,8 +164,8 @@ export default function OnboardingCompany() {
         <div className="mt-6 space-y-4">
           <p className="text-sm text-gray-700">Are you joining as an employee or creating a company as a manager?</p>
           <div className="flex gap-4">
-            <button onClick={() => { setRole('employee'); setMode('join') }} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded">I'm an employee (join)</button>
-            <button onClick={() => { setRole('manager'); setMode('create') }} className="flex-1 px-4 py-3 bg-green-600 text-white rounded">I'm a manager (create)</button>
+            <button onClick={() => { setRole('employee'); setMode('join') }} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 hover:cursor-pointer">I'm an employee (join)</button>
+            <button onClick={() => { setRole('manager'); setMode('create') }} className="flex-1 px-4 py-3 bg-green-600 text-white rounded hover:bg-green-700 hover:cursor-pointer">I'm a manager (create)</button>
           </div>
         </div>
       )}

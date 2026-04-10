@@ -14,6 +14,7 @@ export function Dashboard() {
   const router = useRouter();
   const [ready, setReady] = useState(false)
   const [membershipRole, setMembershipRole] = useState<string | null>(null)
+  const effectiveMembershipRole = membershipRole ?? selected?.current_user_role ?? null
 
   useEffect(() => {//if user is signed in but has no companies, send to company onboarding (case where user goes directly to dashboard)
     if (ready && user?.id && Array.isArray(companies) && companies.length === 0) {
@@ -53,7 +54,7 @@ export function Dashboard() {
 
   // Compute derived lists from DB-backed shifts
   const todayShifts = (loading ? [] : shifts).filter((s: any) => s.date === todayDateStr);
-  const myShifts = membershipRole === "employee" ? (shifts || []).filter((s: any) => Array.isArray(s.employees) && s.employees.includes(user.id)) : [];
+  const myShifts = effectiveMembershipRole === "employee" ? (shifts || []).filter((s: any) => Array.isArray(s.employees) && s.employees.includes(user.id)) : [];
   const upcomingShift = myShifts.find((s) => new Date(s.date) >= new Date());
   
   //get pending requests for manager/admin view from database (filtering for pending status and future dates)
@@ -169,7 +170,7 @@ export function Dashboard() {
       </div>
 
       {/* Notifications Panel */}
-      {membershipRole === "employee" && upcomingShift && (
+      {effectiveMembershipRole === "employee" && upcomingShift && (
         <div className="bg-gradient-to-r from-blue-600 to-[#6366F1] rounded-xl p-6 shadow-sm text-white">
           <h3 className="text-lg font-semibold mb-2">Your Next Shift</h3>
           <div className="flex items-center justify-between">
@@ -193,7 +194,7 @@ export function Dashboard() {
       )}
 
       {/* Admin Notifications */}
-      {(membershipRole === "manager" || membershipRole === "admin") && pendingRequests.length > 0 && (
+      {(effectiveMembershipRole === "manager" || effectiveMembershipRole === "admin") && pendingRequests.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 
 //company context to store company info and selected company across the app, including company members 
@@ -13,6 +13,7 @@ export type Company = {
   owner?: string
   website?: string
   join_code?: string
+  current_user_role?: string
   teams?: Team[]
 }
 
@@ -59,6 +60,12 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       console.log('CompanyProvider effect: user missing -> resetting companies')
       setCompanies([])
       setSelectedId("")
+      try {
+        window.localStorage.removeItem('companies_cache')
+        window.localStorage.removeItem('activeCompanyId')
+      } catch (e) {
+        console.warn('CompanyProvider effect: failed clearing client cache', e)
+      }
       return
     }
 
@@ -67,7 +74,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return
       try {
         // prefer server API to avoid client-side caching/RLS timing issues
-        const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) })
+        const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }), cache: 'no-store' })
         console.log('CompanyProvider load: server response fetching companies/mine', resp)
         if (resp.ok) {
           const json = await resp.json()
@@ -115,13 +122,24 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     if (!user?.id) return
     try {
       setLoadingCompanies(true)
-      const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) })
+      const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }), cache: 'no-store' })
       if (resp.ok) {
         const json = await resp.json()
         console.log('CompanyContext.refresh: server response', json)
-        setCompanies(json.companies || [])
+        const nextCompanies = json.companies || []
+        setCompanies(nextCompanies)
+        setSelectedId((current) => {
+          if (current && nextCompanies.some((company: Company) => company.id === current)) return current
+          const fallback = nextCompanies[0]?.id ?? ''
+          try {
+            if (fallback) localStorage.setItem('activeCompanyId', fallback)
+            else localStorage.removeItem('activeCompanyId')
+          } catch (e) {}
+          return fallback
+        })
       } else {
         setCompanies([])
+        setSelectedId("")
       }
     } catch (e) {
       console.warn('refresh companies failed', e)

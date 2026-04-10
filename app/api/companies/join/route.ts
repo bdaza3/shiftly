@@ -22,12 +22,14 @@ export async function POST(req: Request) {
     // ensure membership exists
     const { data: existing, error: exErr } = await svc.from('company_members').select('*').eq('company_id', company.id).eq('user_id', user_id).limit(1)
     if (exErr) return NextResponse.json({ error: exErr.message || String(exErr) }, { status: 400 })
+    let role = existing?.[0]?.role ?? null
     if (!existing || existing.length === 0) {
       const { error: insErr } = await svc.from('company_members').insert({ company_id: company.id, user_id, role: 'employee' })
       if (insErr) return NextResponse.json({ error: insErr.message || String(insErr) }, { status: 400 })
+      role = 'employee'
     }
 
-    return NextResponse.json({ ok: true, company })
+    return NextResponse.json({ ok: true, company: { ...company, current_user_role: role ?? 'employee' } })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || String(err) }, { status: 500 })
   }

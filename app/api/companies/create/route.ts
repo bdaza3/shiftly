@@ -43,7 +43,7 @@ if (memberErr) {
   return NextResponse.json({ error: memberErr.message }, { status: 400 })
 }
 
-return NextResponse.json({ ok: true, company })
+return NextResponse.json({ ok: true, company: { ...company, current_user_role: 'admin' } })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || String(err) }, { status: 500 })
   }

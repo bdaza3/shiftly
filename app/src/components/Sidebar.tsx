@@ -10,23 +10,24 @@ import {
   ClipboardList,
   BarChart3,
   ChevronRight,
-  Plus,
   Building
 } from "lucide-react";
 import CompanySelector from "./CompanySelector";
 import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
 import { supabase } from '../../../lib/supabaseClient'
-import { useEffect, useState } from 'react'
+import { startTransition, useEffect, useState } from 'react'
 
 export function Sidebar() {
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
-  const { companies, selected, selectCompany, addCompany } = useCompany();
+  const { selected } = useCompany();
   const [isAdmin, setIsAdmin] = useState(false);
   const [membershipRole, setMembershipRole] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false)
+  const inferredMembershipRole = membershipRole ?? selected?.current_user_role ?? null
+  const inferredIsAdmin = /manager|admin|owner|company/.test(String(inferredMembershipRole || '').toLowerCase())
 
   useEffect(() => {
     setMounted(true)
@@ -37,16 +38,21 @@ export function Sidebar() {
       await signOut();
     } catch (err) {
       console.warn("signOut error", err);
+    } finally {
+      startTransition(() => {
+        router.replace("/login");
+        router.refresh();
+      });
     }
-    // navigate to login so user sees sign-in prompt
-    try { router.replace("/login"); } catch (e) { /* ignore */ }
-    try { window.location.assign("/login"); } catch (e) { try { window.location.href = "/login"; } catch(e){/*ignore*/} }
   };
   useEffect(() => {
     let mounted = true
     const load = async () => {
       if (!selected?.id || !user?.id) {
-        if (mounted) setIsAdmin(false)
+        if (mounted) {
+          setMembershipRole(selected?.current_user_role ?? null)
+          setIsAdmin(/manager|admin|owner|company/.test(String(selected?.current_user_role || '').toLowerCase()))
+        }
         return
       }
       try {
@@ -102,7 +108,7 @@ export function Sidebar() {
   const lastName = profile?.last_name ?? user?.user_metadata?.lastName ?? '';
   const displayName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name || user?.email);
   // avoid showing raw auth role like 'authenticated' to users
-  const rawRole = membershipRole ?? profile?.role ?? user?.user_metadata?.role ?? user?.role
+  const rawRole = inferredMembershipRole ?? profile?.role ?? user?.user_metadata?.role ?? user?.role
   let displayRole = rawRole && String(rawRole).toLowerCase() === 'authenticated' ? null : rawRole
   displayRole = displayRole && displayRole.at(0)?.toString().toUpperCase() + displayRole.slice(1) // capitalize first letter for nicer display
 
@@ -150,8 +156,24 @@ export function Sidebar() {
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
-        {isAdmin && (
+        <Link href="/requests" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+          <span className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Requests
+          </span>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+        </Link>
+        <Link href="/company" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+          <span className="flex items-center gap-2">
+            <Building className="w-4 h-4" />
+            Company
+          </span>
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+        </Link>
+
+        {(isAdmin || inferredIsAdmin) && (
           <>
+            <span className="text-xs font-semibold text-gray-400 uppercase px-4 mt-6 mb-2">Management</span>
             <Link href="/manageemployees" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
               <span className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
@@ -177,20 +199,7 @@ export function Sidebar() {
             </Link>
           </>
         )}
-        <Link href="/requests" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
-          <span className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Requests
-          </span>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-        </Link>
-        <Link href="/company" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
-          <span className="flex items-center gap-2">
-            <Building className="w-4 h-4" />
-            Company
-          </span>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
-        </Link>
+
       </nav>
 
       <div className="p-3 border-t border-gray-200">

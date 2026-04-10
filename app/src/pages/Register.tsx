@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../../../lib/supabaseClient";
 
 export function Register() {
-  const { user, refreshProfile, loading: authLoading } = useAuth();
+  const { user, refreshProfile, syncLocalAuth, loading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -76,15 +76,28 @@ export function Register() {
         console.error('profiles upsert failed', upsertErr);
       }
 
+      syncLocalAuth({
+        profile: {
+          ...(user ? { id: user.id } : {}),
+          first_name: firstName,
+          last_name: lastName,
+          phone,
+        },
+        userMetadata: {
+          firstName,
+          lastName,
+          phone,
+        },
+      })
+
       console.log('HANDLE SUBMIT: registration successful, navigating to onboarding')
+      startTransition(() => {
         router.replace("/onboardingcompany");
-
-        console.log('HANDLE SUBMIT: refreshing profile to sync state')
-
-      // Refresh profile so UI (sidebar/profile) reflects saved data
-        refreshProfile().catch((e) => {
-        console.warn('Register: refreshProfile failed', e);
-        });      
+        router.refresh();
+      })
+      refreshProfile().catch((e) => {
+        console.warn('Register: background refreshProfile failed', e);
+      })
     } catch (err: any) {
       console.error('Register: submission failed', err);
       const text = err?.message || String(err)

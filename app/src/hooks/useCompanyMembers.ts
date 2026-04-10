@@ -1,72 +1,55 @@
 import { useEffect, useState } from 'react'
-import { supabase } from "../../../lib/supabaseClient";
-import { useAuth } from './useAuth';
-import { useCompany } from './useCompany';
+import { useAuth } from './useAuth'
+import { useCompany } from './useCompany'
 
 export function useCompanyMembers(companyId: string | null) {
-  const { user } = useAuth();
-  const [members, setMembers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth()
+  const [members, setMembers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const { selected } = useCompany();
-  const targetId = companyId ?? selected?.id ?? null;
+  const { selected } = useCompany()
+  const selectedId = selected?.id ?? null
+  const targetId = companyId ?? selectedId ?? null
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      console.log('Team: effect run, selected=', selected, 'companyId param=', companyId, 'targetId=', targetId)
+    let mounted = true
+
+    ;(async () => {
+      console.log('Team: effect run, selectedId=', selectedId, 'companyId param=', companyId, 'targetId=', targetId)
+
       if (!targetId) {
         if (mounted) {
-          setMembers([]);
-          setLoading(false);
-          console.log("Team: no target company selected — set members=[] and loading=false");
+          setMembers([])
+          setLoading(false)
+          console.log('Team: no target company selected - set members=[] and loading=false')
         }
         return
       }
 
       try {
-        console.log('Team: loading members for company', targetId)
         setLoading(true)
-        console.log("Team: loading true — querying company_members")
+        console.log('Team: loading members for company via API', targetId)
 
-        const { data: membersData, error: membersError } = await supabase
-          .from('company_members')
-          .select('user_id, role')
-          .eq('company_id', targetId)
+        const resp = await fetch('/api/company_members/list', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ company_id: targetId }),
+          cache: 'no-store',
+        })
+        const json = await resp.json()
+        console.log('Team: company_members API response', { status: resp.status, json })
 
-        console.log('Team: company_members response', { membersData, membersError })
-        if (membersError) throw membersError
-        const rows = membersData || []
+        if (!resp.ok) throw new Error(json?.error || 'Failed to load company members')
 
-        const userIds = rows.map((m: any) => m.user_id).filter(Boolean)
-        if (userIds.length === 0) {
-          if (mounted) setMembers([])
-          console.log('Team: no other members found for company', targetId)
-          return
-        }
-
-        console.log('Team: fetching profiles for userIds', userIds)
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name')
-          .in('id', userIds)
-
-        console.log('Team: profiles response', { profilesData, profilesError })
-        if (profilesError) throw profilesError
-
-        const profileMap = new Map((profilesData || []).map((p: any) => [p.id, p]))
-
-        const out = rows.map((m: any) => {
-          const p = profileMap.get(m.user_id)
-          const fullName = p ? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() : null
-          return {
-            id: m.user_id,
-            user_id: m.user_id,
-            full_name: fullName,
-            name: fullName || m.user_id,
-            role: (m.role || 'employee').charAt(0).toUpperCase() + (m.role || 'employee').slice(1),
-          }
-        }).filter((m: any) => m.user_id !== user?.id)
+        const out = (json?.members || [])
+          .map((member: any) => ({
+            ...member,
+            user_id: member.user_id ?? member.id,
+            full_name: member.full_name ?? member.name ?? null,
+            name: member.name ?? member.email ?? member.id,
+            role: (member.role || 'employee').charAt(0).toUpperCase() + (member.role || 'employee').slice(1),
+          }))
+          .filter((member: any) => member.id !== user?.id)
 
         if (mounted) {
           setMembers(out)
@@ -79,12 +62,14 @@ export function useCompanyMembers(companyId: string | null) {
         if (mounted) setLoading(false)
         console.log('Team: loading false (finished)')
       }
-    })();
+    })()
 
-    return () => { mounted = false; };
-  }, [companyId, selected?.id, user?.id, targetId]);
+    return () => {
+      mounted = false
+    }
+  }, [companyId, selectedId, user?.id, targetId])
 
-  return { members, loading };
+  return { members, loading }
 }
 
-export default useCompanyMembers;
+export default useCompanyMembers

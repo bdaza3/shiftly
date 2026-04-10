@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 
 type AuthContextValue = {
@@ -13,6 +13,7 @@ type AuthContextValue = {
   signUp: (email: string, password: string) => Promise<any>
   signOut: () => Promise<any>
   refreshProfile: () => Promise<void>
+  syncLocalAuth: (payload: { profile?: any | null; userMetadata?: Record<string, any> | null }) => void
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -21,6 +22,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any | null>(null)
   const [profile, setProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const clearAuthState = () => {
+    setUser(null)
+    setProfile(null)
+    setLoading(false)
+  }
+  const syncLocalAuth = ({ profile: nextProfile, userMetadata }: { profile?: any | null; userMetadata?: Record<string, any> | null }) => {
+    if (nextProfile !== undefined) setProfile(nextProfile)
+    if (userMetadata) {
+      setUser((prev: any) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          user_metadata: {
+            ...(prev.user_metadata ?? {}),
+            ...userMetadata,
+          },
+        }
+      })
+    }
+  }
 
   useEffect(() => {
     let mounted = true
@@ -97,21 +118,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = async () => {
     console.log('AuthContext.refreshProfile: start')
     const GET_SESSION_TIMEOUT = 3000
-    const getSessionWithTimeout = (timeout = GET_SESSION_TIMEOUT) =>
+    const withTimeout = <T,>(promise: Promise<T>, timeout: number, label: string) =>
       Promise.race([
-        supabase.auth.getSession(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('supabase.auth.getSession timeout')), timeout)),
+        promise,
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timeout`)), timeout)),
       ])
 
     try {
       let s: any = null
       try {
-        s = await getSessionWithTimeout()
+        s = await withTimeout(supabase.auth.getSession(), GET_SESSION_TIMEOUT, 'supabase.auth.getSession')
       } catch (e) {
         console.warn('AuthContext.refreshProfile: getSession timed out or failed', e)
         // don't clear existing user/profile on transient getSession failures; try getUser fallback
         try {
-          const gu = await supabase.auth.getUser()
+          const gu = await withTimeout(supabase.auth.getUser(), 2000, 'supabase.auth.getUser')
           s = { data: { user: (gu as any)?.data?.user ?? null } }
           console.log('AuthContext.refreshProfile: getUser fallback success', (s as any)?.data?.user?.id)
         } catch (e2) {
@@ -121,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      const u = (s as any)?.data?.session?.user ?? null
+      const u = (s as any)?.data?.session?.user ?? (s as any)?.data?.user ?? null
       console.log('AuthContext.refreshProfile: session user', u)
       setUser(u)
       if (u?.id) {
@@ -179,21 +200,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
+    clearAuthState()
     try {
-      const res = await supabase.auth.signOut();
-      setUser(null);
-      setProfile(null);
+      const res = await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('supabase.auth.signOut timeout')), 5000)),
+      ])
       return res;
     } catch (err) {
       console.warn("AuthContext signOut error", err);
-      setUser(null);
-      setProfile(null);
       throw err;
     }
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, userloading: loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, userloading: loading, signIn, signUp, signOut, refreshProfile, syncLocalAuth }}>
       {children}
     </AuthContext.Provider>
   )

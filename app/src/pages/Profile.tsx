@@ -20,6 +20,7 @@ export function Profile() {
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
+  const effectiveMembershipRole = membershipRole ?? selected?.current_user_role ?? null
 
   useEffect(() => {
     if (!user) return;
@@ -84,7 +85,7 @@ export function Profile() {
 
   if (!user) return null;
 
-  const rawRole = membershipRole ?? profile?.role ?? user?.user_metadata?.role ?? user?.role
+  const rawRole = effectiveMembershipRole ?? profile?.role ?? user?.user_metadata?.role ?? user?.role
   let displayRole = rawRole && String(rawRole).toLowerCase() === 'authenticated' ? null : rawRole
   displayRole = displayRole && displayRole.at(0)?.toString().toUpperCase() + displayRole.slice(1) // capitalize first letter for nicer display
   const displayName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name || user?.email);
