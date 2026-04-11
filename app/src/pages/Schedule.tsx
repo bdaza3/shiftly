@@ -1,619 +1,397 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Calendar as CalendarIcon,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  LoaderCircle,
+  Redo2,
+  Sparkles,
+  Undo2,
+} from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 import CreateShiftModal from "../components/CreateShiftModal";
 import GanttDayDetail from "../components/GanttDayDetail";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
-import { useShifts } from "../hooks/useShifts";
-import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useCompany } from "../hooks/useCompany";
 import { useAuth } from "../hooks/useAuth";
-import { supabase } from "@/lib/supabaseClient";
+import { useCompany } from "../hooks/useCompany";
+import { useShifts } from "../hooks/useShifts";
+
+type SaveState = { kind: "idle" | "saving" | "saved" | "error"; message: string };
+type HistoryEntry = { label: string; undo: () => Promise<void>; redo: () => Promise<void> };
+type EmployeeOption = { id: string; name: string; role?: string };
+type ShiftDraft = {
+  date: string;
+  startTime: string;
+  endTime: string;
+  employees: string[];
+  employeeId?: string;
+  employeeName?: string;
+  role: string;
+  location?: string;
+  company_id?: string;
+};
+
+const EMPTY_STATE: SaveState = { kind: "idle", message: "" };
+
+function SaveBadge({ state }: { state: SaveState }) {
+  if (state.kind === "idle") return null;
+  const tone = state.kind === "saved" ? "bg-emerald-50 text-emerald-700" : state.kind === "error" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700";
+  return (
+    <div className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm ${tone}`}>
+      {state.kind === "saving" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+      <span>{state.message}</span>
+    </div>
+  );
+}
 
 export function Schedule() {
   const { user, profile } = useAuth();
+  const { selected } = useCompany();
+  const { shifts, createShift, updateShift, deleteShift } = useShifts(selected?.id);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"week" | "month">("week");
-  const { selected } = useCompany();
-  const { shifts, loading, createShift, updateShift, deleteShift } = useShifts(selected?.id);
+  const [companyMembers, setCompanyMembers] = useState<EmployeeOption[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingShift, setEditingShift] = useState<any | null>(null);
+  const [expandedDate, setExpandedDate] = useState<string | null>(null);
+  const [shiftMeta, setShiftMeta] = useState<Record<string, { employees?: string[]; employeeName?: string }>>({});
+  const [saveState, setSaveState] = useState<SaveState>(EMPTY_STATE);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [redoHistory, setRedoHistory] = useState<HistoryEntry[]>([]);
+  const [copiedShift, setCopiedShift] = useState<ShiftDraft | null>(null);
+  const [dragPreview, setDragPreview] = useState<{ visible: boolean; x: number; y: number; title?: string }>({ visible: false, x: 0, y: 0 });
+  const resetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [companyMembers, setCompanyMembers] = useState<{ id: string; name: string; role?: string }[]>([]);
-  const [membersLoading, setMembersLoading] = useState(false);
+  const setStatus = useCallback((kind: SaveState["kind"], message: string) => {
+    if (resetRef.current) clearTimeout(resetRef.current);
+    setSaveState({ kind, message });
+    if (kind === "saved" || kind === "error") resetRef.current = setTimeout(() => setSaveState(EMPTY_STATE), 2200);
+  }, []);
+
+  useEffect(() => () => { if (resetRef.current) clearTimeout(resetRef.current); }, []);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      if (!selected) {
-        if (mounted) setCompanyMembers([]);
-        return;
-      }
-      setMembersLoading(true);
+      if (!selected?.id) return mounted && setCompanyMembers([]);
       try {
-        // 1) Client-side: fetch company_members and batch profiles (same approach as Team)
-        const { data: membersData, error: membersErr } = await supabase
-          .from('company_members')
-          .select('user_id, role')
-          .eq('company_id', selected.id)
-          .order('created_at', { ascending: false });
-        console.log('Schedule: membersData', membersData, 'error', membersErr);
-        if (membersErr) throw membersErr;
-
+        const { data: membersData, error } = await supabase.from("company_members").select("user_id, role").eq("company_id", selected.id);
+        if (error) throw error;
         const userIds = (membersData || []).map((m: any) => m.user_id).filter(Boolean);
-        let profilesData: any[] = [];
-        if (userIds.length > 0) {
-          const { data: p, error: pErr } = await supabase
-            .from('profiles')
-            .select('id, first_name, last_name')
-            .in('id', userIds);
-          if (pErr) console.log('Schedule: profiles fetch error', pErr);
-          profilesData = p || [];
-        }
-
-        const profileMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
-
-        const out = (membersData || [])
-          .map((m: any) => {
-            const p = profileMap.get(m.user_id);
-            const fullName = p ? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() : null;
-            return {
-              id: m.user_id,
-              user_id: m.user_id,
-              full_name: fullName,
-              name: fullName || m.user_id,
-              role: m.role,
-              email: p?.email ?? null,
-            };
-          })
-          .filter((m: any) => m.user_id !== user?.id);
-
-        // also filter out admin/owner from assignable list later; here keep full roster
-        if (mounted && (out || []).length > 0) {
-          setCompanyMembers(out);
-          setMembersLoading(false);
-          return;
-        }
-
-        // 2) Fallback: server-side endpoint (service role) when client cannot access members
-        try {
-          const resp = await fetch('/api/company_members/list', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id }) });
-          const json = await resp.json();
-          if (resp.ok && json?.members) {
-            const normalized = (json.members || []).map((m: any) => ({
-              id: m.id ?? m.user_id,
-              user_id: m.user_id ?? m.id,
-              name: m.name ?? m.full_name ?? m.email ?? String(m.id ?? m.user_id),
-              full_name: m.full_name ?? null,
-              first_name: m.first_name ?? null,
-              last_name: m.last_name ?? null,
-              role: m.role,
-            }));
-            if (mounted) setCompanyMembers(normalized.filter((mm: any) => mm.user_id !== user?.id));
-          } else {
-            if (mounted) setCompanyMembers([]);
-          }
-        } catch (e2) {
-          console.warn('Schedule: server fallback failed', e2);
-          if (mounted) setCompanyMembers([]);
-        }
-      } catch (err) {
-        console.warn('Schedule: could not load company members', err);
-        // final fallback: try server-side endpoint
-        try {
-          const resp = await fetch('/api/company_members/list', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id }) });
-          const json = await resp.json();
-          if (resp.ok && json?.members) {
-            const normalized = (json.members || []).map((m: any) => ({
-              id: m.id ?? m.user_id,
-              user_id: m.user_id ?? m.id,
-              name: m.name ?? m.full_name ?? m.email ?? String(m.id ?? m.user_id),
-              full_name: m.full_name ?? null,
-              first_name: m.first_name ?? null,
-              last_name: m.last_name ?? null,
-              role: m.role,
-            }));
-            if (mounted) setCompanyMembers(normalized.filter((mm: any) => mm.user_id !== user?.id));
-          } else {
-            if (mounted) setCompanyMembers([]);
-          }
-        } catch (e3) {
-          console.warn('Schedule: server fallback also failed', e3);
-          if (mounted) setCompanyMembers([]);
-        }
-      } finally {
-        if (mounted) setMembersLoading(false);
+        const { data: profiles } = userIds.length ? await supabase.from("profiles").select("id, first_name, last_name").in("id", userIds) : { data: [] };
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim()]));
+        if (!mounted) return;
+        setCompanyMembers((membersData || []).map((m: any) => ({ id: m.user_id, name: profileMap.get(m.user_id) || m.user_id, role: m.role })).filter((m: EmployeeOption) => m.id !== user?.id));
+      } catch (error) {
+        console.warn("Schedule members load failed", error);
+        if (mounted) setCompanyMembers([]);
       }
     })();
     return () => { mounted = false; };
   }, [selected?.id, user?.id]);
 
-  // Create shift modal state
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingShift, setEditingShift] = useState<any | null>(null);
-  const [dragPreview, setDragPreview] = useState<{ visible: boolean; x: number; y: number; title?: string }>({ visible: false, x: 0, y: 0 });
-  const [expandedDate, setExpandedDate] = useState<string | null>(null);
-  // preserve shift metadata (employees / employeeName) locally so moving a shift
-  // doesn't momentarily lose assignment if backend response omits those fields
-  const [shiftMeta, setShiftMeta] = useState<Record<string, { employees?: string[]; employeeName?: string }>>({});
-
-  const getWeekDates = (date: Date) => {
-    const week = [];
-    const current = new Date(date);
-    const day = current.getDay();
-    const diff = current.getDate() - day;
-    current.setDate(diff);
-
-    for (let i = 0; i < 7; i++) {
-      week.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
-    return week;
-  };
-
-  const weekDates = getWeekDates(currentDate);
-
-  const goToPrevious = () => {
-    const newDate = new Date(currentDate);
-    if (view === "week") {
-      newDate.setDate(newDate.getDate() - 7);
-    } else {
-      newDate.setMonth(newDate.getMonth() - 1);
-    }
-    setCurrentDate(newDate);
-  };
-
-  const goToNext = () => {
-    const newDate = new Date(currentDate);
-    if (view === "week") {
-      newDate.setDate(newDate.getDate() + 7);
-    } else {
-      newDate.setMonth(newDate.getMonth() + 1);
-    }
-    setCurrentDate(newDate);
-  };
-
-  const getShiftsForDate = (date: Date) => {
-    return shifts.filter((shift) => {
-      const shiftDate = new Date(shift.date);
-      return (
-        shiftDate.getDate() === date.getDate() &&
-        shiftDate.getMonth() === date.getMonth() &&
-        shiftDate.getFullYear() === date.getFullYear()
-      );
-    });
-  };
-
-  // shifts are provided by `useShifts` hook (includes fetch and realtime)
-
-  const handleSaveShift = async (payload: any) => {
-    try {
-      if (payload.id) {
-        await updateShift(payload.id, payload);
-      } else {
-        await createShift(payload);
-      }
-    } catch (err) {
-      console.error("save shift", err);
-    }
-    setEditingShift(null);
-    setShowCreateModal(false);
-  };
-
-  const handleDeleteShift = async (id: string) => {
-    try {
-      await deleteShift(id);
-    } catch (err) {
-      console.error("delete shift", err);
-    }
-    setEditingShift(null);
-    setShowCreateModal(false);
-  };
-
-  const handleMoveShift = async (shiftId: string, newDateStr: string) => {
-    try {
-      await updateShift(shiftId, { date: newDateStr });
-    } catch (err) {
-      console.error("move shift", err);
-    }
-  };
-
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, shiftId: string) => {
-    e.dataTransfer.setData("text/plain", shiftId);
-    e.dataTransfer.effectAllowed = "move";
-    const sh = shifts.find((x) => x.id === shiftId);
-    let title = sh?.employeeName;
-    if (sh?.employees && sh.employees.length > 0) {
-      const firstId = sh.employees[0];
-      const m = companyMembers.find((cm) => cm.id === firstId);
-      title = m?.name ?? firstId;
-    }
-    setDragPreview({ visible: true, x: e.clientX, y: e.clientY, title });
-  };
-
-  // keep local shift metadata in sync but prefer existing meta when present
   useEffect(() => {
     setShiftMeta((prev) => {
-      const out: Record<string, { employees?: string[]; employeeName?: string }> = { ...prev };
-      (shifts || []).forEach((s) => {
-        if (!s?.id) return;
-        out[s.id] = {
-          employees: s.employees ?? prev[s.id]?.employees,
-          employeeName: s.employeeName ?? s.name ?? prev[s.id]?.employeeName,
-        };
+      const next = { ...prev };
+      shifts.forEach((shift) => {
+        if (!shift.id) return;
+        next[shift.id] = { employees: shift.employees ?? prev[shift.id]?.employees, employeeName: shift.employeeName ?? shift.name ?? prev[shift.id]?.employeeName };
       });
-      return out;
+      return next;
     });
   }, [shifts]);
 
-  const handleDropOnDate = (date: Date, e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const id = e.dataTransfer.getData("text/plain");
-    if (!id) return;
-    const dateStr = date.toISOString().split("T")[0];
-    handleMoveShift(id, dateStr);
-    setDragPreview((p) => ({ ...p, visible: false }));
+  const assignableEmployees = useMemo(() => companyMembers.filter((m) => !["admin", "manager"].includes((m.role || "").toLowerCase()) && m.id !== user?.id), [companyMembers, user?.id]);
+  const pushHistory = useCallback((entry: HistoryEntry) => { setHistory((prev) => [...prev, entry]); setRedoHistory([]); }, []);
+  const withCompany = useCallback((draft: ShiftDraft) => ({ ...draft, ...(selected?.id ? { company_id: selected.id } : {}) }), [selected?.id]);
+  const toDraft = useCallback((shift: any, overrides: Partial<ShiftDraft> = {}): ShiftDraft => {
+    const employees = overrides.employees ?? shift.employees ?? [];
+    const employeeId = overrides.employeeId ?? shift.employeeId ?? employees[0];
+    const employeeName = overrides.employeeName ?? shift.employeeName ?? (employeeId ? companyMembers.find((m) => m.id === employeeId)?.name : undefined);
+    return {
+      date: overrides.date ?? shift.date,
+      startTime: overrides.startTime ?? shift.startTime ?? "09:00",
+      endTime: overrides.endTime ?? shift.endTime ?? "17:00",
+      employees,
+      ...(employeeId ? { employeeId } : {}),
+      ...(employeeName ? { employeeName } : {}),
+      role: overrides.role ?? shift.role ?? "Staff",
+      ...(overrides.location ?? shift.location ? { location: overrides.location ?? shift.location } : {}),
+      ...(selected?.id ? { company_id: selected.id } : {}),
+    };
+  }, [companyMembers, selected?.id]);
+
+  const runAction = useCallback(async (label: string, action: () => Promise<void>) => {
+    setStatus("saving", label);
+    try {
+      await action();
+      setStatus("saved", "Saved changes");
+    } catch (error) {
+      console.error(label, error);
+      setStatus("error", "Could not save changes");
+      throw error;
+    }
+  }, [setStatus]);
+
+  const getWeekDates = (date: Date) => {
+    const week: Date[] = [];
+    const current = new Date(date);
+    current.setDate(current.getDate() - current.getDay());
+    for (let i = 0; i < 7; i += 1) { week.push(new Date(current)); current.setDate(current.getDate() + 1); }
+    return week;
   };
 
-  const handleDragOverCell = (e: React.DragEvent<HTMLDivElement>) => {
-    setDragPreview((p) => ({ ...p, x: e.clientX + 12, y: e.clientY + 12 }));
-  };
+  const getShiftsForDate = useCallback((date: Date) => shifts.filter((shift) => {
+    const shiftDate = new Date(shift.date);
+    return shiftDate.getDate() === date.getDate() && shiftDate.getMonth() === date.getMonth() && shiftDate.getFullYear() === date.getFullYear();
+  }), [shifts]);
 
   const isToday = (date: Date) => {
     const today = new Date();
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
+    return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
   };
+
+  const handleUndo = useCallback(async () => {
+    const entry = history[history.length - 1];
+    if (!entry) return;
+    setHistory((prev) => prev.slice(0, -1));
+    try { await runAction(`Undoing ${entry.label.toLowerCase()}`, entry.undo); setRedoHistory((prev) => [...prev, entry]); }
+    catch { setHistory((prev) => [...prev, entry]); }
+  }, [history, runAction]);
+
+  const handleRedo = useCallback(async () => {
+    const entry = redoHistory[redoHistory.length - 1];
+    if (!entry) return;
+    setRedoHistory((prev) => prev.slice(0, -1));
+    try { await runAction(`Redoing ${entry.label.toLowerCase()}`, entry.redo); setHistory((prev) => [...prev, entry]); }
+    catch { setRedoHistory((prev) => [...prev, entry]); }
+  }, [redoHistory, runAction]);
+
+  const handleSaveShift = useCallback(async (payload: any) => {
+    const draft = withCompany(payload);
+    if (payload.id) {
+      const existing = shifts.find((shift) => shift.id === payload.id);
+      if (!existing) return;
+      const before = toDraft(existing);
+      await runAction("Saving shift", async () => { await updateShift(payload.id, draft); });
+      pushHistory({ label: "Edit shift", undo: async () => { await updateShift(payload.id, before); }, redo: async () => { await updateShift(payload.id, draft); } });
+    } else {
+      let createdId = "";
+      await runAction("Creating shift", async () => { const created = await createShift(draft); createdId = created.id; });
+      pushHistory({ label: "Create shift", undo: async () => { await deleteShift(createdId); }, redo: async () => { const recreated = await createShift(draft); createdId = recreated.id; } });
+    }
+    setEditingShift(null);
+    setShowCreateModal(false);
+  }, [createShift, deleteShift, pushHistory, runAction, shifts, toDraft, updateShift, withCompany]);
+
+  const handleDeleteShift = useCallback(async (id: string) => {
+    const existing = shifts.find((shift) => shift.id === id);
+    if (!existing) return;
+    const before = toDraft(existing);
+    let activeId = id;
+    await runAction("Deleting shift", async () => { await deleteShift(id); });
+    pushHistory({
+      label: "Delete shift",
+      undo: async () => { const restored = await createShift(before); activeId = restored.id; },
+      redo: async () => { await deleteShift(activeId); },
+    });
+    setEditingShift(null);
+    setShowCreateModal(false);
+  }, [createShift, deleteShift, pushHistory, runAction, shifts, toDraft]);
+
+  const handleMoveShift = useCallback(async (shiftId: string, newDate: string) => {
+    const existing = shifts.find((shift) => shift.id === shiftId);
+    if (!existing || existing.date === newDate) return;
+    const before = toDraft(existing);
+    const after = toDraft(existing, { date: newDate });
+    await runAction("Moving shift", async () => { await updateShift(shiftId, after); });
+    pushHistory({ label: "Move shift", undo: async () => { await updateShift(shiftId, before); }, redo: async () => { await updateShift(shiftId, after); } });
+  }, [pushHistory, runAction, shifts, toDraft, updateShift]);
+
+  const handleCopyShift = useCallback((shift: any) => { setCopiedShift(toDraft(shift)); setStatus("saved", "Shift copied"); }, [setStatus, toDraft]);
+
+  const handlePasteShift = useCallback(async (date: string) => {
+    if (!copiedShift) return;
+    const draft = withCompany({ ...copiedShift, date });
+    let createdId = "";
+    await runAction("Copying shift", async () => { const created = await createShift(draft); createdId = created.id; });
+    pushHistory({ label: "Copy shift", undo: async () => { await deleteShift(createdId); }, redo: async () => { const recreated = await createShift(draft); createdId = recreated.id; } });
+  }, [copiedShift, createShift, deleteShift, pushHistory, runAction, withCompany]);
+
+  const buildAutoShifts = useCallback((date: string) => {
+    const busy = new Set(shifts.filter((shift) => shift.date === date).flatMap((shift) => shift.employees ?? []));
+    const counts = new Map(assignableEmployees.map((employee) => [employee.id, shifts.reduce((sum, shift) => sum + ((shift.employees ?? []).includes(employee.id) ? 1 : 0), 0)]));
+    const available = [...assignableEmployees]
+      .filter((employee) => !busy.has(employee.id))
+      .sort((left, right) => ((counts.get(left.id) ?? 0) - (counts.get(right.id) ?? 0)) || left.name.localeCompare(right.name));
+    return [
+      { startTime: "07:00", endTime: "15:00", role: "Opening" },
+      { startTime: "09:00", endTime: "17:00", role: "Mid" },
+      { startTime: "15:00", endTime: "23:00", role: "Closing" },
+    ].slice(0, available.length).map((template, index) => withCompany({ date, ...template, employees: [available[index].id], employeeId: available[index].id, employeeName: available[index].name }));
+  }, [assignableEmployees, shifts, withCompany]);
+
+  const handleAutoCreate = useCallback(async (date: string) => {
+    const drafts = buildAutoShifts(date);
+    if (drafts.length === 0) return setStatus("error", "No available employees for auto-fill");
+    let createdIds: string[] = [];
+    await runAction("Auto-filling shifts", async () => {
+      createdIds = [];
+      for (const draft of drafts) { const created = await createShift(draft); createdIds.push(created.id); }
+    });
+    pushHistory({
+      label: "Auto-fill shifts",
+      undo: async () => { for (const id of createdIds) await deleteShift(id); },
+      redo: async () => {
+        const nextIds: string[] = [];
+        for (const draft of drafts) { const created = await createShift(draft); nextIds.push(created.id); }
+        createdIds = nextIds;
+      },
+    });
+  }, [buildAutoShifts, createShift, deleteShift, pushHistory, runAction, setStatus]);
+
+  const openShift = (shift: any) => { setEditingShift(shift); setShowCreateModal(true); };
+  const weekDates = getWeekDates(currentDate);
+  const goToPrevious = () => setCurrentDate((prev) => {
+    const next = new Date(prev);
+    if (view === "week") next.setDate(next.getDate() - 7);
+    else next.setMonth(next.getMonth() - 1);
+    return next;
+  });
+  const goToNext = () => setCurrentDate((prev) => {
+    const next = new Date(prev);
+    if (view === "week") next.setDate(next.getDate() + 7);
+    else next.setMonth(next.getMonth() + 1);
+    return next;
+  });
+
+  const startDrag = (e: React.DragEvent<HTMLDivElement>, shiftId: string) => {
+    e.dataTransfer.setData("text/plain", shiftId);
+    const shift = shifts.find((item) => item.id === shiftId);
+    const first = shift?.employees?.[0];
+    setDragPreview({ visible: true, x: e.clientX, y: e.clientY, title: first ? companyMembers.find((member) => member.id === first)?.name ?? first : shift?.employeeName });
+  };
+
+  const dayActions = (date: string) => (
+    <div className="flex flex-col gap-2">
+      <button onClick={() => void handleAutoCreate(date)} className="inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"><Sparkles className="h-3.5 w-3.5" />Auto</button>
+      <button onClick={() => void handlePasteShift(date)} disabled={!copiedShift} className="inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Copy className="h-3.5 w-3.5" />Paste</button>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <CalendarIcon className="w-6 h-6 text-blue-600" />
+            <CalendarIcon className="h-6 w-6 text-blue-600" />
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Schedule</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                {currentDate.toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </p>
+              <p className="mt-1 text-sm text-gray-500">{currentDate.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex border border-gray-200 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setView("week")}
-                className={`px-4 py-2 transition-colors ${
-                  view === "week"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50 hover:cursor-pointer"
-                }`}
-              >
-                Week
-              </button>
-              <button
-                onClick={() => setView("month")}
-                className={`px-4 py-2 transition-colors ${
-                  view === "month"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50 hover:cursor-pointer"
-                }`}
-              >
-                Month
-              </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <SaveBadge state={saveState} />
+            <button onClick={() => void handleUndo()} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />Undo</button>
+            <button onClick={() => void handleRedo()} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />Redo</button>
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              <button onClick={() => setView("week")} className={`px-4 py-2 ${view === "week" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}>Week</button>
+              <button onClick={() => setView("month")} className={`px-4 py-2 ${view === "month" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}>Month</button>
             </div>
-
-              {(() => {
-                const role = (profile?.role || "").toString().toLowerCase();
-                const canCreate = role === "admin" || role === "manager";
-                if (!canCreate) return null;
-                return (
-                  <button
-                    onClick={() => {
-                      setEditingShift(null);
-                      setShowCreateModal(true);
-                    }}
-                    className="ml-3 px-3 py-2 bg-[#10B981] text-white rounded-lg text-sm hover:bg-[#059669] hover:cursor-pointer"
-                  >
-                    New Shift
-                  </button>
-                );
-              })()}
-
-            <div className="flex gap-2">
-              <button
-                onClick={goToPrevious}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={goToNext}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+            {["admin", "manager"].includes((profile?.role || "").toLowerCase()) && <button onClick={() => { setEditingShift(null); setShowCreateModal(true); }} className="rounded-lg bg-emerald-500 px-3 py-2 text-sm text-white hover:bg-emerald-600">New Shift</button>}
+            <button onClick={goToPrevious} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50"><ChevronLeft className="h-5 w-5" /></button>
+            <button onClick={goToNext} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50"><ChevronRight className="h-5 w-5" /></button>
           </div>
         </div>
       </div>
 
-      {(() => {
-        const assignable = (companyMembers.length > 0 ? companyMembers : []).filter((m) => {
-          const role = (m.role || "").toString().toLowerCase();
-          if (role === "admin" || role === "manager") return false;
-          if (user?.id && m.id === user.id) return false;
-          return true;
-        });
-        return (
-          <CreateShiftModal
-            visible={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
-            onSave={handleSaveShift}
-            onDelete={handleDeleteShift}
-            initialData={editingShift}
-            employees={assignable}
-          />
-        );
-      })()}
+      <CreateShiftModal visible={showCreateModal} onClose={() => { setShowCreateModal(false); setEditingShift(null); }} onSave={handleSaveShift} onDelete={handleDeleteShift} initialData={editingShift} employees={assignableEmployees} />
 
-      {expandedDate && (
-        <GanttDayDetail
-          date={new Date(expandedDate)}
-          shifts={getShiftsForDate(new Date(expandedDate))}
-          onClose={() => setExpandedDate(null)}
-          companyMembers={companyMembers}
-          onUpdateShift={(id: string, startTime: string, endTime: string) => updateShift(id, { startTime, endTime })}
-        />
-      )}
+      {expandedDate && <GanttDayDetail date={new Date(expandedDate)} shifts={getShiftsForDate(new Date(expandedDate))} onClose={() => setExpandedDate(null)} companyMembers={companyMembers} onUpdateShift={(id, startTime, endTime) => handleSaveShift({ ...(shifts.find((shift) => shift.id === id) ?? {}), id, startTime, endTime })} onEditShift={openShift} onDeleteShift={handleDeleteShift} onCopyShift={handleCopyShift} onPasteShift={() => handlePasteShift(expandedDate)} canPaste={!!copiedShift} onAutoCreate={() => handleAutoCreate(expandedDate)} onUndo={handleUndo} onRedo={handleRedo} canUndo={history.length > 0} canRedo={redoHistory.length > 0} saveState={saveState} />}
 
-      {/* Calendar Grid */}
-      {view === "week" && !expandedDate && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="grid grid-cols-7 border-b border-gray-200">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
-              <div
-                key={day}
-                className="p-4 text-center border-r border-gray-200 last:border-r-0"
-              >
-                <p className="text-sm font-semibold text-gray-700">{day}</p>
+      {view === "week" && !expandedDate && <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="grid grid-cols-7 border-b border-gray-200">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="border-r border-gray-200 p-4 text-center last:border-r-0"><p className="text-sm font-semibold text-gray-700">{day}</p></div>)}</div>
+        <div className="grid grid-cols-7">
+          {weekDates.map((date, index) => {
+            const dayShifts = getShiftsForDate(date);
+            const dateStr = date.toISOString().split("T")[0];
+            return <div key={index} onDragOver={(e) => { e.preventDefault(); setDragPreview((prev) => ({ ...prev, visible: true, x: e.clientX + 12, y: e.clientY + 12 })); }} onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) void handleMoveShift(id, dateStr); setDragPreview((prev) => ({ ...prev, visible: false })); }} className={`min-h-[220px] border-r border-b border-gray-200 p-3 last:border-r-0 ${isToday(date) ? "bg-blue-600/5" : "bg-white"}`}>
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <span onClick={() => setExpandedDate(dateStr)} className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ${isToday(date) ? "bg-blue-600 font-bold text-white" : "text-gray-700"}`}>{date.getDate()}</span>
+                {dayActions(dateStr)}
               </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7">
-            {weekDates.map((date, index) => {
-              const shifts = getShiftsForDate(date);
-              const today = isToday(date);
-
-              return (
-                <div
-                  key={index}
-                  onDragOver={(e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); handleDragOverCell(e); }}
-                  onDrop={(e: React.DragEvent<HTMLDivElement>) => handleDropOnDate(date, e)}
-                  className={`min-h-[200px] p-3 border-r border-b border-gray-200 last:border-r-0 ${
-                    today ? "bg-blue-600 bg-opacity-5" : "bg-white"
-                  }`}
-                >
-                  <div className="flex items-center justify-center mb-2">
-                    <span
-                      onClick={(e) => { e.stopPropagation(); setExpandedDate(date.toISOString().split("T")[0]); }}
-                      className={`w-8 h-8 flex items-center justify-center rounded-full ${
-                        today
-                          ? "bg-blue-600 text-white font-bold"
-                          : "text-gray-700"
-                      }`}
-                    >
-                      {date.getDate()}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {shifts.map((shift) => (
-                      <motion.div
-                        key={shift.id}
-                        layoutId={shift.id ? `shift-${shift.id}` : undefined}
-                        draggable
-                        onDragStartCapture={(e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, shift.id)}
-                        onClick={() => {
-                          setEditingShift(shift);
-                          setShowCreateModal(true);
-                        }}
-                        className="bg-blue-600 text-white p-2 rounded text-xs cursor-pointer hover:bg-blue-700 transition-colors"
-                        initial={{ opacity: 1 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.18 }}
-                      >
-                        {(() => {
-                          const meta = shiftMeta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };
-                          if (meta.employees && meta.employees.length > 0) {
-                            return (
-                              <div className="space-y-1">
-                                {meta.employees.map((emp: string, i: number) => {
-                                  const found = companyMembers.find((cm) => cm.id === emp);
-                                  const display = found?.name ?? emp;
-                                  return <p key={i} className="font-semibold truncate">{display}</p>;
-                                })}
-                                <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
-                              </div>
-                            );
-                          }
-                          return (
-                            <>
-                              <p className="font-semibold truncate">{meta.employeeName}</p>
-                              <p className="text-white/80 truncate">{shift.role}</p>
-                              <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
-                            </>
-                          );
-                        })()}
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+              <div className="space-y-2">{dayShifts.map((shift) => <motion.div key={shift.id} layoutId={shift.id ? `shift-${shift.id}` : undefined} draggable onDragStartCapture={(e) => startDrag(e, shift.id)} onClick={() => openShift(shift)} className="cursor-pointer rounded bg-blue-600 p-2 text-xs text-white hover:bg-blue-700">
+                {(() => {
+                  const meta = shiftMeta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };
+                  const names = meta.employees?.length ? meta.employees.map((employeeId: string) => companyMembers.find((member) => member.id === employeeId)?.name ?? employeeId) : [meta.employeeName ?? "Unassigned"];
+                  return <>
+                    {names.map((name: string) => <p key={name} className="truncate font-semibold">{name}</p>)}
+                    <p className="text-white/75">{shift.startTime} - {shift.endTime}</p>
+                    <div className="mt-2 flex gap-2">
+                      <button onClick={(event) => { event.stopPropagation(); handleCopyShift(shift); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Copy</button>
+                      <button onClick={(event) => { event.stopPropagation(); void handleDeleteShift(shift.id); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Delete</button>
+                    </div>
+                  </>;
+                })()}
+              </motion.div>)}</div>
+            </div>;
+          })}
         </div>
-      )}
+        {dragPreview.visible && <div className="pointer-events-none fixed z-50 rounded bg-gray-900 px-3 py-2 text-sm text-white shadow-lg" style={{ left: dragPreview.x, top: dragPreview.y }}>{dragPreview.title ?? "Moving shift"}</div>}
+      </div>}
 
-      {/* Month view */}
-      {view === "month" && !expandedDate && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="grid grid-cols-7 border-b border-gray-200">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-              <div key={d} className="p-4 text-center border-r border-gray-200 last:border-r-0">
-                <p className="text-sm font-semibold text-gray-700">{d}</p>
-              </div>
-            ))}
-          </div>
-
-          <MonthGrid
-            monthDate={currentDate}
-            getShiftsForDate={getShiftsForDate}
-            isToday={isToday}
-            onMoveShift={handleMoveShift}
-            onEditShift={(sh) => {
-              setEditingShift(sh);
-              setShowCreateModal(true);
-            }}
-            onDragOverCell={handleDragOverCell}
-            companyMembers={companyMembers}
-            shiftMeta={shiftMeta}
-          />
-        </div>
-      )}
+      {view === "month" && !expandedDate && <MonthGrid monthDate={currentDate} getShiftsForDate={getShiftsForDate} isToday={isToday} onMoveShift={handleMoveShift} onEditShift={openShift} companyMembers={companyMembers} shiftMeta={shiftMeta} onExpandDate={setExpandedDate} onCopyShift={handleCopyShift} onPasteShift={handlePasteShift} onAutoCreate={handleAutoCreate} canPaste={!!copiedShift} />}
     </div>
   );
 }
 
-function MonthGrid({
-  monthDate,
-  getShiftsForDate,
-  isToday,
-  onMoveShift,
-  onEditShift,
-  onDragOverCell,
-  companyMembers,
-  shiftMeta,
-}: {
+function MonthGrid({ monthDate, getShiftsForDate, isToday, onMoveShift, onEditShift, companyMembers, shiftMeta, onExpandDate, onCopyShift, onPasteShift, onAutoCreate, canPaste }: {
   monthDate: Date;
-  getShiftsForDate: (d: Date) => any[];
-  isToday: (d: Date) => boolean;
-  onMoveShift: (shiftId: string, newDateStr: string) => void;
+  getShiftsForDate: (date: Date) => any[];
+  isToday: (date: Date) => boolean;
+  onMoveShift: (shiftId: string, date: string) => Promise<void>;
   onEditShift: (shift: any) => void;
-  onDragOverCell: (e: React.DragEvent<HTMLDivElement>) => void;
-  companyMembers: { id: string; name: string; role?: string }[];
+  companyMembers: EmployeeOption[];
   shiftMeta: Record<string, { employees?: string[]; employeeName?: string }>;
+  onExpandDate: (date: string) => void;
+  onCopyShift: (shift: any) => void;
+  onPasteShift: (date: string) => Promise<void>;
+  onAutoCreate: (date: string) => Promise<void>;
+  canPaste: boolean;
 }) {
-  const year = monthDate.getFullYear();
-  const month = monthDate.getMonth();
-
-  // first day of month
-  const firstOfMonth = new Date(year, month, 1);
-  // start on Sunday of the week containing the 1st
-  const start = new Date(firstOfMonth);
-  start.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
-
-  // last day of month
-  const lastOfMonth = new Date(year, month + 1, 0);
-  // end on Saturday of the week containing the last
-  const end = new Date(lastOfMonth);
-  end.setDate(lastOfMonth.getDate() + (6 - lastOfMonth.getDay()));
-
-  const days: Date[] = [];
-  const cursor = new Date(start);
-  while (cursor <= end) {
-    days.push(new Date(cursor));
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  return (
-    <div className="grid grid-cols-7">
-      {days.map((date, idx) => {
-        const shifts = getShiftsForDate(date);
-        const today = isToday(date);
-        const inMonth = date.getMonth() === month;
-
-        function setExpandedDate(dateStr: string) {
-          // MonthGrid does not own expanded-date state.
-          // Use the existing edit flow as a safe fallback:
-          const dayShifts = getShiftsForDate(new Date(dateStr));
-          if (dayShifts.length > 0) {
-            onEditShift(dayShifts[0]);
-          }
-        }
-
-        return (
-          <div
-            key={idx}
-            onDragOver={(e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); onDragOverCell(e); }}
-            onDrop={(e: React.DragEvent<HTMLDivElement>) => {
-              e.preventDefault();
-              const id = e.dataTransfer.getData("text/plain");
-              if (id) onMoveShift(id, date.toISOString().split("T")[0]);
-            }}
-            className={`min-h-[140px] p-3 border-r border-b border-gray-200 last:border-r-0 ${
-              today ? "bg-blue-600 bg-opacity-5" : "bg-white"
-            } ${inMonth ? "" : "bg-gray-50 text-gray-400"}`}
-          >
-            <div className="flex items-center justify-center mb-2">
-              <span
-                onClick={(e) => { e.stopPropagation(); setExpandedDate(date.toISOString().split("T")[0]); }}
-                className={`w-8 h-8 flex items-center justify-center rounded-full ${
-                  today ? "bg-blue-600 text-white font-bold" : "text-gray-700"
-                }`}
-              >
-                {date.getDate()}
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              {shifts.map((shift) => (
-                <motion.div
-                  key={shift.id}
-                  layoutId={shift.id ? `shift-${shift.id}` : undefined}
-                  draggable
-                  onDragStartCapture={(e: React.DragEvent<HTMLDivElement>) => {
-                    e.dataTransfer.setData("text/plain", shift.id);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  onClick={() => onEditShift(shift)}
-                  className="bg-blue-600 text-white p-2 rounded text-xs cursor-pointer hover:bg-blue-700 transition-colors"
-                >
-                  {(() => {
-                    const meta = shiftMeta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };
-                    if (meta.employees && meta.employees.length > 0) {
-                      return (
-                        <div className="space-y-1">
-                          {meta.employees.map((emp: string, i: number) => {
-                            const found = companyMembers.find((cm) => cm.id === emp);
-                            const display = found?.name ?? emp;
-                            return <p key={i} className="font-semibold truncate">{display}</p>;
-                          })}
-                          <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
-                        </div>
-                      );
-                    }
-                    return (
-                      <>
-                        <p className="font-semibold truncate">{meta.employeeName}</p>
-                        <p className="text-white/80 truncate">{shift.role}</p>
-                        <p className="text-white/70">{shift.startTime} - {shift.endTime}</p>
-                      </>
-                    );
-                  })()}
-                </motion.div>
-              ))}
-            </div>
+  const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+  const start = new Date(first); start.setDate(first.getDate() - first.getDay());
+  const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0); end.setDate(end.getDate() + (6 - end.getDay()));
+  const days: Date[] = []; const cursor = new Date(start); while (cursor <= end) { days.push(new Date(cursor)); cursor.setDate(cursor.getDate() + 1); }
+  return <div className="grid grid-cols-7">
+    {days.map((date, index) => {
+      const dayShifts = getShiftsForDate(date);
+      const dateStr = date.toISOString().split("T")[0];
+      return <div key={index} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) void onMoveShift(id, dateStr); }} className={`min-h-[150px] border-r border-b border-gray-200 p-3 last:border-r-0 ${isToday(date) ? "bg-blue-600/5" : "bg-white"} ${date.getMonth() === monthDate.getMonth() ? "" : "bg-gray-50 text-gray-400"}`}>
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <span onClick={() => onExpandDate(dateStr)} className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ${isToday(date) ? "bg-blue-600 font-bold text-white" : "text-gray-700"}`}>{date.getDate()}</span>
+          <div className="flex flex-col gap-2">
+            <button onClick={() => void onAutoCreate(dateStr)} className="rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50">Auto</button>
+            <button onClick={() => void onPasteShift(dateStr)} disabled={!canPaste} className="rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">Paste</button>
           </div>
-        );
-      })}
-    </div>
-  );
+        </div>
+        <div className="space-y-2">{dayShifts.map((shift) => <motion.div key={shift.id} layoutId={shift.id ? `shift-${shift.id}` : undefined} draggable onDragStartCapture={(e) => { e.dataTransfer.setData("text/plain", shift.id); }} onClick={() => onEditShift(shift)} className="cursor-pointer rounded bg-blue-600 p-2 text-xs text-white hover:bg-blue-700">
+          {(() => {
+            const meta = shiftMeta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };
+            const names = meta.employees?.length ? meta.employees.map((employeeId: string) => companyMembers.find((member) => member.id === employeeId)?.name ?? employeeId) : [meta.employeeName ?? "Unassigned"];
+            return <>
+              {names.map((name: string) => <p key={name} className="truncate font-semibold">{name}</p>)}
+              <p className="text-white/75">{shift.startTime} - {shift.endTime}</p>
+              <button onClick={(event) => { event.stopPropagation(); onCopyShift(shift); }} className="mt-2 rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Copy</button>
+            </>;
+          })()}
+        </motion.div>)}</div>
+      </div>;
+    })}
+  </div>;
 }

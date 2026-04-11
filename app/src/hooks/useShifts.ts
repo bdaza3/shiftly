@@ -89,7 +89,7 @@ export function useShifts(companyId?: string | null) {
       }
     }
     setLoading(false);
-  }, []);
+  }, [companyId]);
 
   useEffect(() => {
     fetchShifts();
@@ -288,10 +288,11 @@ export function useShifts(companyId?: string | null) {
   };
 
   const deleteShift = async (id: string) => {
+    const deletedShift = shifts.find((shift) => shift.id === id) ?? null;
     const { error } = await supabase.from("shifts").delete().eq("id", id);
     if (error) throw error;
     setShifts((s) => s.filter((sh) => sh.id !== id));
-    return true;
+    return deletedShift;
   };
 
   return { shifts, loading, fetchShifts, createShift, updateShift, deleteShift };

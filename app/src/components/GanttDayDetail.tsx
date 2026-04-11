@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle2, Copy, LoaderCircle, Redo2, Sparkles, Trash2, Undo2 } from "lucide-react";
 
 function parseTimeToMinutes(t: string) {
   if (!t) return 0;
@@ -18,19 +21,40 @@ export default function GanttDayDetail({
   onClose,
   companyMembers,
   onUpdateShift,
+  onEditShift,
+  onDeleteShift,
+  onCopyShift,
+  onPasteShift,
+  canPaste,
+  onAutoCreate,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+  saveState,
 }: {
   date: Date;
   shifts: any[];
   onClose: () => void;
   companyMembers?: { id: string; name: string }[];
   onUpdateShift?: (id: string, startTime: string, endTime: string) => Promise<any> | void;
+  onEditShift?: (shift: any) => void;
+  onDeleteShift?: (id: string) => Promise<any> | void;
+  onCopyShift?: (shift: any) => void;
+  onPasteShift?: () => Promise<any> | void;
+  canPaste?: boolean;
+  onAutoCreate?: () => Promise<any> | void;
+  onUndo?: () => Promise<any> | void;
+  onRedo?: () => Promise<any> | void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  saveState?: { kind: "idle" | "saving" | "saved" | "error"; message: string };
 }) {
   const dayLabel = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [availableHeight, setAvailableHeight] = useState<number>(420);
   const dragStateRef = useRef<{ id?: string; initStart: number; initEnd: number; startX?: number; type?: 'left' | 'right' | 'move' } | null>(null);
-  const lastUpdateRef = useRef<number>(0);
 
   // Manual DOM visual updates removed — React state is the single source of truth
 
@@ -50,7 +74,6 @@ export default function GanttDayDetail({
 
   // per-shift row height
   const perShift = 48; // px per shift row
-  const base = 88; // header/padding inside chart
 
   useLayoutEffect(() => {
     function update() {
@@ -129,6 +152,34 @@ export default function GanttDayDetail({
             <p className="text-sm text-gray-500">Detailed Gantt view</p>
           </div>
           <div className="flex items-center gap-2">
+            {saveState?.kind && saveState.kind !== "idle" && (
+              <div className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm ${
+                saveState.kind === "saved"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : saveState.kind === "error"
+                    ? "bg-red-50 text-red-700"
+                    : "bg-blue-50 text-blue-700"
+              }`}>
+                {saveState.kind === "saving" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                <span>{saveState.message}</span>
+              </div>
+            )}
+            <button onClick={() => onUndo?.()} disabled={!canUndo} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+              <Undo2 className="h-4 w-4" />
+              Undo
+            </button>
+            <button onClick={() => onRedo?.()} disabled={!canRedo} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+              <Redo2 className="h-4 w-4" />
+              Redo
+            </button>
+            <button onClick={() => onPasteShift?.()} disabled={!canPaste} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+              <Copy className="h-4 w-4" />
+              Paste
+            </button>
+            <button onClick={() => onAutoCreate?.()} className="inline-flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700">
+              <Sparkles className="h-4 w-4" />
+              Auto Fill Day
+            </button>
             <button onClick={onClose} className="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50">Close</button>
           </div>
         </div>
@@ -164,7 +215,6 @@ export default function GanttDayDetail({
                   const dur = Math.max(15, ls.end - ls.start);
                   const left = ((ls.start - viewStartMinutes) / (viewHours * 60)) * 100;
                   const width = (dur / (viewHours * 60)) * 100;
-                  const right = 100 - (left + width);
                   const assignedEmployees = (localShifts[id]?.employees ?? s.employees);
                   const assignedEmployeeName = localShifts[id]?.employeeName ?? s.employeeName ?? s.name;
                   let empName = 'Unassigned';
@@ -312,7 +362,7 @@ export default function GanttDayDetail({
                             if (!state || state.id !== id) return;
                             const dx = ev.clientX - (state.startX ?? 0);
                             const minutes = Math.round(pxToMinutes(dx) / 15) * 15;
-                            let newEnd = Math.max(state.initStart + 15, state.initEnd + minutes);
+                            const newEnd = Math.max(state.initStart + 15, state.initEnd + minutes);
                             setLocalShifts((prev) => {
                               const cur = prev[id] ?? { start: state.initStart, end: state.initEnd };
                               if (cur.start === state.initStart && cur.end === newEnd) return prev;
@@ -327,8 +377,7 @@ export default function GanttDayDetail({
                             if (!state || state.id !== id) return;
                             const dx = ev.clientX - (state.startX ?? 0);
                             const minutes = Math.round(pxToMinutes(dx) / 15) * 15;
-                            let newEnd = Math.max(state.initStart + 15, state.initEnd + minutes);
-                            newEnd = Math.max(state.initStart + 15, Math.min(2880, newEnd));
+                            const newEnd = Math.max(state.initStart + 15, Math.min(2880, Math.max(state.initStart + 15, state.initEnd + minutes)));
                             setLocalShifts((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { employees: s.employees, employeeName: s.employeeName ?? s.name }), start: state.initStart, end: newEnd } }));
                             const newStartStr = normalizeClock(state.initStart);
                             const newEndStr = normalizeClock(newEnd);
@@ -351,6 +400,53 @@ export default function GanttDayDetail({
                 })}
               </div>
             </div>
+          </div>
+
+          <div className="mt-10 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {shifts.map((shift, index) => {
+              const id = shift.id ?? `idx-${index}`;
+              const local = localShifts[id];
+              const assignedEmployees = local?.employees ?? shift.employees ?? [];
+              const employeeLabel = assignedEmployees.length > 0
+                ? assignedEmployees
+                    .map((employeeId: string) => companyMembers?.find((member) => member.id === employeeId)?.name ?? employeeId)
+                    .join(", ")
+                : local?.employeeName ?? shift.employeeName ?? shift.name ?? "Unassigned";
+
+              return (
+                <div key={id} className="rounded-lg border border-gray-200 bg-white p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-gray-900">{employeeLabel}</p>
+                      <p className="text-sm text-gray-500">{shift.role ?? "Shift"}</p>
+                    </div>
+                    <div className="text-sm font-medium text-gray-600">
+                      {formatTime(local?.start ?? parseTimeToMinutes(shift.startTime || shift.start || "00:00"))}
+                      {" - "}
+                      {formatTime(local?.end ?? parseTimeToMinutes(shift.endTime || shift.end || "00:00"))}
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button onClick={() => onEditShift?.(shift)} className="rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">
+                      Edit
+                    </button>
+                    <button onClick={() => onCopyShift?.(shift)} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">
+                      <Copy className="h-4 w-4" />
+                      Copy
+                    </button>
+                    <button onClick={() => onDeleteShift?.(shift.id)} className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {shifts.length === 0 && (
+              <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+                No shifts yet for this day. Use Auto Fill Day or create one from the schedule.
+              </div>
+            )}
           </div>
         </div>
       </motion.div>

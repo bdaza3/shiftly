@@ -4,26 +4,63 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useCompany } from "../hooks/useCompany";
 import React from "react";
 
 export function Login() {
-  const { signIn } = useAuth()
+  const { signIn, user, loading, refreshProfile } = useAuth()
+  const { refresh: refreshCompanies } = useCompany()
   const router = useRouter();
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
+  const [submitting, setSubmitting] = React.useState(false)
+  const [redirectPending, setRedirectPending] = React.useState(false)
 
+  React.useEffect(() => {
+    if (loading || !user?.id || !redirectPending) return
+    let cancelled = false
+
+    const finishRedirect = async () => {
+      try {
+        await refreshProfile()
+        await refreshCompanies()
+      } catch (error) {
+        console.warn("Login redirect sync failed", error)
+      }
+
+      if (cancelled) return
+      router.replace("/dashboard")
+      router.refresh()
+    }
+
+    finishRedirect()
+
+    return () => {
+      cancelled = true
+    }
+  }, [loading, redirectPending, refreshCompanies, refreshProfile, router, user?.id])
+
+  React.useEffect(() => {
+    if (loading || !user?.id || redirectPending) return
+    router.replace("/dashboard")
+  }, [loading, redirectPending, router, user?.id])
 
   const handleSignIn = async () => {
-    const res = await signIn(email, password)
-    if (res.error) {
-      alert(res.error.message)
-    } else {
-      // force a full reload so server-rendered pages pick up the new session
-      try {
-        window.location.assign('/dashboard')
-      } catch (e) {
-        router.push('/dashboard')
+    setSubmitting(true)
+    try {
+      const res = await signIn(email, password)
+      if (res.error) {
+        alert(res.error.message)
+        setRedirectPending(false)
+        return
       }
+      setRedirectPending(true)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unable to sign in"
+      alert(message)
+      setRedirectPending(false)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -77,16 +114,17 @@ export function Login() {
 
             <button onClick={handleSignIn}
               type="button"
+              disabled={submitting}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogIn className="w-5 h-5" />
-              Sign In
+              {submitting ? "Signing In..." : "Sign In"}
             </button>
           </div>
 
           <div className="mt-6 text-center">
             <Link href="/signup" className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline hover:cursor-pointer">
-              Don't have an account? Sign up
+              Don&apos;t have an account? Sign up
             </Link>
           </div>
         </div>
