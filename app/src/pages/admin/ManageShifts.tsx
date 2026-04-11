@@ -3,7 +3,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, ClipboardList, Copy, LoaderCircle, Plus, Redo2, Sparkles, Trash2, Undo2 } from "lucide-react";
+import { CheckCircle2, ClipboardList, Copy, LoaderCircle, Plus, Redo2, Sparkles, Trash2, Undo2, PencilIcon } from "lucide-react";
 import CreateShiftModal from "../../components/CreateShiftModal";
 import { useAuth } from "../../hooks/useAuth";
 import { useCompany } from "../../hooks/useCompany";
@@ -55,8 +55,17 @@ export function ManageShifts() {
 
   const runAction = useCallback(async (label: string, action: () => Promise<void>) => {
     setStatus("saving", label);
-    try { await action(); setStatus("saved", "Saved changes"); }
-    catch (error) { console.error(label, error); setStatus("error", "Could not save changes"); throw error; }
+    console.log("ManageShifts.runAction start", { label });
+    try {
+      await action();
+      setStatus("saved", "Saved changes");
+      console.log("ManageShifts.runAction success", { label });
+    } catch (error) {
+      console.error(label, error);
+      console.log("ManageShifts.runAction error", { label, error });
+      setStatus("error", "Could not save changes");
+      throw error;
+    }
   }, [setStatus]);
 
   const pushHistory = (entry: HistoryEntry) => { setHistory((prev) => [...prev, entry]); setRedoHistory([]); };
@@ -65,14 +74,17 @@ export function ManageShifts() {
 
   const handleSave = async (payload: any) => {
     const draft = withCompany(payload);
+    console.log("ManageShifts.handleSave called", { payload, selectedCompany: selected?.id });
     if (payload.id) {
       const existing = shifts.find((shift) => shift.id === payload.id); if (!existing) return;
       const before = toDraft(existing);
       await runAction("Saving shift", async () => { await updateShift(payload.id, draft); });
+      console.log("ManageShifts.saved shift", { id: payload.id });
       pushHistory({ label: "Edit shift", undo: async () => { await updateShift(payload.id, before); }, redo: async () => { await updateShift(payload.id, draft); } });
     } else {
       let createdId = "";
       await runAction("Creating shift", async () => { const created = await createShift(draft); createdId = created.id; });
+      console.log("ManageShifts.created shift", { createdId });
       pushHistory({ label: "Create shift", undo: async () => { await deleteShift(createdId); }, redo: async () => { const recreated = await createShift(draft); createdId = recreated.id; } });
     }
     setShowModal(false);
@@ -80,23 +92,28 @@ export function ManageShifts() {
   };
 
   const handleDelete = async (id: string) => {
+    console.log("ManageShifts.handleDelete called", { id });
     const existing = shifts.find((shift) => shift.id === id); if (!existing) return;
     const before = toDraft(existing); let activeId = id;
     await runAction("Deleting shift", async () => { await deleteShift(id); });
+    console.log("ManageShifts.deleted shift", { id });
     pushHistory({ label: "Delete shift", undo: async () => { const restored = await createShift(before); activeId = restored.id; }, redo: async () => { await deleteShift(activeId); } });
     setShowModal(false);
     setEditingShift(null);
   };
 
   const handleCopy = async (shift: any) => {
+    console.log("ManageShifts.handleCopy called", { shiftId: shift?.id });
     const draft = withCompany(toDraft(shift));
     let createdId = "";
     await runAction("Copying shift", async () => { const created = await createShift(draft); createdId = created.id; });
+    console.log("ManageShifts.copied shift", { createdId });
     pushHistory({ label: "Copy shift", undo: async () => { await deleteShift(createdId); }, redo: async () => { const recreated = await createShift(draft); createdId = recreated.id; } });
   };
 
   const handleAutoCreate = async () => {
     const today = new Date().toISOString().split("T")[0];
+    console.log("ManageShifts.handleAutoCreate start", { today });
     const existingToday = shifts.filter((shift) => shift.date === today);
     const busy = new Set(existingToday.flatMap((shift) => shift.employees ?? []));
     const counts = new Map(assignable.map((employee) => [employee.id, shifts.reduce((sum, shift) => sum + ((shift.employees ?? []).includes(employee.id) ? 1 : 0), 0)]));
@@ -104,9 +121,11 @@ export function ManageShifts() {
     const drafts = [{ startTime: "07:00", endTime: "15:00", role: "Opening" }, { startTime: "09:00", endTime: "17:00", role: "Mid" }, { startTime: "15:00", endTime: "23:00", role: "Closing" }]
       .slice(0, available.length)
       .map((template, index) => withCompany({ date: today, ...template, employees: [available[index].id], employeeId: available[index].id, employeeName: available[index].name }));
+    console.log("ManageShifts.handleAutoCreate computed", { availableCount: available.length, draftsCount: drafts.length });
     if (!drafts.length) return setStatus("error", "No available employees for auto-fill");
     let createdIds: string[] = [];
     await runAction("Auto-filling shifts", async () => { createdIds = []; for (const draft of drafts) { const created = await createShift(draft); createdIds.push(created.id); } });
+    console.log("ManageShifts.handleAutoCreate created", { createdCount: createdIds.length, createdIds });
     pushHistory({ label: "Auto-fill shifts", undo: async () => { for (const id of createdIds) await deleteShift(id); }, redo: async () => { const nextIds: string[] = []; for (const draft of drafts) { const created = await createShift(draft); nextIds.push(created.id); } createdIds = nextIds; } });
   };
 
@@ -122,10 +141,10 @@ export function ManageShifts() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SaveBadge state={saveState} />
-          <button onClick={() => void handleUndo()} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />Undo</button>
-          <button onClick={() => void handleRedo()} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />Redo</button>
-          <button onClick={() => void handleAutoCreate()} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50"><Sparkles className="h-4 w-4" />Auto Today</button>
-          <button onClick={() => { setEditingShift(null); setShowModal(true); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"><Plus className="h-5 w-5" />New Shift</button>
+          <button onClick={() => { console.log("ManageShifts.click Undo"); void handleUndo(); }} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />Undo</button>
+          <button onClick={() => { console.log("ManageShifts.click Redo"); void handleRedo(); }} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />Redo</button>
+          <button onClick={() => { console.log("ManageShifts.click Auto Today"); void handleAutoCreate(); }} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Sparkles className="h-4 w-4" />Auto Today</button>
+          <button onClick={() => { console.log("ManageShifts.click New Shift"); setEditingShift(null); setShowModal(true); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 hover:cursor-pointer"><Plus className="h-5 w-5" />New Shift</button>
         </div>
       </div>
     </div>
@@ -136,7 +155,10 @@ export function ManageShifts() {
           <thead><tr className="border-b border-gray-200"><th className="p-4 text-left font-semibold text-gray-700">Employee</th><th className="p-4 text-left font-semibold text-gray-700">Date</th><th className="p-4 text-left font-semibold text-gray-700">Time</th><th className="p-4 text-left font-semibold text-gray-700">Role</th><th className="p-4 text-left font-semibold text-gray-700">Location</th><th className="p-4 text-left font-semibold text-gray-700">Actions</th></tr></thead>
           <tbody>
             {(loading ? [] : shifts).map((shift: any) => {
-              const employeeLabel = shift.employeeName ?? (shift.employees && shift.employees[0]) ?? "Unassigned";
+              const names = (shift.employees && shift.employees.length)
+                ? shift.employees.map((id: string) => employees.find((e: any) => e.id === id)?.name ?? id)
+                : (shift.employeeName ? [shift.employeeName] : []);
+              const employeeLabel = names.length ? names.join(", ") : "Unassigned";
               return <tr key={shift.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
                 <td className="p-4 font-medium text-gray-900">{employeeLabel}</td>
                 <td className="p-4 text-gray-700">{shift.date ? new Date(shift.date).toLocaleDateString() : "-"}</td>
@@ -145,9 +167,9 @@ export function ManageShifts() {
                 <td className="p-4 text-gray-700">{shift.location ?? "-"}</td>
                 <td className="p-4">
                   <div className="flex gap-2">
-                    <button onClick={() => { setEditingShift(shift); setShowModal(true); }} className="rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">Edit</button>
-                    <button onClick={() => void handleCopy(shift)} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50"><Copy className="h-4 w-4" />Copy</button>
-                    <button onClick={() => void handleDelete(shift.id)} className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" />Delete</button>
+                    <button onClick={() => { console.log("ManageShifts.click Edit", { shiftId: shift.id }); setEditingShift(shift); setShowModal(true); }} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><PencilIcon className="h-4 w-4" />Edit</button>
+                    <button onClick={() => { console.log("ManageShifts.click Copy", { shiftId: shift.id }); void handleCopy(shift); }} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Copy className="h-4 w-4" />Copy</button>
+                    <button onClick={() => { console.log("ManageShifts.click Delete", { shiftId: shift.id }); void handleDelete(shift.id); }} className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:cursor-pointer"><Trash2 className="h-4 w-4" />Delete</button>
                   </div>
                 </td>
               </tr>;

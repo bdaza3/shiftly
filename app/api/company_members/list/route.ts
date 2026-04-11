@@ -19,8 +19,10 @@ export async function POST(req: Request) {
     let profiles: any[] = []
     let users: any[] = []
     if (userIds.length > 0) {
-      const { data: p, error: pErr } = await svc.from('profiles').select('id, first_name, last_name, phone, email').in('id', userIds)
+      // profiles table contains first_name/last_name (no email column)
+      const { data: p, error: pErr } = await svc.from('profiles').select('id, first_name, last_name, phone').in('id', userIds)
       if (!pErr) profiles = p || []
+      // fallback to users table for email/full_name when profiles are not available
       const { data: u, error: uErr } = await svc.from('users').select('id, full_name, email, role').in('id', userIds)
       if (!uErr) users = u || []
     }
@@ -28,7 +30,7 @@ export async function POST(req: Request) {
     const members = (rows || []).map((r: any) => {
       const p = profiles.find((x: any) => x.id === r.user_id)
       const u = users.find((x: any) => x.id === r.user_id)
-      const name = p ? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() : u?.full_name ?? u?.email
+      const name = p ? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() : u?.full_name ?? u?.email ?? r.user_id
       return { id: r.user_id, role: r.role, startDate: r.created_at, name, email: p?.email ?? u?.email ?? null }
     })
 

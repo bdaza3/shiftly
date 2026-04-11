@@ -91,6 +91,10 @@ export default function GanttDayDetail({
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  useEffect(() => {
+    console.log("GanttDayDetail.mountOrUpdate", { date: date.toISOString(), shiftsCount: shifts.length });
+  }, [date, shifts.length]);
+
   // render finer ticks (30-min) to make gaps smaller
   const ticks = 48;
 
@@ -115,6 +119,7 @@ export default function GanttDayDetail({
           employeeName: existing?.employeeName ?? s.employeeName ?? s.name,
         };
       });
+      console.debug("GanttDayDetail.localShifts set", { keysPreview: Object.keys(map).slice(0, 5), total: Object.keys(map).length });
       return map;
     });
   }, [shifts]);
@@ -135,6 +140,7 @@ export default function GanttDayDetail({
     const hours = Math.min(48, Math.max(24, neededHours));
     setViewStartMinutes(start);
     setViewHours(hours);
+    console.log("GanttDayDetail.viewWindow", { minStart, maxEnd, viewStartMinutes: start, viewHours: hours });
   }, [localShifts]);
 
   return (
@@ -247,6 +253,7 @@ export default function GanttDayDetail({
                         dragMomentum={false}
                         onDragStart={() => {
                           dragStateRef.current = { id, initStart: ls.start, initEnd: ls.end };
+                          console.debug("GanttDayDetail.dragStart", { id, initStart: ls.start, initEnd: ls.end });
                         }}
                         onDrag={(e, info) => {
                           const st0 = dragStateRef.current?.initStart ?? ls.start;
@@ -268,6 +275,7 @@ export default function GanttDayDetail({
                             setViewStartMinutes(startM);
                             setViewHours(hoursNeeded);
                           }
+                          console.debug("GanttDayDetail.drag", { id, offsetX: info?.offset?.x, snappedDelta, newStart, newEnd });
                         }}
                         onDragEnd={(_, info) => {
                           const st0 = dragStateRef.current?.initStart ?? ls.start;
@@ -284,6 +292,7 @@ export default function GanttDayDetail({
                           });
                           const newStartStr = normalizeClock(newStart);
                           const newEndStr = normalizeClock(newEnd);
+                          console.log("GanttDayDetail.dragEnd", { id, newStartStr, newEndStr });
                           if (onUpdateShift && s.id) onUpdateShift(s.id, newStartStr, newEndStr);
                           setTimeout(() => ensureVisible(newStart), 40);
                         }}
@@ -334,6 +343,7 @@ export default function GanttDayDetail({
                                 setLocalShifts((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { employees: s.employees, employeeName: s.employeeName ?? s.name }), start: newStart, end: state.initEnd } }));
                                 const newStartStr = normalizeClock(newStart);
                                 const newEndStr = normalizeClock(state.initEnd);
+                                console.log("GanttDayDetail.resizeStart", { id, newStartStr, newEndStr });
                                 if (onUpdateShift && s.id) onUpdateShift(s.id, newStartStr, newEndStr);
                                 setTimeout(() => ensureVisible(newStart), 40);
                                 window.removeEventListener('pointermove', onMove as any);
@@ -381,7 +391,8 @@ export default function GanttDayDetail({
                             setLocalShifts((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { employees: s.employees, employeeName: s.employeeName ?? s.name }), start: state.initStart, end: newEnd } }));
                             const newStartStr = normalizeClock(state.initStart);
                             const newEndStr = normalizeClock(newEnd);
-                            if (onUpdateShift && s.id) onUpdateShift(s.id, newStartStr, newEndStr);
+                              console.log("GanttDayDetail.resizeEnd", { id, newStartStr, newEndStr });
+                              if (onUpdateShift && s.id) onUpdateShift(s.id, newStartStr, newEndStr);
                             setTimeout(() => ensureVisible(state.initStart), 40);
                             window.removeEventListener('pointermove', onMove as any);
                             window.removeEventListener('pointerup', onUp as any);

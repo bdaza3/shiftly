@@ -87,6 +87,7 @@ export function Schedule() {
         const profileMap = new Map((profiles || []).map((p: any) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim()]));
         if (!mounted) return;
         setCompanyMembers((membersData || []).map((m: any) => ({ id: m.user_id, name: profileMap.get(m.user_id) || m.user_id, role: m.role })).filter((m: EmployeeOption) => m.id !== user?.id));
+        console.log("Schedule.members loaded", { selectedId: selected?.id, membersCount: (membersData || []).length });
       } catch (error) {
         console.warn("Schedule members load failed", error);
         if (mounted) setCompanyMembers([]);
@@ -174,15 +175,18 @@ export function Schedule() {
 
   const handleSaveShift = useCallback(async (payload: any) => {
     const draft = withCompany(payload);
+    console.log("Schedule.handleSaveShift called", { payload, selectedCompany: selected?.id });
     if (payload.id) {
       const existing = shifts.find((shift) => shift.id === payload.id);
       if (!existing) return;
       const before = toDraft(existing);
       await runAction("Saving shift", async () => { await updateShift(payload.id, draft); });
+      console.log("Schedule.saved shift", { id: payload.id });
       pushHistory({ label: "Edit shift", undo: async () => { await updateShift(payload.id, before); }, redo: async () => { await updateShift(payload.id, draft); } });
     } else {
       let createdId = "";
       await runAction("Creating shift", async () => { const created = await createShift(draft); createdId = created.id; });
+      console.log("Schedule.created shift", { createdId });
       pushHistory({ label: "Create shift", undo: async () => { await deleteShift(createdId); }, redo: async () => { const recreated = await createShift(draft); createdId = recreated.id; } });
     }
     setEditingShift(null);
@@ -190,11 +194,13 @@ export function Schedule() {
   }, [createShift, deleteShift, pushHistory, runAction, shifts, toDraft, updateShift, withCompany]);
 
   const handleDeleteShift = useCallback(async (id: string) => {
+    console.log("Schedule.handleDeleteShift called", { id });
     const existing = shifts.find((shift) => shift.id === id);
     if (!existing) return;
     const before = toDraft(existing);
     let activeId = id;
     await runAction("Deleting shift", async () => { await deleteShift(id); });
+    console.log("Schedule.deleted shift", { id });
     pushHistory({
       label: "Delete shift",
       undo: async () => { const restored = await createShift(before); activeId = restored.id; },
@@ -205,21 +211,25 @@ export function Schedule() {
   }, [createShift, deleteShift, pushHistory, runAction, shifts, toDraft]);
 
   const handleMoveShift = useCallback(async (shiftId: string, newDate: string) => {
+    console.log("Schedule.handleMoveShift start", { shiftId, newDate });
     const existing = shifts.find((shift) => shift.id === shiftId);
     if (!existing || existing.date === newDate) return;
     const before = toDraft(existing);
     const after = toDraft(existing, { date: newDate });
     await runAction("Moving shift", async () => { await updateShift(shiftId, after); });
+    console.log("Schedule.handleMoveShift done", { shiftId, beforeDate: before.date, afterDate: after.date });
     pushHistory({ label: "Move shift", undo: async () => { await updateShift(shiftId, before); }, redo: async () => { await updateShift(shiftId, after); } });
   }, [pushHistory, runAction, shifts, toDraft, updateShift]);
 
   const handleCopyShift = useCallback((shift: any) => { setCopiedShift(toDraft(shift)); setStatus("saved", "Shift copied"); }, [setStatus, toDraft]);
 
   const handlePasteShift = useCallback(async (date: string) => {
+    console.log("Schedule.handlePasteShift called", { date, copiedShift });
     if (!copiedShift) return;
     const draft = withCompany({ ...copiedShift, date });
     let createdId = "";
     await runAction("Copying shift", async () => { const created = await createShift(draft); createdId = created.id; });
+    console.log("Schedule.pasted shift", { createdId });
     pushHistory({ label: "Copy shift", undo: async () => { await deleteShift(createdId); }, redo: async () => { const recreated = await createShift(draft); createdId = recreated.id; } });
   }, [copiedShift, createShift, deleteShift, pushHistory, runAction, withCompany]);
 
@@ -238,12 +248,14 @@ export function Schedule() {
 
   const handleAutoCreate = useCallback(async (date: string) => {
     const drafts = buildAutoShifts(date);
+    console.log("Schedule.handleAutoCreate start", { date, draftsCount: drafts.length });
     if (drafts.length === 0) return setStatus("error", "No available employees for auto-fill");
     let createdIds: string[] = [];
     await runAction("Auto-filling shifts", async () => {
       createdIds = [];
       for (const draft of drafts) { const created = await createShift(draft); createdIds.push(created.id); }
     });
+    console.log("Schedule.handleAutoCreate created", { date, createdCount: createdIds.length, createdIds });
     pushHistory({
       label: "Auto-fill shifts",
       undo: async () => { for (const id of createdIds) await deleteShift(id); },
@@ -274,6 +286,7 @@ export function Schedule() {
     e.dataTransfer.setData("text/plain", shiftId);
     const shift = shifts.find((item) => item.id === shiftId);
     const first = shift?.employees?.[0];
+    console.log("Schedule.startDrag", { shiftId, first });
     setDragPreview({ visible: true, x: e.clientX, y: e.clientY, title: first ? companyMembers.find((member) => member.id === first)?.name ?? first : shift?.employeeName });
   };
 
@@ -320,7 +333,7 @@ export function Schedule() {
           {weekDates.map((date, index) => {
             const dayShifts = getShiftsForDate(date);
             const dateStr = date.toISOString().split("T")[0];
-            return <div key={index} onDragOver={(e) => { e.preventDefault(); setDragPreview((prev) => ({ ...prev, visible: true, x: e.clientX + 12, y: e.clientY + 12 })); }} onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) void handleMoveShift(id, dateStr); setDragPreview((prev) => ({ ...prev, visible: false })); }} className={`min-h-[220px] border-r border-b border-gray-200 p-3 last:border-r-0 ${isToday(date) ? "bg-blue-600/5" : "bg-white"}`}>
+            return <div key={index} onDragOver={(e) => { e.preventDefault(); setDragPreview((prev) => ({ ...prev, visible: true, x: e.clientX + 12, y: e.clientY + 12 })); }} onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) { console.log("Schedule.onDrop", { id, dateStr }); void handleMoveShift(id, dateStr); } setDragPreview((prev) => ({ ...prev, visible: false })); }} className={`min-h-[220px] border-r border-b border-gray-200 p-3 last:border-r-0 ${isToday(date) ? "bg-blue-600/5" : "bg-white"}`}>
               <div className="mb-3 flex items-start justify-between gap-2">
                 <span onClick={() => setExpandedDate(dateStr)} className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ${isToday(date) ? "bg-blue-600 font-bold text-white" : "text-gray-700"}`}>{date.getDate()}</span>
                 {dayActions(dateStr)}
