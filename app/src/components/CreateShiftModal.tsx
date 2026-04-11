@@ -19,7 +19,15 @@ export default function CreateShiftModal({
   initialData?: any;
   employees: Employee[];
 }) {
-  const [date, setDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const localYMD = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  };
+
+  const [date, setDate] = useState<string>(localYMD());
   const [shiftType, setShiftType] = useState<string>("morning");
   const [customStart, setCustomStart] = useState<string>("09:00");
   const [customEnd, setCustomEnd] = useState<string>("17:00");
@@ -30,7 +38,7 @@ export default function CreateShiftModal({
 
   useEffect(() => {
     if (initialData) {
-      setDate(initialData.date || new Date().toISOString().split("T")[0]);
+      setDate(initialData.date || localYMD());
       setCustomStart(initialData.startTime || "09:00");
       setCustomEnd(initialData.endTime || "17:00");
       setSelectedEmployees(initialData.employees || []);
@@ -41,7 +49,7 @@ export default function CreateShiftModal({
       else if (initialData.startTime === "23:00") setShiftType("night");
       else setShiftType("custom");
     } else {
-      setDate(new Date().toISOString().split("T")[0]);
+      setDate(localYMD());
       setShiftType("morning");
       setCustomStart("09:00");
       setCustomEnd("17:00");

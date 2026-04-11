@@ -53,6 +53,14 @@ export function ManageShifts() {
     return { date: shift.date, startTime: shift.startTime ?? "09:00", endTime: shift.endTime ?? "17:00", employees: employeesForShift, ...(employeeId ? { employeeId } : {}), ...(employeeName ? { employeeName } : {}), role: shift.role ?? "Staff", ...(shift.location ? { location: shift.location } : {}), ...(selected?.id ? { company_id: selected.id } : {}) };
   }, [employees, selected?.id]);
 
+  const parseYMD = (s?: string | null) => {
+    if (!s) return null;
+    const parts = String(s).split("-").map((x) => parseInt(x, 10));
+    if (parts.length < 3 || parts.some((n) => Number.isNaN(n))) return null;
+    const [y, m, d] = parts;
+    return new Date(y, m - 1, d);
+  };
+
   const runAction = useCallback(async (label: string, action: () => Promise<void>) => {
     setStatus("saving", label);
     console.log("ManageShifts.runAction start", { label });
@@ -159,9 +167,10 @@ export function ManageShifts() {
                 ? shift.employees.map((id: string) => employees.find((e: any) => e.id === id)?.name ?? id)
                 : (shift.employeeName ? [shift.employeeName] : []);
               const employeeLabel = names.length ? names.join(", ") : "Unassigned";
+              const dateDisplay = (() => { const d = parseYMD(shift.date); return d ? d.toLocaleDateString() : "-"; })();
               return <tr key={shift.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
                 <td className="p-4 font-medium text-gray-900">{employeeLabel}</td>
-                <td className="p-4 text-gray-700">{shift.date ? new Date(shift.date).toLocaleDateString() : "-"}</td>
+                <td className="p-4 text-gray-700">{dateDisplay}</td>
                 <td className="p-4 text-gray-700">{shift.startTime ?? "--:--"} - {shift.endTime ?? "--:--"}</td>
                 <td className="p-4 text-gray-700">{shift.role ?? "-"}</td>
                 <td className="p-4 text-gray-700">{shift.location ?? "-"}</td>

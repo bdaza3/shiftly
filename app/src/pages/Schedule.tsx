@@ -147,8 +147,18 @@ export function Schedule() {
     return week;
   };
 
+  // parse a YYYY-MM-DD date string into a local Date at midnight
+  const parseYMD = (s?: string | null) => {
+    if (!s) return null;
+    const parts = String(s).split("-").map((x) => parseInt(x, 10));
+    if (parts.length < 3 || parts.some((n) => Number.isNaN(n))) return null;
+    const [y, m, d] = parts;
+    return new Date(y, m - 1, d);
+  };
+
   const getShiftsForDate = useCallback((date: Date) => shifts.filter((shift) => {
-    const shiftDate = new Date(shift.date);
+    const shiftDate = parseYMD(shift.date);
+    if (!shiftDate) return false;
     return shiftDate.getDate() === date.getDate() && shiftDate.getMonth() === date.getMonth() && shiftDate.getFullYear() === date.getFullYear();
   }), [shifts]);
 
@@ -325,7 +335,10 @@ export function Schedule() {
 
       <CreateShiftModal visible={showCreateModal} onClose={() => { setShowCreateModal(false); setEditingShift(null); }} onSave={handleSaveShift} onDelete={handleDeleteShift} initialData={editingShift} employees={assignableEmployees} />
 
-      {expandedDate && <GanttDayDetail date={new Date(expandedDate)} shifts={getShiftsForDate(new Date(expandedDate))} onClose={() => setExpandedDate(null)} companyMembers={companyMembers} onUpdateShift={(id, startTime, endTime) => handleSaveShift({ ...(shifts.find((shift) => shift.id === id) ?? {}), id, startTime, endTime })} onEditShift={openShift} onDeleteShift={handleDeleteShift} onCopyShift={handleCopyShift} onPasteShift={() => handlePasteShift(expandedDate)} canPaste={!!copiedShift} onAutoCreate={() => handleAutoCreate(expandedDate)} onUndo={handleUndo} onRedo={handleRedo} canUndo={history.length > 0} canRedo={redoHistory.length > 0} saveState={saveState} />}
+      {expandedDate && (() => {
+        const d = parseYMD(expandedDate);
+        return d ? <GanttDayDetail date={d} shifts={getShiftsForDate(d)} onClose={() => setExpandedDate(null)} companyMembers={companyMembers} onUpdateShift={(id, startTime, endTime) => handleSaveShift({ ...(shifts.find((shift) => shift.id === id) ?? {}), id, startTime, endTime })} onEditShift={openShift} onDeleteShift={handleDeleteShift} onCopyShift={handleCopyShift} onPasteShift={() => handlePasteShift(expandedDate)} canPaste={!!copiedShift} onAutoCreate={() => handleAutoCreate(expandedDate)} onUndo={handleUndo} onRedo={handleRedo} canUndo={history.length > 0} canRedo={redoHistory.length > 0} saveState={saveState} /> : null;
+      })()}
 
       {view === "week" && !expandedDate && <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="grid grid-cols-7 border-b border-gray-200">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="border-r border-gray-200 p-4 text-center last:border-r-0"><p className="text-sm font-semibold text-gray-700">{day}</p></div>)}</div>
