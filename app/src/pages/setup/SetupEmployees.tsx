@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { Users, ArrowRight, Mail, Plus, X, Link as LinkIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Users, ArrowRight, Mail, Plus, X, Link as LinkIcon, LightbulbIcon } from "lucide-react";
 
 export function SetupEmployees() {
   const [emails, setEmails] = useState<string[]>([""]);
   const [inviteLink, setInviteLink] = useState("");
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const addEmailField = () => {
     setEmails([...emails, ""]);
@@ -33,15 +33,15 @@ export function SetupEmployees() {
     // Save employee invites
     const validEmails = emails.filter((e) => e.trim() !== "");
     sessionStorage.setItem("employee_invites", JSON.stringify(validEmails));
-    navigate("/setup/work-structure");
+    router.push("/setupworkstructure");
   };
 
   const handleSkip = () => {
-    navigate("/setup/work-structure");
+    router.push("/setupworkstructure");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#4F46E5] to-[#6366F1] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-[#6366F1] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden">
         <div className="p-8">
           {/* Header */}
@@ -49,7 +49,7 @@ export function SetupEmployees() {
             <div className="w-16 h-16 rounded-full bg-[#F59E0B] bg-opacity-10 flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8 text-[#F59E0B]" />
             </div>
-            <h1 className="text-3xl font-bold text-[#4F46E5] mb-2">
+            <h1 className="text-3xl font-bold text-blue-600 mb-2">
               Invite Your Team
             </h1>
             <p className="text-gray-500">
@@ -68,7 +68,7 @@ export function SetupEmployees() {
               </div>
               <div className="w-16 h-0.5 bg-[#10B981]"></div>
               <div className="flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-sm font-medium">
+                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">
                   2
                 </div>
                 <span className="text-xs font-medium text-gray-900 mt-1">
@@ -101,13 +101,13 @@ export function SetupEmployees() {
                       value={email}
                       onChange={(e) => updateEmail(index, e.target.value)}
                       placeholder="employee@example.com"
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                     />
                     {emails.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeEmailField(index)}
-                        className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                        className="p-2 text-gray-400 hover:text-red-500 transition-colors hover:cursor-pointer"
                       >
                         <X className="w-5 h-5" />
                       </button>
@@ -118,7 +118,7 @@ export function SetupEmployees() {
               <button
                 type="button"
                 onClick={addEmailField}
-                className="flex items-center gap-2 text-sm text-[#4F46E5] hover:text-[#6366F1] font-medium"
+                className="flex items-center gap-2 text-sm text-blue-600 hover:text-[#6366F1] font-medium hover:cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 Add another email
@@ -145,7 +145,7 @@ export function SetupEmployees() {
                 <button
                   type="button"
                   onClick={generateInviteLink}
-                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#4F46E5] hover:bg-indigo-50 transition-colors text-gray-600 font-medium"
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-indigo-50 transition-colors text-gray-600 font-medium hover:cursor-pointer"
                 >
                   Generate Invite Link
                 </button>
@@ -181,7 +181,8 @@ export function SetupEmployees() {
             {/* Info */}
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-900">
-                💡 <strong>Tip:</strong> You can always invite more employees
+                <LightbulbIcon className="inline w-4 h-4 mr-1" />
+                <strong>Tip:</strong> You can always invite more employees
                 later from your dashboard. Don't worry about getting everyone set
                 up right now!
               </p>
@@ -192,13 +193,13 @@ export function SetupEmployees() {
           <div className="flex gap-3 mt-8">
             <button
               onClick={handleSkip}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium hover:cursor-pointer"
             >
               Skip for Now
             </button>
             <button
               onClick={handleContinue}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors font-medium"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium hover:cursor-pointer"
             >
               Continue
               <ArrowRight className="w-5 h-5" />

@@ -1,6 +1,8 @@
+"use client";
+
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { Calendar, ArrowRight, Sparkles, FileText } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Calendar, ArrowRight, Sparkles, FileText, Utensils, Store, Hospital } from "lucide-react";
 
 const SCHEDULE_TEMPLATES = [
   {
@@ -13,39 +15,39 @@ const SCHEDULE_TEMPLATES = [
     id: "restaurant",
     name: "Restaurant Template",
     description: "Morning, lunch, and dinner shifts with typical breaks",
-    icon: "🍽️",
+    icon: Utensils,
   },
   {
     id: "retail",
     name: "Retail Template",
     description: "Opening, mid-day, and closing shifts for 7 days",
-    icon: "🏪",
+    icon: Store,
   },
   {
     id: "healthcare",
     name: "Healthcare Template",
     description: "24/7 coverage with day, evening, and night shifts",
-    icon: "🏥",
+    icon: Hospital,
   },
 ];
 
 export function SetupSchedule() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const handleContinue = () => {
     // Save template choice
     sessionStorage.setItem("schedule_template", selectedTemplate || "blank");
-    navigate("/setup/employees");
+    router.push("/setupemployees");
   };
 
   const handleSkip = () => {
     sessionStorage.setItem("setup_skipped", "true");
-    navigate("/");
+    router.push("/");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#4F46E5] to-[#6366F1] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-[#6366F1] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden">
         <div className="p-8">
           {/* Header */}
@@ -53,7 +55,7 @@ export function SetupSchedule() {
             <div className="w-16 h-16 rounded-full bg-[#10B981] bg-opacity-10 flex items-center justify-center mx-auto mb-4">
               <Calendar className="w-8 h-8 text-[#10B981]" />
             </div>
-            <h1 className="text-3xl font-bold text-[#4F46E5] mb-2">
+            <h1 className="text-3xl font-bold text-blue-600 mb-2">
               Create Your First Schedule
             </h1>
             <p className="text-gray-500">
@@ -65,7 +67,7 @@ export function SetupSchedule() {
           <div className="mb-8">
             <div className="flex items-center justify-center gap-2">
               <div className="flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-sm font-medium">
+                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">
                   1
                 </div>
                 <span className="text-xs font-medium text-gray-900 mt-1">
@@ -95,10 +97,10 @@ export function SetupSchedule() {
               <button
                 key={template.id}
                 onClick={() => setSelectedTemplate(template.id)}
-                className={`p-6 border-2 rounded-xl text-left transition-all hover:shadow-md ${
+                className={`p-6 border-2 rounded-xl text-left transition-all hover:shadow-md hover:cursor-pointer ${
                   selectedTemplate === template.id
-                    ? "border-[#4F46E5] bg-indigo-50"
-                    : "border-gray-200 hover:border-[#4F46E5]"
+                    ? "border-blue-600 bg-indigo-50"
+                    : "border-gray-200 hover:border-blue-600"
                 }`}
               >
                 <div className="flex items-start gap-4">
@@ -106,7 +108,7 @@ export function SetupSchedule() {
                     {typeof template.icon === "string" ? (
                       template.icon
                     ) : (
-                      <template.icon className="w-8 h-8 text-[#4F46E5]" />
+                      <template.icon className="w-8 h-8 text-blue-600" />
                     )}
                   </div>
                   <div className="flex-1">
@@ -118,7 +120,7 @@ export function SetupSchedule() {
                     </p>
                   </div>
                   {selectedTemplate === template.id && (
-                    <div className="w-5 h-5 rounded-full bg-[#4F46E5] flex items-center justify-center flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
                       <span className="text-white text-xs">✓</span>
                     </div>
                   )}
@@ -130,7 +132,7 @@ export function SetupSchedule() {
           {/* Smart Tip */}
           <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg mb-6">
             <div className="flex items-start gap-3">
-              <Sparkles className="w-5 h-5 text-[#4F46E5] flex-shrink-0 mt-0.5" />
+              <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-indigo-900 mb-1">
                   Smart Tip
@@ -147,14 +149,14 @@ export function SetupSchedule() {
           <div className="flex gap-3">
             <button
               onClick={handleSkip}
-              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium hover:cursor-pointer"
             >
               Skip Setup
             </button>
             <button
               onClick={handleContinue}
               disabled={!selectedTemplate}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium hover:cursor-pointer"
             >
               Continue
               <ArrowRight className="w-5 h-5" />

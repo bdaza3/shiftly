@@ -163,7 +163,7 @@ export function Register() {
         <div className="p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-blue-600 mb-2">Shiftly</h1>
-            <p className="text-gray-500">Let's get started</p>
+            <p className="text-gray-500">Let's get started!</p>
           </div>
 
           <div className="mb-8">
@@ -182,7 +182,9 @@ export function Register() {
 
           <form onSubmit={handleContinue} className="space-y-6">
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+              <label className="block text-sm font-medium text-gray-700">First name
+                <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+              </label>
               <input
                 type="text"
                 id="firstName"
@@ -195,7 +197,9 @@ export function Register() {
             </div>
 
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+              <label className="block text-sm font-medium text-gray-700">Last name
+                <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+              </label>              
               <input
                 type="text"
                 id="lastName"
@@ -208,7 +212,9 @@ export function Register() {
             </div>
 
             <div>
-              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+              <label className="block text-sm font-medium text-gray-700">Phone number
+                <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+              </label>              
               <input
                 type="tel"
                 id="phoneNumber"
@@ -221,7 +227,7 @@ export function Register() {
               <p className="mt-1 text-xs text-gray-500">We'll use this for shift reminders and notifications</p>
             </div>
 
-            <button type="submit" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button type="submit" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer font-medium">
               Continue
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
                 <path d="M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

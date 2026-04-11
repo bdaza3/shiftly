@@ -50,10 +50,12 @@ export function Step2RoleSelection() {
             </div>
           </div>
 
+          {/* Role Selection */}
           <div className="grid md:grid-cols-2 gap-6 mb-6">
+            {/* Employee Role */}
             <button
               onClick={() => handleRoleSelect("employee")}
-              className={`p-8 border-2 rounded-xl text-left transition-all hover:shadow-lg ${
+              className={`p-8 border-2 rounded-xl text-left transition-all hover:shadow-lg hover:cursor-pointer ${
                 role === "employee"
                   ? "border-blue-600 bg-indigo-50"
                   : "border-gray-200 hover:border-blue-600"
@@ -63,7 +65,7 @@ export function Step2RoleSelection() {
                 <Users className="w-7 h-7 text-blue-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">I'm an Employee</h3>
-              <p className="text-gray-600 mb-4">Join your company's workspace using an invite code</p>
+              <p className="text-gray-600 mb-4">Join your company's workspace using an invite code or request access.</p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start">
                   <span className="text-blue-600 mr-2">✓</span>
@@ -84,9 +86,10 @@ export function Step2RoleSelection() {
               </div>
             </button>
 
+            {/* Manager/Owner Option */}
             <button
               onClick={() => handleRoleSelect("manager")}
-              className={`p-8 border-2 rounded-xl text-left transition-all hover:shadow-lg ${
+              className={`p-8 border-2 rounded-xl text-left transition-all hover:shadow-lg hover:cursor-pointer ${
                 role === "manager"
                   ? "border-blue-600 bg-indigo-50"
                   : "border-gray-200 hover:border-blue-600"
@@ -118,9 +121,12 @@ export function Step2RoleSelection() {
             </button>
           </div>
 
-          <button onClick={() => router.push("/register")} className="w-full py-3 text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
-            ← Go Back
-          </button>
+          <div className="flex items-center justify-center gap-2">
+            <button onClick={() => router.push("/register")} className="w-1/5 py-3 text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium hover:cursor-pointer flex items-center justify-center gap-1 border border-gray-300 rounded-lg hover:bg-gray-50">
+              ← Go Back
+            </button>
+          </div>
+
         </div>
       </div>
     </div>

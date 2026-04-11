@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, ArrowRight, Hash, CheckCircle } from "lucide-react";
+import { Building2, ArrowRight, Hash, CheckCircle, MailIcon, QrCodeIcon } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 
 export default function JoinCompany() {
@@ -26,10 +26,10 @@ export default function JoinCompany() {
 		const v = value.toUpperCase();
 		setJoinCode(v);
 
-		// Mock preview when 6 chars entered
+		// Mock preview when 6 chars entered (in real app, fetch company info from server)
 		if (v.length === 6) {
 			setTimeout(() => {
-				setCompanyPreview({ name: "Joe's Pizza 🍕", industry: "Restaurant" });
+				setCompanyPreview({ name: "Joe's Pizza", industry: "Restaurant" });
 			}, 300);
 		} else {
 			setCompanyPreview(null);
@@ -74,14 +74,14 @@ export default function JoinCompany() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-[#4F46E5] to-[#6366F1] flex items-center justify-center p-4">
+		<div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center p-4">
 			<div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
 				<div className="p-8">
 					<div className="text-center mb-8">
-						<div className="w-16 h-16 rounded-full bg-[#4F46E5] bg-opacity-10 flex items-center justify-center mx-auto mb-4">
-							<Building2 className="w-8 h-8 text-[#4F46E5]" />
+						<div className="w-16 h-16 rounded-full bg-blue-600 bg-opacity-10 flex items-center justify-center mx-auto mb-4">
+							<Building2 className="w-8 h-8 text-blue-600" />
 						</div>
-						<h1 className="text-3xl font-bold text-[#4F46E5] mb-2">Join Your Company</h1>
+						<h1 className="text-3xl font-bold text-blue-600 mb-2">Join Your Company</h1>
 						<p className="text-gray-500">Enter the invite code from your manager</p>
 					</div>
 
@@ -98,9 +98,9 @@ export default function JoinCompany() {
 									✓
 								</div>
 							</div>
-							<div className="w-12 h-0.5 bg-[#4F46E5] mx-2"></div>
+							<div className="w-12 h-0.5 bg-blue-600 mx-2"></div>
 							<div className="flex items-center">
-								<div className="w-8 h-8 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-sm font-medium">3</div>
+								<div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">3</div>
 							</div>
 						</div>
 					</div>
@@ -120,7 +120,7 @@ export default function JoinCompany() {
 									required
 									placeholder="ABC123"
 									maxLength={6}
-									className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent uppercase tracking-wider text-center text-lg font-mono"
+									className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent uppercase tracking-wider text-center text-lg font-mono"
 								/>
 							</div>
 							<p className="mt-1 text-xs text-gray-500">Ask your manager for the 6-character join code</p>
@@ -148,14 +148,14 @@ export default function JoinCompany() {
 							<button
 								type="button"
 								onClick={() => router.push("/register?step=2")}
-								className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+								className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium hover:cursor-pointer"
 							>
-								Back
+								← Back
 							</button>
 							<button
 								type="submit"
 								disabled={loading || joinCode.length < 6}
-								className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+								className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
 							>
 								{loading ? (
 									"Joining..."
@@ -172,11 +172,13 @@ export default function JoinCompany() {
 					<div className="mt-6 pt-6 border-t border-gray-200">
 						<p className="text-center text-sm text-gray-600 mb-3">Or join using:</p>
 						<div className="flex gap-3">
-							<button type="button" className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
-								📧 Email Invite
+							<button type="button" className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium hover:cursor-pointer flex items-center justify-center gap-1">
+								<MailIcon className="w-5 h-5 mr-2 inline" />
+								    Email Invite
 							</button>
-							<button type="button" className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
-								📱 QR Code
+							<button type="button" className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium hover:cursor-pointer flex items-center justify-center gap-1">
+								<QrCodeIcon className="w-5 h-5 mr-2 inline" />
+								    QR Code
 							</button>
 						</div>
 					</div>
