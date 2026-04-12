@@ -19,6 +19,7 @@ import CreateShiftModal from "../components/CreateShiftModal";
 import GanttDayDetail from "../components/GanttDayDetail";
 import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
+import { useRole } from "../hooks/useRole";
 import { useShifts } from "../hooks/useShifts";
 
 type SaveState = { kind: "idle" | "saving" | "saved" | "error"; message: string };
@@ -52,6 +53,7 @@ function SaveBadge({ state }: { state: SaveState }) {
 export function Schedule() {
   const { user, profile } = useAuth();
   const { selected } = useCompany();
+  const { isAdmin } = useRole();
   const { shifts, createShift, updateShift, deleteShift } = useShifts(selected?.id);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"week" | "month">("week");
@@ -320,13 +322,13 @@ export function Schedule() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <SaveBadge state={saveState} />
-            <button onClick={() => void handleUndo()} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />Undo</button>
-            <button onClick={() => void handleRedo()} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />Redo</button>
+            {isAdmin && <button onClick={() => void handleUndo()} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />Undo</button>}
+            {isAdmin && <button onClick={() => void handleRedo()} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />Redo</button>}
             <div className="overflow-hidden rounded-lg border border-gray-200">
               <button onClick={() => setView("week")} className={`px-4 py-2 ${view === "week" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}>Week</button>
               <button onClick={() => setView("month")} className={`px-4 py-2 ${view === "month" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}>Month</button>
             </div>
-            {["admin", "manager"].includes((profile?.role || "").toLowerCase()) && <button onClick={() => { setEditingShift(null); setShowCreateModal(true); }} className="rounded-lg bg-emerald-500 px-3 py-2 text-sm text-white hover:bg-emerald-600">New Shift</button>}
+            {isAdmin && <button onClick={() => { setEditingShift(null); setShowCreateModal(true); }} className="rounded-lg bg-emerald-500 px-3 py-2 text-sm text-white hover:bg-emerald-600">New Shift</button>}
             <button onClick={goToPrevious} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50"><ChevronLeft className="h-5 w-5" /></button>
             <button onClick={goToNext} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50"><ChevronRight className="h-5 w-5" /></button>
           </div>
@@ -349,7 +351,7 @@ export function Schedule() {
             return <div key={index} onDragOver={(e) => { e.preventDefault(); setDragPreview((prev) => ({ ...prev, visible: true, x: e.clientX + 12, y: e.clientY + 12 })); }} onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) { console.log("Schedule.onDrop", { id, dateStr }); void handleMoveShift(id, dateStr); } setDragPreview((prev) => ({ ...prev, visible: false })); }} className={`min-h-[220px] border-r border-b border-gray-200 p-3 last:border-r-0 ${isToday(date) ? "bg-blue-600/5" : "bg-white"}`}>
               <div className="mb-3 flex items-start justify-between gap-2">
                 <span onClick={() => setExpandedDate(dateStr)} className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ${isToday(date) ? "bg-blue-600 font-bold text-white" : "text-gray-700"}`}>{date.getDate()}</span>
-                {dayActions(dateStr)}
+                {isAdmin ? dayActions(dateStr) : null}
               </div>
               <div className="space-y-2">{dayShifts.map((shift) => <motion.div key={shift.id} layoutId={shift.id ? `shift-${shift.id}` : undefined} draggable onDragStartCapture={(e) => startDrag(e, shift.id)} onClick={() => openShift(shift)} className="cursor-pointer rounded bg-blue-600 p-2 text-xs text-white hover:bg-blue-700">
                 {(() => {
@@ -359,8 +361,14 @@ export function Schedule() {
                     {names.map((name: string) => <p key={name} className="truncate font-semibold">{name}</p>)}
                     <p className="text-white/75">{shift.startTime} - {shift.endTime}</p>
                     <div className="mt-2 flex gap-2">
-                      <button onClick={(event) => { event.stopPropagation(); handleCopyShift(shift); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Copy</button>
-                      <button onClick={(event) => { event.stopPropagation(); void handleDeleteShift(shift.id); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Delete</button>
+                      {isAdmin ? (
+                        <>
+                          <button onClick={(event) => { event.stopPropagation(); handleCopyShift(shift); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Copy</button>
+                          <button onClick={(event) => { event.stopPropagation(); void handleDeleteShift(shift.id); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Delete</button>
+                        </>
+                      ) : (
+                        <div className="text-xs text-white/60">Read-only</div>
+                      )}
                     </div>
                   </>;
                 })()}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Building2, Globe, Users, Clock, Save, Edit2, Copy, Check } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
+import { useRole } from "../hooks/useRole";
 import { supabase } from "../../../lib/supabaseClient";
 
 const INDUSTRIES = [
@@ -100,7 +101,7 @@ export function Company() {
     try { await navigator.clipboard.writeText(inviteLink); } catch (e) { console.warn('copy link failed', e); }
   };
 
-  const isAdmin = Boolean(selected?.current_user_role === 'admin' || user?.role === 'admin');
+  const { isAdmin } = useRole();
 
   return (
     <div className="space-y-6">

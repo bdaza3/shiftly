@@ -7,6 +7,7 @@ import { CheckCircle2, ClipboardList, Copy, LoaderCircle, Plus, Redo2, Sparkles,
 import CreateShiftModal from "../../components/CreateShiftModal";
 import { useAuth } from "../../hooks/useAuth";
 import { useCompany } from "../../hooks/useCompany";
+import { useRole } from "../../hooks/useRole";
 import { useCompanyMembers } from "../../hooks/useCompanyMembers";
 import { useShifts } from "../../hooks/useShifts";
 
@@ -25,6 +26,7 @@ function SaveBadge({ state }: { state: SaveState }) {
 export function ManageShifts() {
   const { selected } = useCompany();
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const { members } = useCompanyMembers(selected?.id ?? null);
   const { shifts, loading, createShift, updateShift, deleteShift } = useShifts(selected?.id);
   const [showModal, setShowModal] = useState(false);
@@ -149,10 +151,14 @@ export function ManageShifts() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SaveBadge state={saveState} />
-          <button onClick={() => { console.log("ManageShifts.click Undo"); void handleUndo(); }} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />Undo</button>
-          <button onClick={() => { console.log("ManageShifts.click Redo"); void handleRedo(); }} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />Redo</button>
-          <button onClick={() => { console.log("ManageShifts.click Auto Today"); void handleAutoCreate(); }} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Sparkles className="h-4 w-4" />Auto Today</button>
-          <button onClick={() => { console.log("ManageShifts.click New Shift"); setEditingShift(null); setShowModal(true); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 hover:cursor-pointer"><Plus className="h-5 w-5" />New Shift</button>
+          {isAdmin && (
+            <>
+              <button onClick={() => { console.log("ManageShifts.click Undo"); void handleUndo(); }} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />Undo</button>
+              <button onClick={() => { console.log("ManageShifts.click Redo"); void handleRedo(); }} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />Redo</button>
+              <button onClick={() => { console.log("ManageShifts.click Auto Today"); void handleAutoCreate(); }} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Sparkles className="h-4 w-4" />Auto Today</button>
+              <button onClick={() => { console.log("ManageShifts.click New Shift"); setEditingShift(null); setShowModal(true); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 hover:cursor-pointer"><Plus className="h-5 w-5" />New Shift</button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -176,9 +182,15 @@ export function ManageShifts() {
                 <td className="p-4 text-gray-700">{shift.location ?? "-"}</td>
                 <td className="p-4">
                   <div className="flex gap-2">
-                    <button onClick={() => { console.log("ManageShifts.click Edit", { shiftId: shift.id }); setEditingShift(shift); setShowModal(true); }} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><PencilIcon className="h-4 w-4" />Edit</button>
-                    <button onClick={() => { console.log("ManageShifts.click Copy", { shiftId: shift.id }); void handleCopy(shift); }} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Copy className="h-4 w-4" />Copy</button>
-                    <button onClick={() => { console.log("ManageShifts.click Delete", { shiftId: shift.id }); void handleDelete(shift.id); }} className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:cursor-pointer"><Trash2 className="h-4 w-4" />Delete</button>
+                    {isAdmin ? (
+                      <>
+                        <button onClick={() => { console.log("ManageShifts.click Edit", { shiftId: shift.id }); setEditingShift(shift); setShowModal(true); }} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><PencilIcon className="h-4 w-4" />Edit</button>
+                        <button onClick={() => { console.log("ManageShifts.click Copy", { shiftId: shift.id }); void handleCopy(shift); }} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Copy className="h-4 w-4" />Copy</button>
+                        <button onClick={() => { console.log("ManageShifts.click Delete", { shiftId: shift.id }); void handleDelete(shift.id); }} className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:cursor-pointer"><Trash2 className="h-4 w-4" />Delete</button>
+                      </>
+                    ) : (
+                      <div className="text-sm text-gray-400">Restricted</div>
+                    )}
                   </div>
                 </td>
               </tr>;
