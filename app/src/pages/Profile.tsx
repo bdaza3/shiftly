@@ -20,6 +20,8 @@ export function Profile() {
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const effectiveMembershipRole = membershipRole ?? selected?.current_user_role ?? null
 
   useEffect(() => {
@@ -79,8 +81,8 @@ export function Profile() {
     } catch (err) {
       console.warn("Profile: signOut error", err);
     }
-    try { router.replace('/login'); } catch(e){}
-    try { window.location.assign('/login'); } catch(e){}
+    try { router.replace('/'); } catch(e){}
+    try { window.location.assign('/'); } catch(e){}
   };
 
   if (!user) return null;
@@ -155,11 +157,11 @@ export function Profile() {
             </div>
             <div className="ml-auto">
               {!editing ? (
-                <button onClick={() => setEditing(true)} className="px-3 py-2 bg-gray-100 rounded">Edit</button>
+                <button onClick={() => setEditing(true)} className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors hover:cursor-pointer">Edit</button>
               ) : (
                 <div className="flex gap-2">
-                  <button onClick={handleSave} disabled={saving} className="px-3 py-2 bg-blue-600 text-white rounded">Save</button>
-                  <button onClick={() => setEditing(false)} className="px-3 py-2 border rounded">Cancel</button>
+                  <button onClick={handleSave} disabled={saving} className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors hover:cursor-pointer">Save</button>
+                  <button onClick={() => setEditing(false)} className="px-3 py-2 border rounded hover:bg-gray-100 transition-colors hover:cursor-pointer">Cancel</button>
                 </div>
               )}
             </div>
@@ -200,13 +202,63 @@ export function Profile() {
           </div>
 
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+            <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors hover:cursor-pointer">
               <LogOut className="w-5 h-5" />
               Sign Out
             </button>
           </div>
         </div>
       </div>
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => { if (!logoutLoading) setShowLogoutConfirm(false) }} />
+          <div className="relative bg-white rounded-lg p-6 w-full max-w-sm z-10 shadow-lg" aria-busy={logoutLoading}>
+            <div className="flex flex-col items-center gap-2 mb-4 text-center">
+              <h2 className="text-xl font-semibold text-gray-900">Confirm Sign Out</h2>
+              <p className="text-sm text-gray-500">Are you sure you want to sign out?</p>
+            </div>
+            <div className="mt-4 flex justify-center gap-3">
+              <button
+                onClick={() => { if (!logoutLoading) setShowLogoutConfirm(false) }}
+                disabled={logoutLoading}
+                className={`px-3 py-1 rounded ${logoutLoading ? 'bg-gray-100 text-gray-400' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} transition-colors hover:cursor-pointer`}>
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (logoutLoading) return;
+                  setLogoutLoading(true);
+                  await new Promise((r) => requestAnimationFrame(r));
+                  try {
+                    await supabase.auth.signOut();
+                    // small delay so spinner is visible even for very fast sign-outs
+                    await new Promise((r) => setTimeout(r, 120));
+                    try { window.location.assign('/'); } catch (e) { try { router.replace('/'); } catch(_) {} }
+                  } catch (err) {
+                    console.warn('Profile: logout failed (confirm)', err)
+                  } finally {
+                    try { setLogoutLoading(false) } catch (_) {}
+                    try { setShowLogoutConfirm(false) } catch (_) {}
+                  }
+                }}
+                disabled={logoutLoading}
+                className={`px-3 py-1 rounded ${logoutLoading ? 'bg-red-500 cursor-wait' : 'bg-red-600 hover:bg-red-700'} text-white flex items-center gap-2 transition-colors hover:cursor-pointer`}>
+                {logoutLoading ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                    <span>Logging out...</span>
+                  </>
+                ) : (
+                  'Sign Out'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

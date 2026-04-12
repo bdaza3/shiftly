@@ -20,11 +20,12 @@ import { startTransition, useEffect, useState } from 'react'
 
 export function Sidebar() {
   const router = useRouter();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile } = useAuth();
   const { selected } = useCompany();
   const [isAdmin, setIsAdmin] = useState(false);
   const [membershipRole, setMembershipRole] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  
   const [mounted, setMounted] = useState(false)
   const inferredMembershipRole = membershipRole ?? selected?.current_user_role ?? null
   const inferredIsAdmin = /manager|admin|owner|company/.test(String(inferredMembershipRole || '').toLowerCase())
@@ -33,18 +34,7 @@ export function Sidebar() {
     setMounted(true)
   }, [])
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (err) {
-      console.warn("signOut error", err);
-    } finally {
-      startTransition(() => {
-        router.replace("/login");
-        router.refresh();
-      });
-    }
-  };
+  
   useEffect(() => {
     let mounted = true
     const load = async () => {
@@ -128,7 +118,7 @@ export function Sidebar() {
           >
             <span>
               {mounted ? (selected?.name ?? "Select company") : "Select company"}
-            </span>            
+            </span>
             <ChevronRight className="w-4 h-4 text-gray-400" />
           </button>
         </div>
@@ -217,27 +207,13 @@ export function Sidebar() {
           </Link>
 
 
-          <div className="ml-2">
-            <button
-              onClick={async () => {
-                console.log("Sidebar: logout clicked");
-                try {
-                  await handleLogout();
-                  console.log("Sidebar: handleLogout completed");
-                } catch (err) {
-                  console.warn("Sidebar: logout failed", err);
-                  try { await handleLogout(); } catch (e) { console.warn("Sidebar: retry logout failed", e); }
-                }
-              }}
-              className="px-3 py-1 text-sm text-red-600 hover:text-red-700 rounded-lg hover:cursor-pointer"
-            >
-              Logout
-            </button>
-          </div>
+          <div className="ml-2" />
         </div>
       </div>
 
       <CompanySelector open={menuOpen} onClose={() => setMenuOpen(false)} />
+
+      
     </aside>
   );
 }
