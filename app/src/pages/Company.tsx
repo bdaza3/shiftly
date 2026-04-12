@@ -115,7 +115,7 @@ export function Company() {
         {isAdmin && !isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer"
           >
             <Edit2 className="w-4 h-4" />
             Edit Settings
@@ -437,7 +437,7 @@ export function Company() {
                 />
                 <button
                   onClick={copyInviteCode}
-                  className="px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 hover:cursor-pointer"
                 >
                   {copiedCode ? (
                     <>
@@ -468,7 +468,7 @@ export function Company() {
                 />
                 <button
                   onClick={copyInviteLink}
-                  className="px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#6366F1] transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 hover:cursor-pointer"
                 >
                   <Copy className="w-4 h-4" />
                   Copy
