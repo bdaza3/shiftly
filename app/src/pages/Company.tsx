@@ -42,6 +42,7 @@ interface CompanyData {
 
 export function Company() {
   const { user } = useAuth();
+  const { isAdmin } = useRole();
   const { selected, refresh, addCompany } = useCompany();
   const [isEditing, setIsEditing] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -60,6 +61,7 @@ export function Company() {
   const [companyData, setCompanyData] = useState<CompanyData>(defaultCompany);
   const [formData, setFormData] = useState<CompanyData>(defaultCompany);
   const [saving, setSaving] = useState(false);
+  const [joinSaving, setJoinSaving] = useState(false);
 
   useEffect(() => {
     if (selected) {
@@ -101,7 +103,28 @@ export function Company() {
     try { await navigator.clipboard.writeText(inviteLink); } catch (e) { console.warn('copy link failed', e); }
   };
 
-  const { isAdmin } = useRole();
+  const toggleJoining = async () => {
+    if (!selected?.id) return;
+    setJoinSaving(true);
+    try {
+      if (joinCode) {
+        // disable joining via server API (service role)
+        const resp = await fetch('/api/companies/update-join', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id, join_code: null }) })
+        const json = await resp.json()
+        if (!resp.ok) throw new Error(json?.error || 'update join failed')
+      } else {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const resp = await fetch('/api/companies/update-join', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id, join_code: code }) })
+        const json = await resp.json()
+        if (!resp.ok) throw new Error(json?.error || 'update join failed')
+      }
+      try { await refresh(); } catch (e) { console.warn('refresh failed', e); }
+    } catch (e) {
+      console.warn('toggle joining failed', e);
+    } finally {
+      setJoinSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -407,7 +430,8 @@ export function Company() {
       {/* Employee Invites Card */}
       {isAdmin && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-gray-200">
+          <div className="p-6 border-b border-gray-200 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-lg bg-[#F59E0B] bg-opacity-10 flex items-center justify-center">
                 <Users className="w-6 h-6 text-[#F59E0B]" />
@@ -421,6 +445,15 @@ export function Company() {
                 </p>
               </div>
             </div>
+            <div>
+              <button
+                onClick={toggleJoining}
+                className={`px-4 py-2 rounded-lg transition-colors hover:cursor-pointer ${joinCode ? 'bg-red-50 text-red-700 border border-red-100 hover:bg-red-100' : 'bg-green-50 text-green-700 border border-green-100 hover:bg-green-100'}`}
+              >
+                {joinSaving ? 'Saving…' : joinCode ? 'Disable Joining' : 'Enable Joining'}
+              </button>
+            </div>
+          </div>
           </div>
 
           <div className="p-6 space-y-4">
@@ -436,22 +469,24 @@ export function Company() {
                   readOnly
                   className="flex-1 px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg font-mono text-lg text-center tracking-wider"
                 />
-                <button
-                  onClick={copyInviteCode}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 hover:cursor-pointer"
-                >
-                  {copiedCode ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4" />
-                      Copy
-                    </>
-                  )}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={copyInviteCode}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 hover:cursor-pointer"
+                  >
+                    {copiedCode ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
