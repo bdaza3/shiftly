@@ -13,7 +13,17 @@ export type Company = {
   owner?: string
   website?: string
   join_code?: string
+  // optional alternate camelCase
+  joinCode?: string
   current_user_role?: string
+  // common admin fields used in UI
+  timezone?: string
+  industry?: string
+  size?: string
+  default_shift_length?: number
+  // camelCase alternative
+  defaultShiftLength?: number
+  phone?: string
   teams?: Team[]
 }
 
