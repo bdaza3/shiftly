@@ -22,8 +22,11 @@ export function Login() {
 
     const finishRedirect = async () => {
       try {
-        await refreshProfile()
-        await refreshCompanies()
+        const withTimeout = async (p: Promise<any>, ms = 3000) =>
+          Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))])
+
+        try { await withTimeout(refreshProfile(), 3000) } catch (e) { console.warn('refreshProfile timed out or failed', e) }
+        try { await withTimeout(refreshCompanies(), 3000) } catch (e) { console.warn('refreshCompanies timed out or failed', e) }
       } catch (error) {
         console.warn("Login redirect sync failed", error)
       }
@@ -49,6 +52,7 @@ export function Login() {
     setSubmitting(true)
     try {
       const res = await signIn(email, password)
+      console.log('Login.handleSignIn: signIn result', res)
       if (res.error) {
         alert(res.error.message)
         setRedirectPending(false)
