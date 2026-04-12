@@ -73,7 +73,14 @@ export default function CreateCompany() {
       const resp = await fetch("/api/companies/create", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: formData.companyName.trim(), join_code, user_id: user.id }),
+        body: JSON.stringify({
+          name: formData.companyName.trim(),
+          join_code,
+          user_id: user.id,
+          first_name: step1Data.firstName ?? null,
+          last_name: step1Data.lastName ?? null,
+          phone: step1Data.phone ?? null,
+        }),
       });
       const json = await resp.json();
       if (!resp.ok || json?.error) throw new Error(json?.error || "Failed to create company");
@@ -81,18 +88,19 @@ export default function CreateCompany() {
       const created = json.company;
       if (created) {
         addCompany(created);
-        try { await refresh(); } catch (e) { /* ignore */ }
+        try { await refresh(); } catch { /* ignore */ }
       }
 
       // persist company info for setup wizard
-      try { sessionStorage.setItem("company_info", JSON.stringify(formData)); } catch (e) {}
+      try { sessionStorage.setItem("company_info", JSON.stringify(formData)); } catch {}
       sessionStorage.removeItem("registration_step1");
 
-      try { await refreshProfile(); } catch (e) { /* ignore */ }
+      try { await refreshProfile(); } catch { /* ignore */ }
 
       router.replace("/setupschedule");
-    } catch (err: any) {
-      alert(err?.message || String(err) || "Failed to create company. Please try again.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      alert(message || "Failed to create company. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, ArrowRight, Hash, CheckCircle, MailIcon, QrCodeIcon } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { useCompany } from "../../hooks/useCompany";
 
 export default function JoinCompany() {
 	const [joinCode, setJoinCode] = useState("");
@@ -14,6 +15,7 @@ export default function JoinCompany() {
 	} | null>(null);
 	const router = useRouter();
 	const { user, refreshProfile } = useAuth();
+	const { addCompany, refresh } = useCompany();
 
 	useEffect(() => {
 		const step1Data = sessionStorage.getItem("registration_step1");
@@ -22,18 +24,45 @@ export default function JoinCompany() {
 		}
 	}, [router]);
 
+	useEffect(() => {
+		const normalizedCode = joinCode.trim().toUpperCase();
+		if (normalizedCode.length !== 6) {
+			setCompanyPreview(null);
+			return;
+		}
+
+		let cancelled = false;
+		const timeoutId = window.setTimeout(async () => {
+			try {
+				const resp = await fetch("/api/companies/preview", {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({ join_code: normalizedCode }),
+				});
+				const json = await resp.json();
+				if (cancelled) return;
+				if (resp.ok && json?.company) {
+					setCompanyPreview({
+						name: json.company.name,
+						industry: json.company.industry,
+					});
+				} else {
+					setCompanyPreview(null);
+				}
+			} catch {
+				if (!cancelled) setCompanyPreview(null);
+			}
+		}, 250);
+
+		return () => {
+			cancelled = true;
+			window.clearTimeout(timeoutId);
+		};
+	}, [joinCode]);
+
 	const handleCodeChange = (value: string) => {
 		const v = value.toUpperCase();
 		setJoinCode(v);
-
-		// Mock preview when 6 chars entered (in real app, fetch company info from server)
-		if (v.length === 6) {
-			setTimeout(() => {
-				setCompanyPreview({ name: "Joe's Pizza", industry: "Restaurant" });
-			}, 300);
-		} else {
-			setCompanyPreview(null);
-		}
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -47,7 +76,13 @@ export default function JoinCompany() {
 			const resp = await fetch("/api/companies/join", {
 				method: "POST",
 				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ join_code: joinCode, user_id: user.id }),
+				body: JSON.stringify({
+					join_code: joinCode,
+					user_id: user.id,
+					first_name: step1Data.firstName ?? null,
+					last_name: step1Data.lastName ?? null,
+					phone: step1Data.phone ?? null,
+				}),
 			});
 
 			const json = await resp.json();
@@ -55,19 +90,25 @@ export default function JoinCompany() {
 				throw new Error(json?.error || "Failed to join company");
 			}
 
+			if (json?.company) {
+				addCompany(json.company);
+			}
+
 			// clear step1 data
 			sessionStorage.removeItem("registration_step1");
 
-			// refresh local profile/state
+			// refresh local profile/company state
 			try {
+				await refresh();
 				await refreshProfile();
-			} catch (err) {
+			} catch {
 				// ignore
 			}
 
-			router.replace("/");
-		} catch (error: any) {
-			alert(error?.message || String(error) || "Invalid join code. Please check and try again.");
+			router.replace("/dashboard");
+		} catch (error: unknown) {
+			const message = error instanceof Error ? error.message : String(error);
+			alert(message || "Invalid join code. Please check and try again.");
 		} finally {
 			setLoading(false);
 		}
@@ -131,7 +172,7 @@ export default function JoinCompany() {
 								<div className="flex items-start gap-3">
 									<CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
 									<div>
-										<p className="text-sm font-medium text-green-900">You're joining:</p>
+										<p className="text-sm font-medium text-green-900">You&apos;re joining:</p>
 										<p className="text-lg font-semibold text-green-900 mt-1">{companyPreview.name}</p>
 										{companyPreview.industry && <p className="text-sm text-green-700 mt-0.5">{companyPreview.industry}</p>}
 									</div>
@@ -140,7 +181,7 @@ export default function JoinCompany() {
 						)}
 
 						<div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-							<p className="text-sm text-blue-900 font-medium mb-2">Don't have a join code?</p>
+							<p className="text-sm text-blue-900 font-medium mb-2">Don&apos;t have a join code?</p>
 							<p className="text-sm text-blue-700">Contact your manager or company owner to get an invite code. They can generate one from their admin dashboard.</p>
 						</div>
 
@@ -155,7 +196,7 @@ export default function JoinCompany() {
 							<button
 								type="submit"
 								disabled={loading || joinCode.length < 6}
-								className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-[#6366F1] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+								className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium hover:cursor-pointer"
 							>
 								{loading ? (
 									"Joining..."

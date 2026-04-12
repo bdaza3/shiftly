@@ -384,6 +384,7 @@ export function Company() {
       </div>
 
       {/* Work Settings Card */}
+    {isAdmin && (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -426,6 +427,7 @@ export function Company() {
           </div>
         </div>
       </div>
+    )}
 
       {/* Employee Invites Card */}
       {isAdmin && (

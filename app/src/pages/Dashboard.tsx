@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import { useShifts } from "../hooks/useShifts";
+import useRequests from "../hooks/useRequests";
 
 export function Dashboard() {
   const { user, userloading } = useAuth();
@@ -60,7 +61,18 @@ export function Dashboard() {
   //get pending requests for manager/admin view from database (filtering for pending status and future dates)
   //const pendingRequests = sampleRequests.filter((r) => r.status === "pending");
 
+  const { requests: allRequests, loading: requestsLoading, fetchRequests } = useRequests();
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    // refresh when selected company changes
+    fetchRequests().catch(() => {})
+  }, [selected?.id]);
+
+  useEffect(() => {
+    const pending = (allRequests || []).filter((r: any) => (r.status === 'pending'))
+    setPendingRequests(pending)
+  }, [allRequests])
 
   return (
     userloading ? <div className="p-6">Loading...</div> :

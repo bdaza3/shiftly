@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { useRole } from "../hooks/useRole";
+import useRequests from "../hooks/useRequests";
 import { FileText, Plus, X, Check, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -11,69 +13,48 @@ export function Requests() {
   const [requestType, setRequestType] = useState<"time-off" | "shift-swap">("time-off");
   const [date, setDate] = useState("");
   const [reason, setReason] = useState("");
-
-  const [requests, setRequests] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { role } = useRole();
+  const { requests, loading, createRequest, updateStatus, fetchRequests } = useRequests();
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const { data, error } = await supabase.from("requests").select("*").order("created_at", { ascending: false });
-      if (error) {
-        console.warn("requests fetch failed, using mock", error);
-        // fallback to mock
-        if (!mounted) return;
-        setRequests([
-          { id: "r1", employeeId: "u1", employeeName: "Alice Johnson", type: "time-off", date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), reason: "Family vacation", status: "pending", createdAt: new Date().toISOString() },
-          { id: "r2", employeeId: "u2", employeeName: "Bob Smith", type: "shift-swap", date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), reason: "Swap with Alice", status: "approved", createdAt: new Date().toISOString() }
-        ]);
-        setLoading(false);
-        return;
-      }
-      if (!mounted) return;
-      setRequests((data || []).map((r: any) => ({ ...r, createdAt: r.created_at ?? r.createdAt })));
-      setLoading(false);
-    })();
-    return () => { mounted = false; };
-  }, []);
+    // ensure requests are fresh when modal closes
+    if (!showModal) fetchRequests().catch(() => {})
+  }, [showModal, fetchRequests])
 
   const submitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      employee_id: user?.id ?? null,
+      requester_id: user?.id ?? null,
       employee_name: profile?.full_name ?? user?.email ?? "Unknown",
       type: requestType,
       date,
-      reason,
+      details: reason,
       status: "pending",
+      company_id: undefined,
     };
     try {
-      const { data, error } = await supabase.from("requests").insert([payload]).select().single();
-      if (error) throw error;
-      setRequests((s) => [ { ...data, createdAt: data.created_at ?? data.createdAt }, ...s ]);
+      await createRequest(payload);
       setShowModal(false);
       setDate("");
       setReason("");
     } catch (err) {
-      console.warn("could not submit request, falling back to mock", err);
-      alert("Request submitted (mock)");
-      setShowModal(false);
+      console.warn("could not submit request", err);
+      alert("Request submission failed")
     }
   };
 
   const handleAction = async (id: string, newStatus: string) => {
     try {
-      const { data, error } = await supabase.from("requests").update({ status: newStatus }).eq("id", id).select().single();
-      if (error) throw error;
-      setRequests((s) => s.map((r) => (r.id === id ? { ...r, status: data.status } : r)));
+      await updateStatus(id, newStatus)
     } catch (err) {
       console.warn("could not update request status", err);
-      setRequests((s) => s.map((r) => (r.id === id ? { ...r, status: newStatus } : r)));
+      // optimistic fallback
+      fetchRequests().catch(() => {})
     }
   };
 
   const userRequests = user?.role === "employee"
-    ? requests.filter((r) => r.employee_id === user.id || r.employeeId === user.id)
+    ? requests.filter((r) => r.requester_id === user.id || r.requester_id === user.id)
     : requests;
 
   const getStatusColor = (status: string) => {
@@ -112,17 +93,17 @@ export function Requests() {
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Requests</h2>
               <p className="text-sm text-gray-500 mt-1">
-                {user?.role === "admin"
+                {role === "admin"
                   ? "Review and manage employee requests"
                   : "Submit and track your time-off and shift swap requests"}
               </p>
             </div>
           </div>
 
-          {user?.role === "employee" && (
+          {role === "employee" && (
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer"
             >
               <Plus className="w-5 h-5" />
               New Request
@@ -137,7 +118,7 @@ export function Requests() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">
-                {user?.role === "admin" && (
+                {role === "admin" && (
                   <th className="text-left p-4 font-semibold text-gray-700">Employee</th>
                 )}
                 <th className="text-left p-4 font-semibold text-gray-700">Type</th>
@@ -145,7 +126,7 @@ export function Requests() {
                 <th className="text-left p-4 font-semibold text-gray-700">Reason</th>
                 <th className="text-left p-4 font-semibold text-gray-700">Status</th>
                 <th className="text-left p-4 font-semibold text-gray-700">Submitted</th>
-                {user?.role === "admin" && (
+                {role === "admin" && (
                   <th className="text-left p-4 font-semibold text-gray-700">Actions</th>
                 )}
               </tr>
@@ -153,7 +134,7 @@ export function Requests() {
             <tbody>
               {userRequests.map((request) => (
                 <tr key={request.id} className="border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
-                  {user?.role === "admin" && (
+                  {role === "admin" && (
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
@@ -175,7 +156,7 @@ export function Requests() {
                     </span>
                   </td>
                   <td className="p-4 text-gray-700">{new Date(request.createdAt ?? request.created_at ?? request.createdAt).toLocaleDateString()}</td>
-                  {user?.role === "admin" && (
+                  {role === "admin" && (
                     <td className="p-4">
                       {request.status === "pending" && (
                         <div className="flex gap-2">
@@ -194,11 +175,11 @@ export function Requests() {
 
       {/* New Request Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-xl font-semibold text-gray-900">New Request</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-6 h-6" /></button>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 hover:cursor-pointer"><X className="w-6 h-6" /></button>
             </div>
 
             <form onSubmit={submitRequest} className="p-6 space-y-4">
@@ -221,8 +202,8 @@ export function Requests() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Submit Request</button>
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer">Submit Request</button>
               </div>
             </form>
           </div>

@@ -91,7 +91,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
           const comps = json.companies ?? []
           setCompanies(comps)
           const stored = typeof window !== 'undefined' ? window.localStorage.getItem('activeCompanyId') : null
-          if (stored && comps.find((c: any) => c.id === stored)) {
+          if (stored && comps.find((c: Company) => c.id === stored)) {
             setSelectedId(stored)
           } else if (comps.length > 0) {
             setSelectedId(comps[0].id)
@@ -118,14 +118,21 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
 
   const selectCompany = (id: string) => {
     setSelectedId(id)
-    try { localStorage.setItem('activeCompanyId', id) } catch (e) {}
+    try { localStorage.setItem('activeCompanyId', id) } catch {}
   }
 
   const addCompany = (company: Company) => {
     console.log('CompanyContext.addCompany: adding', company)
-    setCompanies((prev) => [...prev, company])
+    setCompanies((prev) => {
+      const existingIndex = prev.findIndex((item) => item.id === company.id)
+      if (existingIndex === -1) return [...prev, company]
+
+      const next = [...prev]
+      next[existingIndex] = { ...next[existingIndex], ...company }
+      return next
+    })
     setSelectedId(company.id)
-    try { localStorage.setItem('activeCompanyId', company.id) } catch (e) {}
+    try { localStorage.setItem('activeCompanyId', company.id) } catch {}
   }
 
   const refresh = async () => {
@@ -144,7 +151,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
           try {
             if (fallback) localStorage.setItem('activeCompanyId', fallback)
             else localStorage.removeItem('activeCompanyId')
-          } catch (e) {}
+          } catch {}
           return fallback
         })
       } else {
