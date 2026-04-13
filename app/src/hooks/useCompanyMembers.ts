@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from './useAuth'
 import { useCompany } from './useCompany'
+import { authFetch } from '@/lib/authFetch'
 
 export function useCompanyMembers(companyId: string | null) {
   const { user } = useAuth()
@@ -30,9 +31,8 @@ export function useCompanyMembers(companyId: string | null) {
         setLoading(true)
         console.log('Team: loading members for company via API', targetId)
 
-        const resp = await fetch('/api/company_members/list', {
+        const resp = await authFetch('/api/company_members/list', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ company_id: targetId }),
           cache: 'no-store',
         })

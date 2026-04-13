@@ -1,23 +1,40 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from "next/server"
+import {
+  authenticateRequest,
+  isPrivilegedRole,
+  normalizeUuid,
+  parseJsonBody,
+  requireMembership,
+} from "@/lib/apiSecurity"
 
 export async function POST(req: Request) {
+  const auth = await authenticateRequest(req, {
+    rateLimitKey: "requests-list",
+    limit: 60,
+    windowMs: 60_000,
+  })
+  if (!auth.ok) return auth.response
+
   try {
-    const body = await req.json()
-    const { company_id } = body
-    const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE
-    const svcUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || process.env.SUPABASE_PROJECT_URL
-    if (!svcKey || !svcUrl) return NextResponse.json({ error: 'missing service role key or url' }, { status: 500 })
+    const body = await parseJsonBody<{ company_id: unknown }>(req)
+    const companyId = normalizeUuid(body.company_id, "company_id")
+    const membership = await requireMembership(auth.service, companyId, auth.user.id)
 
-    const svc = createClient(svcUrl, svcKey, { auth: { persistSession: false } })
+    let query = auth.service.from("requests").select("*").eq("company_id", companyId).order("created_at", {
+      ascending: false,
+    })
 
-    let q = svc.from('requests').select('*').order('created_at', { ascending: false })
-    if (company_id) q = q.eq('company_id', company_id)
-    const { data, error } = await q
+    if (!isPrivilegedRole(membership.role)) {
+      query = query.eq("requester_id", auth.user.id)
+    }
+
+    const { data, error } = await query
     if (error) return NextResponse.json({ error: error.message || String(error) }, { status: 400 })
 
     return NextResponse.json({ ok: true, requests: data })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    const status = message === "forbidden" ? 403 : 400
+    return NextResponse.json({ error: message }, { status })
   }
 }

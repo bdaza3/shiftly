@@ -6,6 +6,8 @@ import { useCompany } from "../hooks/useCompany";
 import { User, Mail, Calendar, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
+import { authFetch } from "@/lib/authFetch";
+import { sanitizeString, sanitizePhone } from "../../../lib/inputSanitizer";
 
 export function Profile() {
   const router = useRouter();
@@ -47,7 +49,7 @@ export function Profile() {
         let role = data && data[0] && data[0].role
         if (!role) {
           try {
-            const resp = await fetch('/api/company_members/get', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id, user_id: user.id }) })
+            const resp = await authFetch('/api/company_members/get', { method: 'POST', body: JSON.stringify({ company_id: selected.id, user_id: user.id }) })
             if (resp.ok) {
               const json = await resp.json()
               role = json?.membership?.role
@@ -59,7 +61,7 @@ export function Profile() {
         if (mountedLocal) setMembershipRole(role ?? null)
       } catch (e) {
         try {
-          const resp = await fetch('/api/company_members/get', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected?.id, user_id: user?.id }) })
+          const resp = await authFetch('/api/company_members/get', { method: 'POST', body: JSON.stringify({ company_id: selected?.id, user_id: user?.id }) })
           if (resp.ok) {
             const json = await resp.json()
             if (mountedLocal) setMembershipRole(json?.membership?.role ?? null)
@@ -108,8 +110,8 @@ export function Profile() {
       // upsert profiles via server API to avoid RLS
       if (user.id) {
         try {
-          const resp = await fetch('/api/profiles/upsert', {
-            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: user.id, first_name: firstName || null, last_name: lastName || null, phone: phone || null })
+          const resp = await authFetch('/api/profiles/upsert', {
+            method: 'POST', body: JSON.stringify({ first_name: firstName || null, last_name: lastName || null, phone: phone || null })
           })
           const j = await resp.json()
           if (!resp.ok) console.warn('Profile upsert server error', j)
@@ -180,9 +182,9 @@ export function Profile() {
               <p className="text-sm text-gray-500 mb-2">Name & phone</p>
               {editing ? (
                 <div className="grid grid-cols-1 gap-2">
-                  <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" className="w-full border p-2 rounded" />
-                  <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" className="w-full border p-2 rounded" />
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="w-full border p-2 rounded" />
+                  <input value={firstName} onChange={(e) => setFirstName(sanitizeString(e.target.value, 50))} placeholder="First name" className="w-full border p-2 rounded" />
+                  <input value={lastName} onChange={(e) => setLastName(sanitizeString(e.target.value, 50))} placeholder="Last name" className="w-full border p-2 rounded" />
+                  <input value={phone} onChange={(e) => setPhone(sanitizePhone(e.target.value))} placeholder="Phone" className="w-full border p-2 rounded" />
                 </div>
               ) : (
                 <div>

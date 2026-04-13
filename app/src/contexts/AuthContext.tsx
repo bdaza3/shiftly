@@ -2,6 +2,7 @@
 
 import React, { createContext, useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
+import { authFetch } from '@/lib/authFetch'
 
 type AuthContextValue = {
   user: any | null
@@ -154,7 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
           console.warn('AuthContext.refreshProfile: client profiles read failed, falling back to server API', e)
           try {
-            const resp = await fetch('/api/profiles/get', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: u.id }) })
+            const resp = await authFetch('/api/profiles/get', { method: 'POST', body: JSON.stringify({}) })
             const json = await resp.json()
             console.log('AuthContext.refreshProfile: server profile response', resp.status, json)
             if (resp.ok && json?.profile) setProfile(json.profile)

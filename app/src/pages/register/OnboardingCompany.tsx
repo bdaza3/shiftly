@@ -3,8 +3,8 @@
 import React, { startTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../hooks/useAuth'
-import { supabase } from '../../../../lib/supabaseClient'
 import { useCompany } from '../../hooks/useCompany'
+import { authFetch } from '@/lib/authFetch'
 
 function generateJoinCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -38,10 +38,9 @@ export default function OnboardingCompany() {
       for (let i = 0; i < 5; i++) {
         const code = generateJoinCode()
         console.log('OnboardingCompany.handleCreate: trying code', code)
-        const resp = await fetch('/api/companies/create', {
+        const resp = await authFetch('/api/companies/create', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ name: companyName.trim(), join_code: code, user_id: user?.id })
+          body: JSON.stringify({ name: companyName.trim(), join_code: code })
         })
         const json = await resp.json()
         console.log('OnboardingCompany.handleCreate: create response', resp.status, json)
@@ -90,56 +89,19 @@ export default function OnboardingCompany() {
         alert('User not loaded yet. Please wait a moment and try again.')
         return
       }
-      // prefer server-side join to avoid RLS issues
-      try {
-        if (!user?.id) {
-          // try refreshing auth/profile
-          await refreshProfile()
-        }
-        const resp = await fetch('/api/companies/join', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ join_code: code, user_id: user?.id }) })
-        const json = await resp.json()
-        console.log('OnboardingCompany.handleJoin: join response', resp.status, json)
-        if (!resp.ok) {
-          throw new Error(json?.error || 'failed to join company')
-        }
-        const company = json.company
-        console.log('OnboardingCompany.handleJoin: joined company', company)
-        // update client state from the returned company
-        addCompany(company)
-        // ensure server and client are synced
-        try { await refresh(); console.log('OnboardingCompany.handleJoin: refresh done') } catch (e) { console.warn('OnboardingCompany.handleJoin: refresh failed', e) }
-        console.log('OnboardingCompany.handleJoin: navigating to /dashboard')
-        startTransition(() => {
-          router.replace('/dashboard')
-          router.refresh()
-        })
-        return
-      } catch (serverJoinErr) {
-        // fallback to client-side join
-        console.warn('OnboardingCompany.handleJoin: server join failed, falling back', serverJoinErr)
+      if (!user?.id) {
+        await refreshProfile()
       }
-
-      // fallback: client-side lookup/insert
-      const { data: companies } = await supabase.from('companies').select('*').eq('join_code', code).limit(1)
-      const company = companies && companies[0]
-      if (!company) {
-        alert('Company not found for that join code')
-        setLoading(false)
-        return
+      const resp = await authFetch('/api/companies/join', { method: 'POST', body: JSON.stringify({ join_code: code }) })
+      const json = await resp.json()
+      console.log('OnboardingCompany.handleJoin: join response', resp.status, json)
+      if (!resp.ok) {
+        throw new Error(json?.error || 'failed to join company')
       }
-      const { data: existing } = await supabase.from('company_members').select('*').eq('company_id', company.id).eq('user_id', user?.id).limit(1)
-      if (existing && existing.length > 0) {
-        addCompany(company)
-        try { await refresh(); console.log('OnboardingCompany.handleJoin: refresh done (existing)') } catch (e) { console.warn('OnboardingCompany.handleJoin: refresh failed', e) }
-        startTransition(() => {
-          router.replace('/dashboard')
-          router.refresh()
-        })
-        return
-      }
-      await supabase.from('company_members').insert({ company_id: company.id, user_id: user?.id, role: 'employee' })
+      const company = json.company
+      console.log('OnboardingCompany.handleJoin: joined company', company)
       addCompany(company)
-      try { await refresh(); console.log('OnboardingCompany.handleJoin: refresh done (fallback)') } catch (e) { console.warn('OnboardingCompany.handleJoin: refresh failed', e) }
+      try { await refresh(); console.log('OnboardingCompany.handleJoin: refresh done') } catch (e) { console.warn('OnboardingCompany.handleJoin: refresh failed', e) }
       startTransition(() => {
         router.replace('/dashboard')
         router.refresh()

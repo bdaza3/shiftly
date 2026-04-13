@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Building2, ArrowRight, Hash, CheckCircle, MailIcon, QrCodeIcon } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useCompany } from "../../hooks/useCompany";
+import { authFetch } from "@/lib/authFetch";
+import { sanitizeJoinCode } from "@/lib/inputSanitizer";
 
 export default function JoinCompany() {
 	const [joinCode, setJoinCode] = useState("");
@@ -34,9 +36,8 @@ export default function JoinCompany() {
 		let cancelled = false;
 		const timeoutId = window.setTimeout(async () => {
 			try {
-				const resp = await fetch("/api/companies/preview", {
+				const resp = await authFetch("/api/companies/preview", {
 					method: "POST",
-					headers: { "content-type": "application/json" },
 					body: JSON.stringify({ join_code: normalizedCode }),
 				});
 				const json = await resp.json();
@@ -61,8 +62,8 @@ export default function JoinCompany() {
 	}, [joinCode]);
 
 	const handleCodeChange = (value: string) => {
-		const v = value.toUpperCase();
-		setJoinCode(v);
+	  const v = sanitizeJoinCode(value);
+	  setJoinCode(v);
 	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -73,12 +74,10 @@ export default function JoinCompany() {
 
 			if (!user?.id) throw new Error("Not signed in");
 
-			const resp = await fetch("/api/companies/join", {
+			const resp = await authFetch("/api/companies/join", {
 				method: "POST",
-				headers: { "content-type": "application/json" },
 				body: JSON.stringify({
 					join_code: joinCode,
-					user_id: user.id,
 					first_name: step1Data.firstName ?? null,
 					last_name: step1Data.lastName ?? null,
 					phone: step1Data.phone ?? null,

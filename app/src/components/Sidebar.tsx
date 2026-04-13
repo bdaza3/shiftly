@@ -17,6 +17,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
 import { supabase } from '../../../lib/supabaseClient'
 import { startTransition, useEffect, useState } from 'react'
+import { authFetch } from "@/lib/authFetch";
 
 export function Sidebar() {
   const router = useRouter();
@@ -51,7 +52,7 @@ export function Sidebar() {
         // if client-side read returns no role (common with RLS until server sync), fallback to server API
         if (!role) {
           try {
-            const resp = await fetch('/api/company_members/get', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id, user_id: user.id }) })
+            const resp = await authFetch('/api/company_members/get', { method: 'POST', body: JSON.stringify({ company_id: selected.id, user_id: user.id }) })
             if (resp.ok) {
               const json = await resp.json()
               role = json?.membership?.role
@@ -71,7 +72,7 @@ export function Sidebar() {
       } catch (e) {
         // fallback to server-side lookup when client read is blocked
         try {
-          const resp = await fetch('/api/company_members/get', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected?.id, user_id: user?.id }) })
+          const resp = await authFetch('/api/company_members/get', { method: 'POST', body: JSON.stringify({ company_id: selected?.id, user_id: user?.id }) })
           if (resp.ok) {
             const json = await resp.json()
             const role = json?.membership?.role

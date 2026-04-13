@@ -12,6 +12,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useCompany } from "../../hooks/useCompany";
+import { authFetch } from "@/lib/authFetch";
 
 export function Overview() {
   const { selected } = useCompany();
@@ -79,41 +80,10 @@ export function Overview() {
           if (!selected) return;
           setLoading(true);
           try {
-            const { data: rows, error } = await supabase.from("company_members").select("*").eq("company_id", selected.id).order("created_at", { ascending: false });
-            console.log('ManageEmployees: company_members client query', { companyId: selected.id, rowsLength: (rows||[]).length, error })
-            if (error) throw error;
-            const out: any[] = [];
-            for (const r of rows || []) {
-              let info: any = null;
-              try {
-                const { data: p } = await supabase.from("profiles").select("id, first_name, last_name").eq("id", r.user_id).maybeSingle();
-                if (p) info = { id: p.id, full_name: `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() };
-              } catch (e) {
-                // ignore
-              }
-              if (!info) {
-                try {
-                  const { data: u } = await supabase.from("users").select("id, full_name, email, role").eq("id", r.user_id).maybeSingle();
-                  if (u) info = u;
-                } catch (e) {
-                  // ignore
-                }
-              }
-              out.push({ id: r.user_id, name: info?.full_name ?? info?.email ?? r.user_id, email: info?.email ?? null, role: r.role ?? "employee", startDate: r.created_at });
-            }
-            if (mounted) setEmployees(out);
-            // if client read returned no members, try server fallback
-            if ((out || []).length === 0) {
-              try {
-                console.log('ManageEmployees: client returned 0 members, trying server fallback')
-                const resp = await fetch('/api/company_members/list', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id }) })
-                const json = await resp.json()
-                console.log('ManageEmployees: server fallback response', json)
-                if (resp.ok && json?.members) {
-                  if (mounted) setEmployees(json.members.map((m:any) => ({ id: m.id, name: m.name, email: m.email, role: m.role ?? 'employee', startDate: m.startDate })))
-                }
-              } catch (e) { console.warn('ManageEmployees: server fallback failed', e) }
-            }
+            const resp = await authFetch('/api/company_members/list', { method: 'POST', body: JSON.stringify({ company_id: selected.id }) })
+            const json = await resp.json()
+            if (!resp.ok) throw new Error(json?.error || 'Failed to load company members')
+            if (mounted) setEmployees(json.members.map((m:any) => ({ id: m.id, name: m.name, email: m.email, role: m.role ?? 'employee', startDate: m.startDate })))
           } catch (err) {
             console.warn("could not load company members", err);
           } finally {

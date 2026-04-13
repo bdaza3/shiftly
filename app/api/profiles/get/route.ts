@@ -1,19 +1,26 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from "next/server"
+import { authenticateRequest, parseJsonBody } from "@/lib/apiSecurity"
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.json()
-    const { id } = body
-    const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE
-    const svcUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || process.env.SUPABASE_PROJECT_URL
-    if (!svcKey || !svcUrl) return NextResponse.json({ error: 'missing service role key or url' }, { status: 500 })
-    const svc = createClient(svcUrl, svcKey, { auth: { persistSession: false } })
+  const auth = await authenticateRequest(req, {
+    rateLimitKey: "profiles-get",
+    limit: 60,
+    windowMs: 60_000,
+  })
+  if (!auth.ok) return auth.response
 
-    const { data, error } = await svc.from('profiles').select('*').eq('id', id).maybeSingle()
+  try {
+    await parseJsonBody<Record<string, never>>(req)
+    const { data, error } = await auth.service
+      .from("profiles")
+      .select("*")
+      .eq("id", auth.user.id)
+      .maybeSingle()
+
     if (error) return NextResponse.json({ error: error.message || String(error) }, { status: 400 })
     return NextResponse.json({ ok: true, profile: data })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: message }, { status: 400 })
   }
 }

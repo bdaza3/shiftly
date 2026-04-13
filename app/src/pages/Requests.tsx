@@ -5,7 +5,6 @@ import { useAuth } from "../hooks/useAuth";
 import { useRole } from "../hooks/useRole";
 import useRequests from "../hooks/useRequests";
 import { FileText, Plus, X, Check, Clock } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
 
 export function Requests() {
   const { user, profile } = useAuth();
@@ -155,7 +154,7 @@ export function Requests() {
                       <span className="capitalize">{request.status}</span>
                     </span>
                   </td>
-                  <td className="p-4 text-gray-700">{new Date(request.createdAt ?? request.created_at ?? request.createdAt).toLocaleDateString()}</td>
+                  <td className="p-4 text-gray-700">{new Date(request.createdAt ?? request.created_at ?? request.date).toLocaleDateString()}</td>
                   {role === "admin" && (
                     <td className="p-4">
                       {request.status === "pending" && (

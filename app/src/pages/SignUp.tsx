@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../../../lib/supabaseClient";
 import { LogIn, Chrome } from "lucide-react";
+import { sanitizeEmail, sanitizePassword } from "../../../lib/inputSanitizer";
 
 export function Signup() {
   const { signUp, userloading } = useAuth();
@@ -78,7 +79,7 @@ export function Signup() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(sanitizeEmail(e.target.value))}
                 placeholder="you@example.com"
                 suppressHydrationWarning={true}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
@@ -91,7 +92,7 @@ export function Signup() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => setPassword(sanitizePassword(e.target.value))}
                 placeholder="••••••••"
                 suppressHydrationWarning={true}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"

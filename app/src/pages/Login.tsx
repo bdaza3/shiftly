@@ -6,6 +6,7 @@ import { LogIn } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
 import React from "react";
+import { sanitizeEmail, sanitizePassword } from "../../../lib/inputSanitizer";
 
 export function Login() {
   const { signIn, user, loading, refreshProfile } = useAuth()
@@ -105,7 +106,7 @@ export function Login() {
                 type="email"
                 id="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(sanitizeEmail(e.target.value))}
                 required
                 placeholder="you@example.com"
                 suppressHydrationWarning={true}
@@ -124,7 +125,7 @@ export function Login() {
                 type="password"
                 id="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => setPassword(sanitizePassword(e.target.value))}
                 required
                 placeholder="••••••••"
                 suppressHydrationWarning={true}

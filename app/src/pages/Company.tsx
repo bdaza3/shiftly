@@ -6,6 +6,8 @@ import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
 import { useRole } from "../hooks/useRole";
 import { supabase } from "../../../lib/supabaseClient";
+import { authFetch } from "@/lib/authFetch";
+import { sanitizeString, sanitizePhone } from "../../../lib/inputSanitizer";
 
 const INDUSTRIES = [
   "Restaurant",
@@ -109,12 +111,12 @@ export function Company() {
     try {
       if (joinCode) {
         // disable joining via server API (service role)
-        const resp = await fetch('/api/companies/update-join', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id, join_code: null }) })
+        const resp = await authFetch('/api/companies/update-join', { method: 'POST', body: JSON.stringify({ company_id: selected.id, join_code: null }) })
         const json = await resp.json()
         if (!resp.ok) throw new Error(json?.error || 'update join failed')
       } else {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const resp = await fetch('/api/companies/update-join', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected.id, join_code: code }) })
+        const resp = await authFetch('/api/companies/update-join', { method: 'POST', body: JSON.stringify({ company_id: selected.id, join_code: code }) })
         const json = await resp.json()
         if (!resp.ok) throw new Error(json?.error || 'update join failed')
       }
@@ -185,7 +187,7 @@ export function Company() {
                 <input
                   type="text"
                   value={formData.companyName}
-                  onChange={(e) => setFormData((f) => ({ ...f, companyName: e.target.value }))}
+                  onChange={(e) => setFormData((f) => ({ ...f, companyName: sanitizeString(e.target.value, 120) }))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
                 />
               ) : (
@@ -274,7 +276,7 @@ export function Company() {
               <input
                 type="text"
                 value={formData.address || ""}
-                onChange={(e) => setFormData((f) => ({ ...f, address: e.target.value }))}
+                onChange={(e) => setFormData((f) => ({ ...f, address: sanitizeString(e.target.value, 200) }))}
                 placeholder="123 Main St, City, State ZIP"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
@@ -292,7 +294,7 @@ export function Company() {
               <input
                 type="tel"
                 value={formData.phone || ""}
-                onChange={(e) => setFormData((f) => ({ ...f, phone: e.target.value }))}
+                onChange={(e) => setFormData((f) => ({ ...f, phone: sanitizePhone(e.target.value) }))}
                 placeholder="+1 (555) 000-0000"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
@@ -310,7 +312,7 @@ export function Company() {
               <input
                 type="text"
                 value={formData.website || ""}
-                onChange={(e) => setFormData((f) => ({ ...f, website: e.target.value }))}
+                onChange={(e) => setFormData((f) => ({ ...f, website: sanitizeString(e.target.value, 200) }))}
                 placeholder="www.company.com"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
@@ -329,9 +331,10 @@ export function Company() {
                   setSaving(true);
                   try {
                     if (selected?.id) {
-                      const { data, error } = await supabase
-                        .from('companies')
-                        .update({
+                      const resp = await authFetch('/api/companies/update', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                          company_id: selected.id,
                           name: formData.companyName,
                           timezone: formData.timezone,
                           industry: formData.industry,
@@ -340,16 +343,15 @@ export function Company() {
                           address: formData.address || null,
                           phone: formData.phone || null,
                           website: formData.website || null,
-                        })
-                        .eq('id', selected.id)
-                        .select()
-                        .single();
-                      if (error) throw error;
+                        }),
+                      });
+                      const json = await resp.json();
+                      if (!resp.ok) throw new Error(json?.error || 'update failed');
                       // refresh company context
                       try { await refresh(); } catch (e) { console.warn('refresh failed', e); }
                     } else {
                       // create company via server API (server uses service role)
-                      const resp = await fetch('/api/companies/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: formData.companyName, user_id: user?.id, join_code: '' }) });
+                      const resp = await authFetch('/api/companies/create', { method: 'POST', body: JSON.stringify({ name: formData.companyName, join_code: '' }) });
                       const json = await resp.json();
                       if (!resp.ok) throw new Error(json?.error || 'create failed');
                       try { addCompany && addCompany(json.company); } catch (e) {}
@@ -413,9 +415,10 @@ export function Company() {
                 min="1"
                 max="24"
                 value={formData.defaultShiftLength}
-                onChange={(e) =>
-                  setFormData({ ...formData, defaultShiftLength: e.target.value })
-                }
+                onChange={(e) => {
+                  const n = Math.max(1, Math.min(24, Number(e.target.value || 0)));
+                  setFormData({ ...formData, defaultShiftLength: String(isNaN(n) ? 8 : n) });
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             ) : (

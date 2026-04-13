@@ -2,6 +2,7 @@
 
 import React, { createContext, useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import { authFetch } from '@/lib/authFetch'
 
 //company context to store company info and selected company across the app, including company members 
 
@@ -84,7 +85,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return
       try {
         // prefer server API to avoid client-side caching/RLS timing issues
-        const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }), cache: 'no-store' })
+        const resp = await authFetch('/api/companies/mine', { method: 'POST', body: JSON.stringify({}), cache: 'no-store' })
         console.log('CompanyProvider load: server response fetching companies/mine', resp)
         if (resp.ok) {
           const json = await resp.json()
@@ -139,7 +140,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     if (!user?.id) return
     try {
       setLoadingCompanies(true)
-      const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }), cache: 'no-store' })
+      const resp = await authFetch('/api/companies/mine', { method: 'POST', body: JSON.stringify({}), cache: 'no-store' })
       if (resp.ok) {
         const json = await resp.json()
         console.log('CompanyContext.refresh: server response', json)

@@ -1,41 +1,73 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from "next/server"
+import {
+  authenticateRequest,
+  normalizeUuid,
+  parseJsonBody,
+  requirePrivilegedMembership,
+} from "@/lib/apiSecurity"
 
 export async function POST(req: Request) {
+  const auth = await authenticateRequest(req, {
+    rateLimitKey: "company-members-list",
+    limit: 30,
+    windowMs: 60_000,
+  })
+  if (!auth.ok) return auth.response
+
   try {
-    const body = await req.json()
-    const { company_id } = body
-    const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE
-    const svcUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || process.env.SUPABASE_PROJECT_URL
-    if (!svcKey || !svcUrl) return NextResponse.json({ error: 'missing service role key or url' }, { status: 500 })
+    const body = await parseJsonBody<{ company_id: unknown }>(req)
+    const companyId = normalizeUuid(body.company_id, "company_id")
 
-    const svc = createClient(svcUrl, svcKey, { auth: { persistSession: false } })
-    if (!company_id) return NextResponse.json({ error: 'missing company_id' }, { status: 400 })
+    await requirePrivilegedMembership(auth.service, companyId, auth.user.id)
 
-    const { data: rows, error } = await svc.from('company_members').select('*').eq('company_id', company_id).order('created_at', { ascending: false })
+    const { data: rows, error } = await auth.service
+      .from("company_members")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false })
+
     if (error) return NextResponse.json({ error: error.message || String(error) }, { status: 400 })
 
-    const userIds = (rows || []).map((r: any) => r.user_id).filter(Boolean)
-    let profiles: any[] = []
-    let users: any[] = []
+    const userIds = (rows || []).map((row: { user_id?: string }) => row.user_id).filter(Boolean)
+    let profiles: Array<{ id: string; first_name?: string | null; last_name?: string | null; phone?: string | null }> = []
+    let users: Array<{ id: string; full_name?: string | null; email?: string | null; role?: string | null }> = []
+
     if (userIds.length > 0) {
-      // profiles table contains first_name/last_name (no email column)
-      const { data: p, error: pErr } = await svc.from('profiles').select('id, first_name, last_name, phone').in('id', userIds)
-      if (!pErr) profiles = p || []
-      // fallback to users table for email/full_name when profiles are not available
-      const { data: u, error: uErr } = await svc.from('users').select('id, full_name, email, role').in('id', userIds)
-      if (!uErr) users = u || []
+      const { data: profileRows, error: profileError } = await auth.service
+        .from("profiles")
+        .select("id, first_name, last_name, phone")
+        .in("id", userIds)
+      if (!profileError) profiles = profileRows || []
+
+      const { data: userRows, error: userError } = await auth.service
+        .from("users")
+        .select("id, full_name, email, role")
+        .in("id", userIds)
+      if (!userError) users = userRows || []
     }
 
-    const members = (rows || []).map((r: any) => {
-      const p = profiles.find((x: any) => x.id === r.user_id)
-      const u = users.find((x: any) => x.id === r.user_id)
-      const name = p ? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() : u?.full_name ?? u?.email ?? r.user_id
-      return { id: r.user_id, role: r.role, startDate: r.created_at, name, email: p?.email ?? u?.email ?? null }
+    const members = (rows || []).map((row: { user_id: string; role?: string | null; created_at?: string }) => {
+      const profile = profiles.find((entry) => entry.id === row.user_id)
+      const user = users.find((entry) => entry.id === row.user_id)
+      const name =
+        profile && (profile.first_name || profile.last_name)
+          ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
+          : user?.full_name ?? user?.email ?? row.user_id
+
+      return {
+        id: row.user_id,
+        role: row.role,
+        startDate: row.created_at,
+        name,
+        email: user?.email ?? null,
+        phone: profile?.phone ?? null,
+      }
     })
 
     return NextResponse.json({ ok: true, members })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    const status = message === "forbidden" ? 403 : 400
+    return NextResponse.json({ error: message }, { status })
   }
 }

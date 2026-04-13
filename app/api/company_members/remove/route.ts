@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server"
 import {
   authenticateRequest,
-  getMembership,
-  isPrivilegedRole,
   normalizeUuid,
   parseJsonBody,
-  requireMembership,
+  requirePrivilegedMembership,
 } from "@/lib/apiSecurity"
 
 export async function POST(req: Request) {
   const auth = await authenticateRequest(req, {
-    rateLimitKey: "company-members-get",
-    limit: 60,
+    rateLimitKey: "company-members-remove",
+    limit: 20,
     windowMs: 60_000,
   })
   if (!auth.ok) return auth.response
@@ -21,13 +19,19 @@ export async function POST(req: Request) {
     const companyId = normalizeUuid(body.company_id, "company_id")
     const targetUserId = normalizeUuid(body.user_id, "user_id")
 
-    const requesterMembership = await requireMembership(auth.service, companyId, auth.user.id)
-    if (targetUserId !== auth.user.id && !isPrivilegedRole(requesterMembership.role)) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 })
+    await requirePrivilegedMembership(auth.service, companyId, auth.user.id)
+
+    if (targetUserId === auth.user.id) {
+      return NextResponse.json({ error: "cannot remove your own membership from this endpoint" }, { status: 400 })
     }
 
-    const membership = await getMembership(auth.service, companyId, targetUserId)
-    return NextResponse.json({ ok: true, membership })
+    const { error } = await auth.service
+      .from("company_members")
+      .delete()
+      .match({ company_id: companyId, user_id: targetUserId })
+
+    if (error) return NextResponse.json({ error: error.message || String(error) }, { status: 400 })
+    return NextResponse.json({ ok: true })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     const status = message === "forbidden" ? 403 : 400

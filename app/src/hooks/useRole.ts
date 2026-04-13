@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useCompany } from '../hooks/useCompany'
+import { authFetch } from '@/lib/authFetch'
 
 type UseRoleResult = {
   role: string | null
@@ -24,9 +25,8 @@ export function useRole(): UseRoleResult {
     }
     setLoading(true)
     try {
-      const resp = await fetch('/api/company_members/get', {
+      const resp = await authFetch('/api/company_members/get', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ company_id: selected.id, user_id: user.id }),
         cache: 'no-store',
       })

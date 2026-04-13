@@ -1,28 +1,31 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from "next/server"
+import { authenticateRequest } from "@/lib/apiSecurity"
 
 export async function POST(req: Request) {
+  const auth = await authenticateRequest(req, {
+    rateLimitKey: "companies-mine",
+    limit: 60,
+    windowMs: 60_000,
+  })
+  if (!auth.ok) return auth.response
+
   try {
-    const body = await req.json()
-    const { user_id } = body
-    const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE
-    const svcUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || process.env.SUPABASE_PROJECT_URL
-    if (!svcKey || !svcUrl) return NextResponse.json({ error: 'missing service role key or url' }, { status: 500 })
+    const { data, error } = await auth.service
+      .from("company_members")
+      .select("role, companies(*)")
+      .eq("user_id", auth.user.id)
 
-    const svc = createClient(svcUrl, svcKey, { auth: { persistSession: false } })
-
-    if (!user_id) return NextResponse.json({ error: 'missing user_id' }, { status: 400 })
-
-    const { data, error } = await svc.from('company_members').select('role, companies(*)').eq('user_id', user_id)
-    console.log('API /companies/mine: query result', { data, error })
     if (error) return NextResponse.json({ error: error.message || String(error) }, { status: 400 })
-    const companies = (data || []).map((r: any) => {
-      if (!r?.companies) return null
-      return { ...r.companies, current_user_role: r.role ?? null }
-    }).filter(Boolean)
-    console.log('API /companies/mine: processed companies', companies)
+
+    const companies = ((data || []) as Array<{ role?: string | null; companies?: Record<string, unknown> | null }>)
+      .map((row) =>
+        row.companies ? { ...row.companies, current_user_role: row.role ?? null } : null
+      )
+      .filter(Boolean)
+
     return NextResponse.json({ ok: true, companies })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

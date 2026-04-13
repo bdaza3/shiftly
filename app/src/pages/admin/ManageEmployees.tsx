@@ -5,6 +5,8 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useCompany } from "../../hooks/useCompany";
 import { useAuth } from "../../hooks/useAuth";
+import { authFetch } from "@/lib/authFetch";
+import { sanitizeEmail, sanitizeString } from "@/lib/inputSanitizer";
 
 export function ManageEmployees() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -37,34 +39,33 @@ export function ManageEmployees() {
     setLoading(true);
     setMessage('Adding...');
     try {
-      // find user in auth 'users' view (may require appropriate RLS/permissions)
-      let userRow: any = null;
-      const { data: urow, error: uErr } = await supabase.from("users").select("id, full_name, email, role").eq("email", emailInput).maybeSingle();
-      if (uErr) {
-        console.warn("could not query users view", uErr);
-      }
-
       if (!selected) {
         setMessage("No company selected.");
         setLoading(false);
         return;
       }
 
-      // persist membership
-      const { data: insertRes, error: insertErr } = await supabase.from("company_members").insert([{ company_id: selected.id, user_id: userRow.id, role: userRow.role ?? "employee" }]);
-      if (insertErr) throw insertErr;
+      const resp = await authFetch('/api/company_members/add', {
+        method: 'POST',
+        body: JSON.stringify({
+          company_id: selected.id,
+          email: emailInput,
+          first_name: firstNameInput || null,
+          last_name: lastNameInput || null,
+        }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || 'Failed to add employee');
 
       const newEmp = {
-        id: userRow.id,
-        name: userRow.full_name ?? userRow.email,
-        email: userRow.email,
-        role: userRow.role ?? "employee",
+        ...(json.member || {}),
         position: "Employee",
-        startDate: new Date().toISOString().split("T")[0],
       };
       setEmployees((s) => [newEmp, ...s]);
       setMessage("Employee added to company.");
       setEmailInput("");
+      setFirstNameInput("");
+      setLastNameInput("");
       setShowModal(false);
     } catch (err: any) {
       console.error("add employee error", err);
@@ -88,9 +89,8 @@ export function ManageEmployees() {
       setLoading(true);
       try {
         console.log('ManageEmployees: loading company_members via API', { companyId: selectedId });
-        const resp = await fetch('/api/company_members/list', {
+        const resp = await authFetch('/api/company_members/list', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ company_id: selectedId }),
           cache: 'no-store',
         });
@@ -136,7 +136,7 @@ export function ManageEmployees() {
       // fallback: request companies for this user and find the selected company
       try {
         if (!user?.id) return
-        const resp = await fetch('/api/companies/mine', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ user_id: user.id }) })
+        const resp = await authFetch('/api/companies/mine', { method: 'POST', body: JSON.stringify({}) })
         if (!resp.ok) return
         const json = await resp.json()
         const comps = json?.companies || []
@@ -153,8 +153,12 @@ export function ManageEmployees() {
   const handleRemove = async (userId: string) => {
     if (!selected) return;
     try {
-      const { error } = await supabase.from("company_members").delete().match({ company_id: selected.id, user_id: userId });
-      if (error) throw error;
+      const resp = await authFetch('/api/company_members/remove', {
+        method: 'POST',
+        body: JSON.stringify({ company_id: selected.id, user_id: userId }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.error || 'Failed to remove member');
       setEmployees((s) => s.filter((e) => e.id !== userId));
     } catch (err) {
       console.warn("could not remove member", err);
@@ -268,9 +272,9 @@ export function ManageEmployees() {
           <div className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6 z-50">
             <h3 className="text-lg font-semibold mb-4">Add Employee by Email</h3>
             <p className="text-sm text-gray-500 mb-3">Enter the email address of the existing Supabase user you want to add to Shiftly HQ.</p>
-            <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} placeholder="user@example.com" className="w-full border p-2 rounded mb-3" />
-            <input type="text" value={firstNameInput} onChange={(e) => setFirstNameInput(e.target.value)} placeholder="First name (optional)" className="w-full border p-2 rounded mb-3" />
-            <input type="text" value={lastNameInput} onChange={(e) => setLastNameInput(e.target.value)} placeholder="Last name (optional)" className="w-full border p-2 rounded mb-3" />
+            <input type="email" value={emailInput} onChange={(e) => setEmailInput(sanitizeEmail(e.target.value))} placeholder="user@example.com" className="w-full border p-2 rounded mb-3" />
+            <input type="text" value={firstNameInput} onChange={(e) => setFirstNameInput(sanitizeString(e.target.value, 80))} placeholder="First name (optional)" className="w-full border p-2 rounded mb-3" />
+            <input type="text" value={lastNameInput} onChange={(e) => setLastNameInput(sanitizeString(e.target.value, 80))} placeholder="Last name (optional)" className="w-full border p-2 rounded mb-3" />
             {message && <p className="text-sm text-red-500 mb-3">{message}</p>}
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setShowModal(false)} className="px-3 py-2 rounded border hover:bg-gray-100 transition-colors hover:cursor-pointer">Cancel</button>

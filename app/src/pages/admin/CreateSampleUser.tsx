@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useCompany } from "../../hooks/useCompany";
+import { sanitizeEmail, sanitizeString } from "@/lib/inputSanitizer";
 
 export default function CreateSampleUser() {
   const router = useRouter();
@@ -55,16 +56,16 @@ export default function CreateSampleUser() {
       <form onSubmit={handleCreate} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700">Email</label>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
+          <input value={email} onChange={(e) => setEmail(sanitizeEmail(e.target.value))} className="mt-2 block w-full border rounded px-3 py-2" />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">First name</label>
-            <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
+            <input value={firstName} onChange={(e) => setFirstName(sanitizeString(e.target.value, 80))} className="mt-2 block w-full border rounded px-3 py-2" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Last name</label>
-            <input value={lastName} onChange={(e) => setLastName(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
+            <input value={lastName} onChange={(e) => setLastName(sanitizeString(e.target.value, 80))} className="mt-2 block w-full border rounded px-3 py-2" />
           </div>
         </div>
         <div>
@@ -77,7 +78,7 @@ export default function CreateSampleUser() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Optional user id (paste auth user id to link)</label>
-          <input value={userId} onChange={(e) => setUserId(e.target.value)} className="mt-2 block w-full border rounded px-3 py-2" />
+          <input value={userId} onChange={(e) => setUserId(sanitizeString(e.target.value, 64))} className="mt-2 block w-full border rounded px-3 py-2" />
         </div>
         {message && <p className="text-sm text-red-500">{message}</p>}
         <div className="flex gap-2">

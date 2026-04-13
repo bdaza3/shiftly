@@ -1,28 +1,39 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from "next/server"
+import {
+  authenticateRequest,
+  normalizeJoinCode,
+  normalizeUuid,
+  parseJsonBody,
+  requirePrivilegedMembership,
+} from "@/lib/apiSecurity"
 
 export async function POST(req: Request) {
+  const auth = await authenticateRequest(req, {
+    rateLimitKey: "companies-update-join",
+    limit: 20,
+    windowMs: 60_000,
+  })
+  if (!auth.ok) return auth.response
+
   try {
-    const body = await req.json()
-    const { company_id, join_code } = body
-    const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE
-    const svcUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || process.env.SUPABASE_PROJECT_URL
-    if (!svcKey || !svcUrl) return NextResponse.json({ error: 'missing service role key or url' }, { status: 500 })
+    const body = await parseJsonBody<{ company_id: unknown; join_code?: unknown }>(req)
+    const companyId = normalizeUuid(body.company_id, "company_id")
+    const joinCode = normalizeJoinCode(body.join_code, false)
 
-    const svc = createClient(svcUrl, svcKey, { auth: { persistSession: false } })
+    await requirePrivilegedMembership(auth.service, companyId, auth.user.id)
 
-    if (!company_id) return NextResponse.json({ error: 'missing company_id' }, { status: 400 })
+    const { data, error } = await auth.service
+      .from("companies")
+      .update({ join_code: joinCode })
+      .eq("id", companyId)
+      .select()
+      .single()
 
-    const updatePayload: any = {}
-    // set join_code to null to disable, or to provided value to enable
-    if (join_code === null || join_code === undefined) updatePayload.join_code = null
-    else updatePayload.join_code = String(join_code).toUpperCase()
-
-    const { data, error } = await svc.from('companies').update(updatePayload).eq('id', company_id).select().single()
     if (error) return NextResponse.json({ error: error.message || String(error) }, { status: 400 })
-
     return NextResponse.json({ ok: true, company: data })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || String(err) }, { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    const status = message === "forbidden" ? 403 : 400
+    return NextResponse.json({ error: message }, { status })
   }
 }

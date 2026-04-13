@@ -1,9 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { supabase } from "@/lib/supabaseClient"
 import { useAuth } from "./useAuth"
 import { useCompany } from "./useCompany"
+import { authFetch } from "@/lib/authFetch"
 
 export type RequestRecord = {
   id: string
@@ -29,7 +29,11 @@ export function useRequests() {
   const fetchRequests = useCallback(async () => {
     setLoading(true)
     try {
-      const resp = await fetch('/api/requests/list', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ company_id: selected?.id ?? null }), cache: 'no-store' })
+      if (!selected?.id) {
+        setRequests([])
+        return
+      }
+      const resp = await authFetch('/api/requests/list', { method: 'POST', body: JSON.stringify({ company_id: selected.id }), cache: 'no-store' })
       const json = await resp.json()
       if (!resp.ok) {
         console.warn('useRequests: server list failed', json)
@@ -67,7 +71,7 @@ export function useRequests() {
         status: payload.status ?? 'pending',
         company_id: payload.company_id ?? selected?.id ?? null,
       }
-      const resp = await fetch('/api/requests/create', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(row) })
+      const resp = await authFetch('/api/requests/create', { method: 'POST', body: JSON.stringify(row) })
       const json = await resp.json()
       if (!resp.ok) {
         console.warn('useRequests.createRequest server failed', json)
@@ -91,7 +95,7 @@ export function useRequests() {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      const resp = await fetch('/api/requests/update', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, status }) })
+      const resp = await authFetch('/api/requests/update', { method: 'POST', body: JSON.stringify({ id, status }) })
       const json = await resp.json()
       if (!resp.ok) {
         console.warn('useRequests.updateStatus server failed', json)

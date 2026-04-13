@@ -9,6 +9,8 @@ import CreateCompany from "./CreateCompany";
 import Link from "next/link";
 import { useAuth } from "../../hooks/useAuth";
 import { supabase } from "../../../../lib/supabaseClient";
+import { authFetch } from "@/lib/authFetch";
+import { sanitizeString, sanitizePhone } from "@/lib/inputSanitizer";
 
 export function Register() {
   const { user, refreshProfile, syncLocalAuth, loading: authLoading } = useAuth();
@@ -72,10 +74,9 @@ export function Register() {
       try {
         if (user?.id) {
         console .log('HANDLE SUBMIT: upserting profile via API', { userId: user.id, firstName, lastName, phone })
-          const resp = await fetch('/api/profiles/upsert', {
+          const resp = await authFetch('/api/profiles/upsert', {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ id: user.id, first_name: firstName ?? null, last_name: lastName ?? null, phone: phone ?? null })
+            body: JSON.stringify({ first_name: firstName ?? null, last_name: lastName ?? null, phone: phone ?? null })
           })
           const json = await resp.json()
           if (!resp.ok) console.warn('server profiles upsert failed', json)

@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { useCompany } from "../hooks/useCompany";
 import { useAuth } from "../hooks/useAuth";
+import { authFetch } from "@/lib/authFetch";
+import { sanitizeString } from "../../../lib/inputSanitizer";
 
 export default function CompanySelector({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { companies, selectCompany, addCompany } = useCompany();
@@ -48,22 +50,21 @@ export default function CompanySelector({ open, onClose }: { open: boolean; onCl
           <div className="flex gap-2 mt-2">
             <input
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => setNewName(sanitizeString(e.target.value, 120))}
               className="flex-1 border rounded px-2 py-1 text-sm"
               placeholder="Company name"
             />
             <button
               onClick={async () => {
-                const name = newName.trim();
+                const name = sanitizeString(newName, 120).trim();
                 if (!name) return;
                 setError(null);
                 setCreating(true);
                 try {
                   const join_code = generateJoinCode();
-                  const resp = await fetch('/api/companies/create', {
+                  const resp = await authFetch('/api/companies/create', {
                     method: 'POST',
-                    headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({ name, user_id: user?.id, join_code })
+                    body: JSON.stringify({ name, join_code })
                   });
                   const json = await resp.json();
                   if (!resp.ok) {

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Building2, ArrowRight, Globe, Users, Clock } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useCompany } from "../../hooks/useCompany";
+import { authFetch } from "@/lib/authFetch";
+import { sanitizeString } from "@/lib/inputSanitizer";
 
 interface CompanyInfo {
   companyName: string;
@@ -70,13 +72,11 @@ export default function CreateCompany() {
 
       const join_code = generateJoinCode();
 
-      const resp = await fetch("/api/companies/create", {
+      const resp = await authFetch("/api/companies/create", {
         method: "POST",
-        headers: { "content-type": "application/json" },
         body: JSON.stringify({
           name: formData.companyName.trim(),
           join_code,
-          user_id: user.id,
           first_name: step1Data.firstName ?? null,
           last_name: step1Data.lastName ?? null,
           phone: step1Data.phone ?? null,
@@ -156,7 +156,7 @@ export default function CreateCompany() {
                 type="text"
                 id="companyName"
                 value={formData.companyName}
-                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, companyName: sanitizeString(e.target.value, 120) })}
                 required
                 placeholder="Joe's Pizza"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"

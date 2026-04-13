@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabaseClient"
+import { authFetch } from "@/lib/authFetch"
 import useAuth from "../hooks/useAuth"
 import useCompany from "../hooks/useCompany"
+import { sanitizeString, sanitizePhone, sanitizePassword } from "../../../lib/inputSanitizer"
 
 export default function Settings() {
   const { user, profile, refreshProfile, signOut } = useAuth()
@@ -71,7 +73,7 @@ export default function Settings() {
     setSaving(true)
     setMessage(null)
     try {
-      const resp = await fetch('/api/profiles/upsert', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: user.id, first_name: firstName, last_name: lastName, phone }) })
+      const resp = await authFetch('/api/profiles/upsert', { method: 'POST', body: JSON.stringify({ first_name: firstName, last_name: lastName, phone }) })
       const json = await resp.json()
       if (!resp.ok) throw new Error(json?.error || 'update failed')
       setMessage('Profile saved')
@@ -115,11 +117,11 @@ export default function Settings() {
 
           <form className="mt-4 space-y-3 max-w-xl" onSubmit={saveProfile}>
             <div className="flex gap-3">
-              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" className="w-1/2 border p-2 rounded" />
-              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className="w-1/2 border p-2 rounded" />
+              <input value={firstName} onChange={e => setFirstName(sanitizeString(e.target.value, 80))} placeholder="First name" className="w-1/2 border p-2 rounded" />
+              <input value={lastName} onChange={e => setLastName(sanitizeString(e.target.value, 80))} placeholder="Last name" className="w-1/2 border p-2 rounded" />
             </div>
             <div>
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone" className="w-full border p-2 rounded" />
+              <input value={phone} onChange={e => setPhone(sanitizePhone(e.target.value))} placeholder="Phone" className="w-full border p-2 rounded" />
             </div>
             <div>
               <input value={user?.email ?? ''} disabled className="w-full border bg-gray-100 p-2 rounded" />
@@ -131,10 +133,10 @@ export default function Settings() {
             {message && <div className="text-sm text-gray-700">{message}</div>}
           </form>
 
-          <div className="mt-6 border-t pt-4">
+            <div className="mt-6 border-t pt-4">
             <h3 className="font-medium">Change password</h3>
             <form className="mt-2 flex gap-2 max-w-md" onSubmit={changePassword}>
-              <input value={newPassword} onChange={e => setNewPassword(e.target.value)} type="password" placeholder="New password" className="flex-1 border p-2 rounded" />
+              <input value={newPassword} onChange={e => setNewPassword(sanitizePassword(e.target.value))} type="password" placeholder="New password" className="flex-1 border p-2 rounded" />
               <button className="px-4 py-2 bg-blue-600 text-white rounded">Update</button>
             </form>
             {pwMessage && <div className="text-sm text-gray-700 mt-2">{pwMessage}</div>}
