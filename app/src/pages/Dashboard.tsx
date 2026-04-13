@@ -5,17 +5,19 @@ import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "../../../lib/supabaseClient";
 import { useShifts } from "../hooks/useShifts";
 import useRequests from "../hooks/useRequests";
+import { useRole } from "../hooks/useRole";
+import { useCompanyMembers } from "../hooks/useCompanyMembers";
 
 export function Dashboard() {
   const { user, userloading } = useAuth();
   const { companies, selected } = useCompany();
   const router = useRouter();
   const [ready, setReady] = useState(false)
-  const [membershipRole, setMembershipRole] = useState<string | null>(null)
+  const { role: membershipRole, isAdmin, loading: roleLoading } = useRole()
   const effectiveMembershipRole = membershipRole ?? selected?.current_user_role ?? null
+  const { members: companyMembers, loading: membersLoading } = useCompanyMembers(selected?.id ?? null)
 
   useEffect(() => {//if user is signed in but has no companies, send to company onboarding (case where user goes directly to dashboard)
     if (ready && user?.id && Array.isArray(companies) && companies.length === 0) {
@@ -25,29 +27,7 @@ export function Dashboard() {
 
   useEffect(() => { setReady(true) }, [])
 
-  useEffect(() => {
-    let mounted = true
-    const load = async () => {
-      if (!user?.id || !selected?.id) {
-        if (mounted) setMembershipRole(null)
-        return
-      }
-      try {
-        const { data, error } = await supabase.from('company_members').select('role').eq('company_id', selected.id).eq('user_id', user.id).limit(1)
-        if (error) {
-          console.warn('failed loading membership role', error)
-          if (mounted) setMembershipRole(null)
-          return
-        }
-        const role = data && data[0] && data[0].role
-        if (mounted) setMembershipRole(role ?? null)
-      } catch (e) {
-        if (mounted) setMembershipRole(null)
-      }
-    }
-    load()
-    return () => { mounted = false }
-  }, [user?.id, selected?.id])
+  // role is now fetched via useRole()
   const { shifts = [], loading } = useShifts(selected?.id);
 
   const today = new Date();
@@ -79,12 +59,13 @@ export function Dashboard() {
     <div className="space-y-6">
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Today's Shifts</p>
+              <p className="text-sm text-gray-500">{isAdmin ? 'Total Employees' : "Today's Shifts"}</p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
-                {todayShifts.length}
+                {isAdmin ? (membersLoading ? '—' : (companyMembers.length + 1)) : todayShifts.length}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-600 bg-opacity-10 rounded-lg flex items-center justify-center">
@@ -111,10 +92,10 @@ export function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">
-                {user?.role === "admin" ? "Total Employees" : "My Shifts This Week"}
+                {isAdmin ? "Pending Requests" : "My Shifts This Week"}
               </p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
-                {user?.role === "admin" ? "5" : myShifts.length}
+                {isAdmin ? (requestsLoading ? '—' : pendingRequests.length) : myShifts.length}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-500 bg-opacity-10 rounded-lg flex items-center justify-center">
