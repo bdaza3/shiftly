@@ -59,6 +59,22 @@ export function Login() {
         return
       }
       setRedirectPending(true)
+
+      // Attempt to refresh profile/companies but don't block the redirect.
+      ;(async () => {
+        const withTimeout = async (p: Promise<any>, ms = 3000) =>
+          Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))])
+        try { await withTimeout(refreshProfile(), 3000) } catch (e) { console.warn('refreshProfile timed out or failed (post-signin)', e) }
+        try { await withTimeout(refreshCompanies(), 3000) } catch (e) { console.warn('refreshCompanies timed out or failed (post-signin)', e) }
+      })()
+
+      try {
+        router.replace('/dashboard')
+        router.refresh()
+      } catch (e) {
+        console.warn('Login: navigate failed', e)
+      }
+      
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unable to sign in"
       alert(message)

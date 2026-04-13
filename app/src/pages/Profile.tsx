@@ -230,7 +230,7 @@ export function Profile() {
                   setLogoutLoading(true);
                   await new Promise((r) => requestAnimationFrame(r));
                   try {
-                    await supabase.auth.signOut();
+                    await signOut();
                     // small delay so spinner is visible even for very fast sign-outs
                     await new Promise((r) => setTimeout(r, 120));
                     try { window.location.assign('/'); } catch (e) { try { router.replace('/'); } catch(_) {} }
