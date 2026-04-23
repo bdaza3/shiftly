@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
-import React from "react";
+import React, { useRef } from "react";
 import { sanitizeEmail, sanitizePassword } from "../../../lib/inputSanitizer";
 
 export function Login() {
@@ -16,18 +16,21 @@ export function Login() {
   const [password, setPassword] = React.useState("")
   const [submitting, setSubmitting] = React.useState(false)
   const [redirectPending, setRedirectPending] = React.useState(false)
+  const redirectFinishedRef = useRef(false)
 
   React.useEffect(() => {
     if (loading || !user?.id || !redirectPending) return
     let cancelled = false
 
     const finishRedirect = async () => {
+      if (redirectFinishedRef.current) return
+      redirectFinishedRef.current = true
       try {
-        const withTimeout = async (p: Promise<any>, ms = 3000) =>
+        const withTimeout = async (p: Promise<any>, ms = 5000) =>
           Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))])
 
-        try { await withTimeout(refreshProfile(), 3000) } catch (e) { console.warn('refreshProfile timed out or failed', e) }
-        try { await withTimeout(refreshCompanies(), 3000) } catch (e) { console.warn('refreshCompanies timed out or failed', e) }
+        try { await withTimeout(refreshProfile(), 5000) } catch (e) { console.warn('refreshProfile timed out or failed', e) }
+        try { await withTimeout(refreshCompanies(), 5000) } catch (e) { console.warn('refreshCompanies timed out or failed', e) }
       } catch (error) {
         console.warn("Login redirect sync failed", error)
       }
@@ -60,14 +63,6 @@ export function Login() {
         return
       }
       setRedirectPending(true)
-
-      // Attempt to refresh profile/companies but don't block the redirect.
-      ;(async () => {
-        const withTimeout = async (p: Promise<any>, ms = 3000) =>
-          Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))])
-        try { await withTimeout(refreshProfile(), 3000) } catch (e) { console.warn('refreshProfile timed out or failed (post-signin)', e) }
-        try { await withTimeout(refreshCompanies(), 3000) } catch (e) { console.warn('refreshCompanies timed out or failed (post-signin)', e) }
-      })()
 
       try {
         router.replace('/dashboard')
