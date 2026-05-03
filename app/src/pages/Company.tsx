@@ -191,7 +191,7 @@ export function Company() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
                 />
               ) : (
-                <p className="text-gray-900">{companyData?.companyName || '—'}</p>
+                <p className="text-gray-900">{companyData?.companyName || 'N/A'}</p>
               )}
           </div>
 
@@ -213,7 +213,7 @@ export function Company() {
                 ))}
               </select>
             ) : (
-              <p className="text-gray-900">{companyData.industry}</p>
+              <p className="text-gray-900">{companyData.industry || 'N/A'}</p>
             )}
           </div>
 
@@ -238,7 +238,7 @@ export function Company() {
                 ))}
               </select>
             ) : (
-              <p className="text-gray-900">{companyData.timezone.replace(/_/g, " ")}</p>
+              <p className="text-gray-900">{companyData.timezone?.replace(/_/g, " ") || 'N/A'}</p>
             )}
           </div>
 
@@ -281,7 +281,7 @@ export function Company() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             ) : (
-              <p className="text-gray-900">{companyData.address || "—"}</p>
+              <p className="text-gray-900">{companyData.address || "N/A"}</p>
             )}
           </div>
 
@@ -299,7 +299,7 @@ export function Company() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             ) : (
-              <p className="text-gray-900">{companyData.phone || "—"}</p>
+              <p className="text-gray-900">{companyData.phone || "N/A"}</p>
             )}
           </div>
 
@@ -317,7 +317,7 @@ export function Company() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             ) : (
-              <p className="text-gray-900">{companyData.website || "—"}</p>
+              <p className="text-gray-900">{companyData.website || "N/A"}</p>
             )}
           </div>
 

@@ -188,8 +188,8 @@ export function Profile() {
                 </div>
               ) : (
                 <div>
-                  <p className="font-medium text-gray-900">{(firstName || lastName) ? `${firstName} ${lastName}`.trim() : '—'}</p>
-                  <p className="text-sm text-gray-600">{phone || '—'}</p>
+                  <p className="font-medium text-gray-900">{(firstName || lastName) ? `${firstName} ${lastName}`.trim() : 'N/A'}</p>
+                  <p className="text-sm text-gray-600">{phone || 'N/A'}</p>
                 </div>
               )}
             </div>
@@ -198,7 +198,7 @@ export function Profile() {
               <Calendar className="w-5 h-5 text-gray-400" />
               <div>
                 <p className="text-sm text-gray-500">Member Since</p>
-                <p className="font-medium text-gray-900">{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '—'}</p>
+                <p className="font-medium text-gray-900">{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</p>
               </div>
             </div>
           </div>

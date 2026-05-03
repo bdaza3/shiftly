@@ -56,7 +56,7 @@ export default function OnboardingCompany() {
       if (!created) throw new Error('Could not create company, try again')
 
       // refresh profile so UI reflects manager role set by server
-      // do not await — a stalled refreshProfile should not block navigation
+      // do not await -> a stalled refreshProfile should not block navigation
       try { refreshProfile().then(() => console.log('OnboardingCompany.handleCreate: refreshProfile done')).catch((e: any) => console.warn('refreshProfile failed', e)) } catch (e) { console.warn('refreshProfile (sync) failed', e) }
       // update client state from the created company we already have
       console.log('OnboardingCompany.handleCreate: addCompany', created)

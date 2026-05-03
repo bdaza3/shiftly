@@ -204,7 +204,7 @@ export function ManageEmployees() {
                         <button onClick={() => setShowJoinPopup(false)} className="text-gray-400 hover:text-gray-600 hover:cursor-pointer">✕</button>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <div className="font-mono font-semibold text-lg">{joinCode ?? "—"}</div>
+                        <div className="font-mono font-semibold text-lg">{joinCode ?? "N/A"}</div>
                         <button
                           onClick={() => {
                             if (!joinCode) return;

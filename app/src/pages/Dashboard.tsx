@@ -65,7 +65,7 @@ export function Dashboard() {
             <div>
               <p className="text-sm text-gray-500">{isAdmin ? 'Total Employees' : "Today's Shifts"}</p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
-                {isAdmin ? (membersLoading ? '—' : (companyMembers.length + 1)) : todayShifts.length}
+                {isAdmin ? (membersLoading ? 'N/A' : (companyMembers.length + 1)) : todayShifts.length}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-600 bg-opacity-10 rounded-lg flex items-center justify-center">
@@ -95,7 +95,7 @@ export function Dashboard() {
                 {isAdmin ? "Pending Requests" : "My Shifts This Week"}
               </p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
-                {isAdmin ? (requestsLoading ? '—' : pendingRequests.length) : myShifts.length}
+                {isAdmin ? (requestsLoading ? 'N/A' : pendingRequests.length) : myShifts.length}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-500 bg-opacity-10 rounded-lg flex items-center justify-center">
@@ -130,7 +130,7 @@ export function Dashboard() {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
-                        {((shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "—"))||"—").charAt(0)}
+                        {((shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "N/A"))||"N/A").charAt(0)}
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "—")}</p>

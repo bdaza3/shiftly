@@ -56,7 +56,7 @@ export default function GanttDayDetail({
   const [availableHeight, setAvailableHeight] = useState<number>(420);
   const dragStateRef = useRef<{ id?: string; initStart: number; initEnd: number; startX?: number; type?: 'left' | 'right' | 'move' } | null>(null);
 
-  // Manual DOM visual updates removed — React state is the single source of truth
+  // Manual DOM visual updates removed, React state is the single source of truth
 
   const normalizeClock = (m: number) => {
     const mm = ((m % 1440) + 1440) % 1440;
