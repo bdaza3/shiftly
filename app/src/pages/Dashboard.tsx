@@ -133,7 +133,7 @@ export function Dashboard() {
                         {((shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "N/A"))||"N/A").charAt(0)}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "—")}</p>
+                        <p className="font-semibold text-gray-900">{shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "N/A")}</p>
                         <p className="text-sm text-gray-500">{shift.role}</p>
                       </div>
                     </div>
