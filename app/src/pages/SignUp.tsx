@@ -4,7 +4,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../../../lib/supabaseClient";
-import { LogIn, Chrome } from "lucide-react";
+import { LogIn, Globe } from "lucide-react";
 import { sanitizeEmail, sanitizePassword } from "../../../lib/inputSanitizer";
 
 export function Signup() {
@@ -111,7 +111,7 @@ export function Signup() {
             </div>
 
             <button onClick={handleGoogle} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:cursor-pointer">
-              <Chrome className="w-5 h-5" />
+              <Globe className="w-5 h-5" />
               Continue with Google
             </button>
 
