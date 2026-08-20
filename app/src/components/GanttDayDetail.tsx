@@ -182,11 +182,11 @@ export default function GanttDayDetail({
               <Copy className="h-4 w-4" />
               Paste
             </button>
-            <button onClick={() => onAutoCreate?.()} className="inline-flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700">
+            <button onClick={() => onAutoCreate?.()} className="inline-flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 hover:cursor-pointer">
               <Sparkles className="h-4 w-4" />
               Auto Fill Day
             </button>
-            <button onClick={onClose} className="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50">Close</button>
+            <button onClick={onClose} className="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50 hover:cursor-pointer">Close</button>
           </div>
         </div>
 

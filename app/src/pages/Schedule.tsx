@@ -304,8 +304,8 @@ export function Schedule() {
 
   const dayActions = (date: string) => (
     <div className="flex flex-col gap-2">
-      <button onClick={() => void handleAutoCreate(date)} className="inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"><Sparkles className="h-3.5 w-3.5" />Auto</button>
-      <button onClick={() => void handlePasteShift(date)} disabled={!copiedShift} className="inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Copy className="h-3.5 w-3.5" />Paste</button>
+      <button onClick={() => void handleAutoCreate(date)} className="inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50 hover:cursor-pointer"><Sparkles className="h-3.5 w-3.5" />Auto</button>
+      <button onClick={() => void handlePasteShift(date)} disabled={!copiedShift} className="inline-flex items-center gap-1 rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 hover:cursor-pointer"><Copy className="h-3.5 w-3.5" />Paste</button>
     </div>
   );
 
@@ -325,12 +325,12 @@ export function Schedule() {
             {isAdmin && <button onClick={() => void handleUndo()} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />Undo</button>}
             {isAdmin && <button onClick={() => void handleRedo()} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />Redo</button>}
             <div className="overflow-hidden rounded-lg border border-gray-200">
-              <button onClick={() => setView("week")} className={`px-4 py-2 ${view === "week" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}>Week</button>
-              <button onClick={() => setView("month")} className={`px-4 py-2 ${view === "month" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50"}`}>Month</button>
+              <button onClick={() => setView("week")} className={`px-4 py-2 ${view === "week" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50 hover:cursor-pointer"}`}>Week</button>
+              <button onClick={() => setView("month")} className={`px-4 py-2 ${view === "month" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50 hover:cursor-pointer"}`}>Month</button>
             </div>
-            {isAdmin && <button onClick={() => { setEditingShift(null); setShowCreateModal(true); }} className="rounded-lg bg-emerald-500 px-3 py-2 text-sm text-white hover:bg-emerald-600">New Shift</button>}
-            <button onClick={goToPrevious} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50"><ChevronLeft className="h-5 w-5" /></button>
-            <button onClick={goToNext} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50"><ChevronRight className="h-5 w-5" /></button>
+            {isAdmin && <button onClick={() => { setEditingShift(null); setShowCreateModal(true); }} className="rounded-lg bg-emerald-500 px-3 py-2 text-sm text-white hover:bg-emerald-600 hover:cursor-pointer">New Shift</button>}
+            <button onClick={goToPrevious} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50 hover:cursor-pointer"><ChevronLeft className="h-5 w-5" /></button>
+            <button onClick={goToNext} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50 hover:cursor-pointer"><ChevronRight className="h-5 w-5" /></button>
           </div>
         </div>
       </div>
@@ -410,8 +410,8 @@ function MonthGrid({ monthDate, getShiftsForDate, isToday, onMoveShift, onEditSh
         <div className="mb-3 flex items-start justify-between gap-2">
           <span onClick={() => onExpandDate(dateStr)} className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ${isToday(date) ? "bg-blue-600 font-bold text-white" : "text-gray-700"}`}>{date.getDate()}</span>
           <div className="flex flex-col gap-2">
-            <button onClick={() => void onAutoCreate(dateStr)} className="rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50">Auto</button>
-            <button onClick={() => void onPasteShift(dateStr)} disabled={!canPaste} className="rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">Paste</button>
+            <button onClick={() => void onAutoCreate(dateStr)} className="rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50 hover:cursor-pointer">Auto</button>
+            <button onClick={() => void onPasteShift(dateStr)} disabled={!canPaste} className="rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 hover:cursor-pointer">Paste</button>
           </div>
         </div>
         <div className="space-y-2">{dayShifts.map((shift) => <motion.div key={shift.id} layoutId={shift.id ? `shift-${shift.id}` : undefined} draggable onDragStartCapture={(e) => { e.dataTransfer.setData("text/plain", shift.id); }} onClick={() => onEditShift(shift)} className="cursor-pointer rounded bg-blue-600 p-2 text-xs text-white hover:bg-blue-700">
