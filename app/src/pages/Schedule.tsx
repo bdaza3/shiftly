@@ -14,13 +14,13 @@ import {
   Sparkles,
   Undo2,
 } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
 import CreateShiftModal from "../components/CreateShiftModal";
 import GanttDayDetail from "../components/GanttDayDetail";
 import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
 import { useRole } from "../hooks/useRole";
 import { useShifts } from "../hooks/useShifts";
+import { authFetch } from "@/lib/authFetch";
 
 type SaveState = { kind: "idle" | "saving" | "saved" | "error"; message: string };
 type HistoryEntry = { label: string; undo: () => Promise<void>; redo: () => Promise<void> };
@@ -51,7 +51,7 @@ function SaveBadge({ state }: { state: SaveState }) {
 }
 
 export function Schedule() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { selected } = useCompany();
   const { isAdmin } = useRole();
   const { shifts, createShift, updateShift, deleteShift } = useShifts(selected?.id);
@@ -77,19 +77,24 @@ export function Schedule() {
 
   useEffect(() => () => { if (resetRef.current) clearTimeout(resetRef.current); }, []);
 
+  // load company members when selected company changes
   useEffect(() => {
     let mounted = true;
     (async () => {
       if (!selected?.id) return mounted && setCompanyMembers([]);
       try {
-        const { data: membersData, error } = await supabase.from("company_members").select("user_id, role").eq("company_id", selected.id);
-        if (error) throw error;
-        const userIds = (membersData || []).map((m: any) => m.user_id).filter(Boolean);
-        const { data: profiles } = userIds.length ? await supabase.from("profiles").select("id, first_name, last_name").in("id", userIds) : { data: [] };
-        const profileMap = new Map((profiles || []).map((p: any) => [p.id, `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim()]));
+        const response = await authFetch("/api/company_members/list", {
+          method: "POST",
+          body: JSON.stringify({ company_id: selected.id }),
+          cache: "no-store",
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result?.error || "Failed to load company members");
         if (!mounted) return;
-        setCompanyMembers((membersData || []).map((m: any) => ({ id: m.user_id, name: profileMap.get(m.user_id) || m.user_id, role: m.role })).filter((m: EmployeeOption) => m.id !== user?.id));
-        console.log("Schedule.members loaded", { selectedId: selected?.id, membersCount: (membersData || []).length });
+        setCompanyMembers((result.members || [])
+          .map((member: any) => ({ id: member.id, name: member.name || member.email || member.id, role: member.role }))
+          .filter((member: EmployeeOption) => member.id !== user?.id));
+        console.log("Schedule.members loaded", { selectedId: selected?.id, membersCount: (result.members || []).length });
       } catch (error) {
         console.warn("Schedule members load failed", error);
         if (mounted) setCompanyMembers([]);
@@ -98,6 +103,7 @@ export function Schedule() {
     return () => { mounted = false; };
   }, [selected?.id, user?.id]);
 
+  // update shiftMeta when shifts change
   useEffect(() => {
     setShiftMeta((prev) => {
       const next = { ...prev };
@@ -113,6 +119,7 @@ export function Schedule() {
   const pushHistory = useCallback((entry: HistoryEntry) => { setHistory((prev) => [...prev, entry]); setRedoHistory([]); }, []);
   const withCompany = useCallback((draft: ShiftDraft) => ({ ...draft, ...(selected?.id ? { company_id: selected.id } : {}) }), [selected?.id]);
   const toDraft = useCallback((shift: any, overrides: Partial<ShiftDraft> = {}): ShiftDraft => {
+    
     const employees = overrides.employees ?? shift.employees ?? [];
     const employeeId = overrides.employeeId ?? shift.employeeId ?? employees[0];
     const employeeName = overrides.employeeName ?? shift.employeeName ?? (employeeId ? companyMembers.find((m) => m.id === employeeId)?.name : undefined);

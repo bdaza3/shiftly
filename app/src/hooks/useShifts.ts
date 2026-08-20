@@ -158,27 +158,8 @@ export function useShifts(companyId?: string | null) {
     if (!row.company_id && companyId) row.company_id = companyId;
     if (payload.employees) row.employees = payload.employees;
     if (payload.location) row.location = payload.location;
-    const isUUID = (v: any) => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
-    if (payload.employeeId && isUUID(payload.employeeId)) row.employee_id = payload.employeeId;
-    else if (payload.employees && payload.employees.length > 0 && isUUID(payload.employees[0])) row.employee_id = payload.employees[0];
     // include employee_name if provided (some schemas require it)
     if (payload.employeeName) row.employee_name = payload.employeeName;
-
-    // verify employee_id refers to an existing profile (avoid querying protected `users` view)
-    if (row.employee_id) {
-      try {
-        const { data: profileExists, error: pErr } = await supabase.from("profiles").select("id").eq("id", row.employee_id).maybeSingle();
-        if (pErr) {
-          console.warn("could not verify profile existence for employee_id", pErr);
-        }
-        if (!profileExists) {
-          console.warn("employee_id not found in profiles table, removing employee_id to avoid FK error", row.employee_id);
-          delete row.employee_id;
-        }
-      } catch (err) {
-        console.warn("error verifying employee_id", err);
-      }
-    }
 
     let { data, error } = await supabase.from("shifts").insert([row]).select().single();
     // handle case where DB doesn't have `employees`, `employee_name` or `employee_id` columns yet
@@ -224,29 +205,12 @@ export function useShifts(companyId?: string | null) {
     // build update object; include employee_id if available
     const upd: any = { date: payload.date, start_time: payload.startTime, end_time: payload.endTime };
     if (payload.employees) upd.employees = payload.employees;
-    const isUUID2 = (v: any) => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
-    if (payload.employeeId && isUUID2(payload.employeeId)) upd.employee_id = payload.employeeId;
-    else if (payload.employees && payload.employees.length > 0 && isUUID2(payload.employees[0])) upd.employee_id = payload.employees[0];
     if (payload.employeeName) upd.employee_name = payload.employeeName;
     upd.role = payload.role ?? "Employee";
     // ensure company stays associated when updating
     if (!upd.company_id && (payload as any).company_id) upd.company_id = (payload as any).company_id;
     if (!upd.company_id && companyId) upd.company_id = companyId;
     if (payload.location) upd.location = payload.location;
-
-    // verify employee exists before updating to avoid FK violation (check `profiles` not `users`)
-    if (upd.employee_id) {
-      try {
-        const { data: profileExists, error: pErr } = await supabase.from("profiles").select("id").eq("id", upd.employee_id).maybeSingle();
-        if (pErr) console.warn("could not verify profile existence for employee_id (update)", pErr);
-        if (!profileExists) {
-          console.warn("employee_id not found for update, removing employee_id to avoid FK error", upd.employee_id);
-          delete upd.employee_id;
-        }
-      } catch (err) {
-        console.warn("error verifying employee_id (update)", err);
-      }
-    }
 
     let { data, error } = await supabase.from("shifts").update(upd).eq("id", id).select().single();
     // if employees, employee_name or employee_id column missing, retry without them
