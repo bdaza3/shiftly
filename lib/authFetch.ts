@@ -2,7 +2,7 @@
 
 import { supabase } from "@/lib/supabaseClient"
 
-const SESSION_GET_TIMEOUT = 1000
+const SESSION_GET_TIMEOUT = 5000
 
 async function tryGetSession(timeout = SESSION_GET_TIMEOUT) {
   try {
@@ -14,6 +14,13 @@ async function tryGetSession(timeout = SESSION_GET_TIMEOUT) {
     return res as any
   } catch (e) {
     console.warn('authFetch: supabase.auth.getSession failed or timed out', e)
+    // Remove an expired refresh token so protected requests do not repeat
+    // the same failed session refresh attempt.
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch (signOutError) {
+      console.warn('authFetch: failed to clear local auth session', signOutError)
+    }
     return null
   }
 }
@@ -23,9 +30,12 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
   const headers = new Headers(init.headers)
 
   const accessToken = sessionResult?.data?.session?.access_token ?? null
-  if (accessToken) {
-    headers.set("authorization", `Bearer ${accessToken}`)
-  }
+  if (!accessToken) return new Response(JSON.stringify({ error: "authentication required" }), {
+    status: 401,
+    headers: { "content-type": "application/json" },
+  })
+
+  headers.set("authorization", `Bearer ${accessToken}`)
 
   if (init.body && !(init.body instanceof FormData) && !headers.has("content-type")) {
     headers.set("content-type", "application/json")

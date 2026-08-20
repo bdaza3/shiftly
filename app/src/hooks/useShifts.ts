@@ -28,8 +28,14 @@ export function useShifts(companyId?: string | null) {
 
   const fetchShifts = useCallback(async () => {
     setLoading(true);
+    if (!companyId) {
+      setShifts([]);
+      setLoading(false);
+      return;
+    }
+
     let q = supabase.from("shifts").select("*").order("date", { ascending: true });
-    if (companyId) q = q.eq('company_id', companyId);
+    q = q.eq('company_id', companyId);
     const { data, error } = await q;
     if (error) {
       console.error("useShifts fetch", error);

@@ -44,6 +44,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const loadProfile = async (userId: string, source: string) => {
+    try {
+      const { data: nextProfile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+      if (error) throw error
+      setProfile(nextProfile ?? null)
+    } catch (error) {
+      console.warn(`AuthContext.${source}: profiles read failed`, error)
+      setProfile(null)
+    }
+  }
+
   useEffect(() => {
     let mounted = true
 
@@ -56,14 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('AuthContext: getSession result', !!u, u?.id)
         setUser(u)
         if (u?.id) {
-          try {
-            const { data: p, error } = await supabase.from('profiles').select('*').eq('id', u.id).maybeSingle()
-            if (error) throw error
-            setProfile(p ?? null)
-          } catch (e) {
-            console.warn('AuthContext: initial profiles read failed', e)
-            setProfile(null)
-          }
+          await loadProfile(u.id, 'initial')
         } else {
           setProfile(null)
         }
@@ -81,24 +89,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     init()
 
-    const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return
       try {
         const u = session?.user ?? null
         console.log('AuthContext.onAuthStateChange', _event, !!u, u?.id)
         setUser(u)
-        if (u?.id) {//if user is signed in, try to get profile; if any step fails, clear profile to avoid stale data
-          try {
-            const { data: p, error } = await supabase.from('profiles').select('*').eq('id', u.id).maybeSingle()
-            if (error) throw error
-            setProfile(p ?? null)
-          } catch (e) {
-            console.warn('AuthContext.onAuthStateChange: profiles read failed', e)
-            setProfile(null)
-          }
-        } else {
-          setProfile(null)
-        }
+        // Do not await Supabase queries inside this callback: auth holds an
+        // internal lock while notifying listeners.
+        if (u?.id) setTimeout(() => { if (mounted) void loadProfile(u.id, 'onAuthStateChange') }, 0)
+        else setProfile(null)
       } catch (e) {
         console.warn('AuthContext.onAuthStateChange handler failed', e)
         setUser(null)

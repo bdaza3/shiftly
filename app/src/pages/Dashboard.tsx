@@ -12,7 +12,7 @@ import { useCompanyMembers } from "../hooks/useCompanyMembers";
 
 export function Dashboard() {
   const { user, userloading } = useAuth();
-  const { companies, selected } = useCompany();
+  const { companies, selected, loading: companiesLoading } = useCompany();
   const router = useRouter();
   const [ready, setReady] = useState(false)
   const { role: membershipRole, isAdmin, loading: roleLoading } = useRole()
@@ -20,10 +20,10 @@ export function Dashboard() {
   const { members: companyMembers, loading: membersLoading } = useCompanyMembers(selected?.id ?? null)
 
   useEffect(() => {//if user is signed in but has no companies, send to company onboarding (case where user goes directly to dashboard)
-    if (ready && user?.id && Array.isArray(companies) && companies.length === 0) {
+    if (ready && user?.id && !companiesLoading && Array.isArray(companies) && companies.length === 0) {
       router.replace('/onboardingcompany')
     }
-  }, [user?.id, companies?.length]);
+  }, [user?.id, companies?.length, companiesLoading, ready, router]);
 
   useEffect(() => { setReady(true) }, [])
 
