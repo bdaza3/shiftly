@@ -20,10 +20,14 @@ export function Dashboard() {
   const { members: companyMembers, loading: membersLoading } = useCompanyMembers(selected?.id ?? null)
 
   useEffect(() => {//if user is signed in but has no companies, send to company onboarding (case where user goes directly to dashboard)
-    if (ready && user?.id && !companiesLoading && Array.isArray(companies) && companies.length === 0) {
-      router.replace('/onboardingcompany')
+    if (ready && !userloading && !user) {
+      router.replace('/')
+      return
     }
-  }, [user?.id, companies?.length, companiesLoading, ready, router]);
+    if (ready && !userloading && user?.id && !companiesLoading && Array.isArray(companies) && companies.length === 0) {
+      router.replace('/register?step=2&sub=create-company')
+    }
+  }, [user?.id, userloading, user, companies?.length, companiesLoading, ready, router]);
 
   useEffect(() => { setReady(true) }, [])
 
@@ -31,7 +35,9 @@ export function Dashboard() {
   const { shifts = [], loading } = useShifts(selected?.id);
 
   const today = new Date();
-  const todayDateStr = today.toISOString().split("T")[0];
+  const todayDateStr = [today.getFullYear(), today.getMonth() + 1, today.getDate()]
+    .map((part, index) => index === 0 ? String(part) : String(part).padStart(2, "0"))
+    .join("-");
 
   // Compute derived lists from DB-backed shifts
   const todayShifts = (loading ? [] : shifts).filter((s: any) => s.date === todayDateStr);
@@ -55,7 +61,8 @@ export function Dashboard() {
   }, [allRequests])
 
   return (
-    userloading ? <div className="p-6">Loading...</div> :
+    userloading || (!user && !ready) ? <div className="p-6">Loading...</div> :
+    !user ? <div className="p-6">Redirecting...</div> :
     <div className="space-y-6">
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

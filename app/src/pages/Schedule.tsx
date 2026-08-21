@@ -329,8 +329,8 @@ export function Schedule() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <SaveBadge state={saveState} />
-            {isAdmin && <button onClick={() => void handleUndo()} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />Undo</button>}
-            {isAdmin && <button onClick={() => void handleRedo()} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />Redo</button>}
+            {isAdmin && <button onClick={() => void handleUndo()} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 hover:cursor-pointer"><Undo2 className="h-4 w-4" />Undo</button>}
+            {isAdmin && <button onClick={() => void handleRedo()} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 hover:cursor-pointer"><Redo2 className="h-4 w-4" />Redo</button>}
             <div className="overflow-hidden rounded-lg border border-gray-200">
               <button onClick={() => setView("week")} className={`px-4 py-2 ${view === "week" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50 hover:cursor-pointer"}`}>Week</button>
               <button onClick={() => setView("month")} className={`px-4 py-2 ${view === "month" ? "bg-blue-600 text-white" : "bg-white text-gray-700 hover:bg-gray-50 hover:cursor-pointer"}`}>Month</button>

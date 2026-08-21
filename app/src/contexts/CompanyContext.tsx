@@ -42,7 +42,9 @@ export const CompanyContext = createContext<CompanyContextValue | undefined>(und
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const [companies, setCompanies] = useState<Company[]>([])
-  const [loadingCompanies, setLoadingCompanies] = useState<boolean>(false)
+  // Keep consumers in a loading state until the first authenticated company
+  // request has completed; an empty initial array is not an empty account.
+  const [loadingCompanies, setLoadingCompanies] = useState<boolean>(true)
   const [selectedId, setSelectedId] = useState<string>('')
 
   // Hydration-safe: load cached companies and selectedId on client after mount

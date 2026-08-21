@@ -170,14 +170,6 @@ export default function GanttDayDetail({
                 <span>{saveState.message}</span>
               </div>
             )}
-            <button onClick={() => onUndo?.()} disabled={!canUndo} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
-              <Undo2 className="h-4 w-4" />
-              Undo
-            </button>
-            <button onClick={() => onRedo?.()} disabled={!canRedo} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
-              <Redo2 className="h-4 w-4" />
-              Redo
-            </button>
             <button onClick={() => onPasteShift?.()} disabled={!canPaste} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
               <Copy className="h-4 w-4" />
               Paste

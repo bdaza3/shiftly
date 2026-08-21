@@ -5,7 +5,6 @@ import { Login } from "../src/pages/Login";
 import { Signup } from "../src/pages/SignUp";
 import { Register } from "../src/pages/register/Register";
 
-import OnboardingCompany from "../src/pages/register/OnboardingCompany";
 import JoinCompany from "../src/pages/register/JoinCompany";
 import Step2RoleSelection from "../src/pages/register/Step2RoleSelection";
 
@@ -34,7 +33,6 @@ const PAGES: Record<string, React.ComponentType<any>> = {
   signup: Signup,
   register: Register,
   step2roleselection: Step2RoleSelection,
-  onboardingcompany: OnboardingCompany,
   joincompany: JoinCompany,
   setupworkstructure: SetupWorkStructure,
   setupemployees: SetupEmployees,

@@ -99,9 +99,9 @@ export function Register() {
         },
       })
 
-      console.log('HANDLE SUBMIT: registration successful, navigating to onboarding')
+      console.log('HANDLE SUBMIT: registration successful, navigating to company setup')
       startTransition(() => {
-        router.replace("/onboardingcompany");
+        router.replace("/register?step=2&sub=create-company");
         router.refresh();
       })
       refreshProfile().catch((e) => {
