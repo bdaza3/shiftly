@@ -39,6 +39,14 @@ type ShiftDraft = {
 
 const EMPTY_STATE: SaveState = { kind: "idle", message: "" };
 
+function formatLocalYMD(date: Date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
 function SaveBadge({ state }: { state: SaveState }) {
   if (state.kind === "idle") return null;
   const tone = state.kind === "saved" ? "bg-emerald-50 text-emerald-700" : state.kind === "error" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700";
@@ -354,7 +362,7 @@ export function Schedule() {
         <div className="grid grid-cols-7">
           {weekDates.map((date, index) => {
             const dayShifts = getShiftsForDate(date);
-            const dateStr = date.toISOString().split("T")[0];
+            const dateStr = formatLocalYMD(date);
             return <div key={index} onDragOver={(e) => { e.preventDefault(); setDragPreview((prev) => ({ ...prev, visible: true, x: e.clientX + 12, y: e.clientY + 12 })); }} onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) { console.log("Schedule.onDrop", { id, dateStr }); void handleMoveShift(id, dateStr); } setDragPreview((prev) => ({ ...prev, visible: false })); }} className={`min-h-[220px] border-r border-b border-gray-200 p-3 last:border-r-0 ${isToday(date) ? "bg-blue-600/5" : "bg-white"}`}>
               <div className="mb-3 flex items-start justify-between gap-2">
                 <span onClick={() => setExpandedDate(dateStr)} className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ${isToday(date) ? "bg-blue-600 font-bold text-white" : "text-gray-700"}`}>{date.getDate()}</span>
@@ -412,7 +420,7 @@ function MonthGrid({ monthDate, getShiftsForDate, isToday, onMoveShift, onEditSh
   return <div className="grid grid-cols-7">
     {days.map((date, index) => {
       const dayShifts = getShiftsForDate(date);
-      const dateStr = date.toISOString().split("T")[0];
+      const dateStr = formatLocalYMD(date);
       return <div key={index} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) void onMoveShift(id, dateStr); }} className={`min-h-[150px] border-r border-b border-gray-200 p-3 last:border-r-0 ${isToday(date) ? "bg-blue-600/5" : "bg-white"} ${date.getMonth() === monthDate.getMonth() ? "" : "bg-gray-50 text-gray-400"}`}>
         <div className="mb-3 flex items-start justify-between gap-2">
           <span onClick={() => onExpandDate(dateStr)} className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ${isToday(date) ? "bg-blue-600 font-bold text-white" : "text-gray-700"}`}>{date.getDate()}</span>
