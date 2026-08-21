@@ -57,12 +57,7 @@ export function ManageEmployees() {
       const json = await resp.json();
       if (!resp.ok) throw new Error(json?.error || 'Failed to add employee');
 
-      const newEmp = {
-        ...(json.member || {}),
-        position: "Employee",
-      };
-      setEmployees((s) => [newEmp, ...s]);
-      setMessage("Employee added to company.");
+      setMessage("Invitation sent.");
       setEmailInput("");
       setFirstNameInput("");
       setLastNameInput("");
@@ -270,8 +265,8 @@ export function ManageEmployees() {
         <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-auto">
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowModal(false)} />
           <div className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6 z-50">
-            <h3 className="text-lg font-semibold mb-4">Add Employee by Email</h3>
-            <p className="text-sm text-gray-500 mb-3">Enter the email address of the existing Supabase user you want to add to Shiftly HQ.</p>
+            <h3 className="text-lg font-semibold mb-4">Invite Employee by Email</h3>
+            <p className="text-sm text-gray-500 mb-3">Send a one-time invitation link. The recipient can use it to join this company after signing in or creating an account.</p>
             <input type="email" value={emailInput} onChange={(e) => setEmailInput(sanitizeEmail(e.target.value))} placeholder="user@example.com" className="w-full border p-2 rounded mb-3" />
             <input type="text" value={firstNameInput} onChange={(e) => setFirstNameInput(sanitizeString(e.target.value, 80))} placeholder="First name (optional)" className="w-full border p-2 rounded mb-3" />
             <input type="text" value={lastNameInput} onChange={(e) => setLastNameInput(sanitizeString(e.target.value, 80))} placeholder="Last name (optional)" className="w-full border p-2 rounded mb-3" />
@@ -287,7 +282,7 @@ export function ManageEmployees() {
                 }}
                 disabled={loading}
                 className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors hover:cursor-pointer"
-              >Add</button>
+              >Send Invite</button>
             </div>
           </div>
         </div>

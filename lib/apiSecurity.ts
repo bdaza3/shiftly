@@ -161,6 +161,17 @@ export function normalizeOptionalName(value: unknown, fieldName: string) {
   return normalized
 }
 
+export function normalizeEmail(value: unknown) {
+  if (typeof value !== "string") throw new Error("invalid email")
+
+  const normalized = value.trim().toLowerCase()
+  if (normalized.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    throw new Error("invalid email")
+  }
+
+  return normalized
+}
+
 export function normalizePhone(value: unknown) {
   if (value === null || value === undefined || value === "") return null
   if (typeof value !== "string") throw new Error("invalid phone")
