@@ -4,6 +4,7 @@ import "./globals.css";
 import Layout from "./src/components/Layout";
 import { AuthProvider } from "./src/contexts/AuthContext";
 import { CompanyProvider } from "./src/contexts/CompanyContext";
+import { LocaleProvider } from "./src/i18n/LocaleProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,11 +34,13 @@ export default function RootLayout({
       <body className="min-h-full">{
         /* Layout handles page chrome (sidebar, header) and content area */
       }
-      <AuthProvider>
-        <CompanyProvider>
-          <Layout>{children}</Layout>
-        </CompanyProvider>
-      </AuthProvider>
+      <LocaleProvider>
+        <AuthProvider>
+          <CompanyProvider>
+            <Layout>{children}</Layout>
+          </CompanyProvider>
+        </AuthProvider>
+      </LocaleProvider>
       </body>
     </html>
   );

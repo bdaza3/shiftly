@@ -5,9 +5,12 @@ import { useAuth } from "../hooks/useAuth";
 import { useRole } from "../hooks/useRole";
 import useRequests from "../hooks/useRequests";
 import { FileText, Plus, X, Check, Clock } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function Requests() {
   const { user, profile } = useAuth();
+  const t = useTranslations("requests")
+  const common = useTranslations("common")
   const [showModal, setShowModal] = useState(false);
   const [requestType, setRequestType] = useState<"time-off" | "shift-swap">("time-off");
   const [date, setDate] = useState("");
@@ -38,7 +41,7 @@ export function Requests() {
       setReason("");
     } catch (err) {
       console.warn("could not submit request", err);
-      alert("Request submission failed")
+      alert(t("submissionFailed"))
     }
   };
 
@@ -90,11 +93,11 @@ export function Requests() {
           <div className="flex items-center gap-4">
             <FileText className="w-6 h-6 text-blue-600" />
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Requests</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{t('title')}</h2>
               <p className="text-sm text-gray-500 mt-1">
                 {role === "admin"
-                  ? "Review and manage employee requests"
-                  : "Submit and track your time-off and shift swap requests"}
+                  ? t('adminDescription')
+                  : t('employeeDescription')}
               </p>
             </div>
           </div>
@@ -105,7 +108,7 @@ export function Requests() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer"
             >
               <Plus className="w-5 h-5" />
-              New Request
+              {t('newRequest')}
             </button>
           )}
         </div>
@@ -118,15 +121,15 @@ export function Requests() {
             <thead>
               <tr className="border-b border-gray-200">
                 {role === "admin" && (
-                  <th className="text-left p-4 font-semibold text-gray-700">Employee</th>
+                  <th className="text-left p-4 font-semibold text-gray-700">{t('employee')}</th>
                 )}
-                <th className="text-left p-4 font-semibold text-gray-700">Type</th>
-                <th className="text-left p-4 font-semibold text-gray-700">Date</th>
-                <th className="text-left p-4 font-semibold text-gray-700">Reason</th>
-                <th className="text-left p-4 font-semibold text-gray-700">Status</th>
-                <th className="text-left p-4 font-semibold text-gray-700">Submitted</th>
+                <th className="text-left p-4 font-semibold text-gray-700">{t('type')}</th>
+                <th className="text-left p-4 font-semibold text-gray-700">{common('date')}</th>
+                <th className="text-left p-4 font-semibold text-gray-700">{t('reason')}</th>
+                <th className="text-left p-4 font-semibold text-gray-700">{common('status')}</th>
+                <th className="text-left p-4 font-semibold text-gray-700">{t('submitted')}</th>
                 {role === "admin" && (
-                  <th className="text-left p-4 font-semibold text-gray-700">Actions</th>
+                  <th className="text-left p-4 font-semibold text-gray-700">{common('actions')}</th>
                 )}
               </tr>
             </thead>
@@ -159,8 +162,8 @@ export function Requests() {
                     <td className="p-4">
                       {request.status === "pending" && (
                         <div className="flex gap-2">
-                          <button onClick={() => handleAction(request.id, "approved")} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-sm">Approve</button>
-                          <button onClick={() => handleAction(request.id, "rejected")} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm">Reject</button>
+                          <button onClick={() => handleAction(request.id, "approved")} className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-sm">{common('approve')}</button>
+                          <button onClick={() => handleAction(request.id, "rejected")} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm">{common('reject')}</button>
                         </div>
                       )}
                     </td>
@@ -177,32 +180,32 @@ export function Requests() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-900">New Request</h3>
+              <h3 className="text-xl font-semibold text-gray-900">{t('newRequest')}</h3>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 hover:cursor-pointer"><X className="w-6 h-6" /></button>
             </div>
 
             <form onSubmit={submitRequest} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Request Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('requestType')}</label>
                 <div className="flex gap-4">
-                  <label className="flex items-center"><input type="radio" name="type" value="time-off" checked={requestType === "time-off"} onChange={(e) => setRequestType(e.target.value as "time-off" | "shift-swap")} className="mr-2" />Time Off</label>
-                  <label className="flex items-center"><input type="radio" name="type" value="shift-swap" checked={requestType === "shift-swap"} onChange={(e) => setRequestType(e.target.value as "time-off" | "shift-swap")} className="mr-2" />Shift Swap</label>
+                  <label className="flex items-center"><input type="radio" name="type" value="time-off" checked={requestType === "time-off"} onChange={(e) => setRequestType(e.target.value as "time-off" | "shift-swap")} className="mr-2" />{t('timeOff')}</label>
+                  <label className="flex items-center"><input type="radio" name="type" value="shift-swap" checked={requestType === "shift-swap"} onChange={(e) => setRequestType(e.target.value as "time-off" | "shift-swap")} className="mr-2" />{t('shiftSwap')}</label>
                 </div>
               </div>
 
               <div>
-                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">{common('date')}</label>
                 <input type="date" id="date" value={date} onChange={(e) => setDate(e.target.value)} required className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" />
               </div>
 
               <div>
-                <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-2">Reason</label>
-                <textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} required rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="Please provide a reason for your request" />
+                <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-2">{t('reason')}</label>
+                <textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} required rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder={t('reasonPlaceholder')} />
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer">Submit Request</button>
+                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer">{common('cancel')}</button>
+                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer">{t('submit')}</button>
               </div>
             </form>
           </div>

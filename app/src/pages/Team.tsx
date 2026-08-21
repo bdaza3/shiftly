@@ -5,9 +5,12 @@ import { supabase } from "@/lib/supabaseClient";
 import { useCompany } from "../hooks/useCompany";
 import { useCompanyMembers } from "../hooks/useCompanyMembers";
 import { useAuth } from "../hooks/useAuth";
+import { useTranslations } from "next-intl";
 
 export function Team() {
   const { selected } = useCompany();
+  const t = useTranslations("team")
+  const common = useTranslations("common")
   const { members, loading } = useCompanyMembers(selected?.id ?? null);
   const { user } = useAuth();
   //const [members, setMembers] = useState<{ id: string; name: string; role: string; email?: string; full_name?: string; first_name?: string; last_name?: string; user_id?: string }[]>([])
@@ -18,16 +21,16 @@ export function Team() {
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Team</h2>
-          <p className="text-sm text-gray-500 mt-1">Directory of employees</p>
+          <h2 className="text-2xl font-bold text-gray-900">{t('title')}</h2>
+          <p className="text-sm text-gray-500 mt-1">{t('description')}</p>
         </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         {loading ? (
-          <p className="text-gray-500">Loading...</p>
+          <p className="text-gray-500">{common('loading')}</p>
         ) : members.length === 0 ? (
-          <p className="text-gray-500">No team members found.</p>
+          <p className="text-gray-500">{t('noMembers')}</p>
         ) : (
           <div className="space-y-3">
             {members.map((m) => {

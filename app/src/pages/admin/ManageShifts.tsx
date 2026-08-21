@@ -10,6 +10,7 @@ import { useCompany } from "../../hooks/useCompany";
 import { useRole } from "../../hooks/useRole";
 import { useCompanyMembers } from "../../hooks/useCompanyMembers";
 import { useShifts } from "../../hooks/useShifts";
+import { useTranslations } from "next-intl";
 
 type SaveState = { kind: "idle" | "saving" | "saved" | "error"; message: string };
 type HistoryEntry = { label: string; undo: () => Promise<void>; redo: () => Promise<void> };
@@ -24,6 +25,7 @@ function SaveBadge({ state }: { state: SaveState }) {
 }
 
 export function ManageShifts() {
+  const t = useTranslations("admin")
   const { selected } = useCompany();
   const { user } = useAuth();
   const { isAdmin } = useRole();
@@ -145,18 +147,18 @@ export function ManageShifts() {
         <div className="flex items-center gap-4">
           <ClipboardList className="h-6 w-6 text-blue-600" />
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Manage Shifts</h2>
-            <p className="mt-1 text-sm text-gray-500">Edit shifts with undo, redo, copy, and auto-fill.</p>
+            <h2 className="text-2xl font-bold text-gray-900">{t('manageShifts')}</h2>
+            <p className="mt-1 text-sm text-gray-500">{t('manageShiftsDescription')}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SaveBadge state={saveState} />
           {isAdmin && (
             <>
-              <button onClick={() => { console.log("ManageShifts.click Undo"); void handleUndo(); }} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />Undo</button>
-              <button onClick={() => { console.log("ManageShifts.click Redo"); void handleRedo(); }} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />Redo</button>
+              <button onClick={() => { console.log("ManageShifts.click Undo"); void handleUndo(); }} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />{t('undo')}</button>
+              <button onClick={() => { console.log("ManageShifts.click Redo"); void handleRedo(); }} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />{t('redo')}</button>
               <button onClick={() => { console.log("ManageShifts.click Auto Today"); void handleAutoCreate(); }} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Sparkles className="h-4 w-4" />Auto Today</button>
-              <button onClick={() => { console.log("ManageShifts.click New Shift"); setEditingShift(null); setShowModal(true); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 hover:cursor-pointer"><Plus className="h-5 w-5" />New Shift</button>
+              <button onClick={() => { console.log("ManageShifts.click New Shift"); setEditingShift(null); setShowModal(true); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 hover:cursor-pointer"><Plus className="h-5 w-5" />{t('newShift')}</button>
             </>
           )}
         </div>

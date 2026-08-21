@@ -3,11 +3,16 @@
 import { Bell, Settings } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useLocalePreference } from "../i18n/LocaleProvider";
 
 export function Header() {
 
   const { user, profile } = useAuth();
   const router = useRouter();
+  const t = useTranslations("header")
+  const common = useTranslations("common")
+  const { locale } = useLocalePreference()
   const firstName = profile?.first_name ?? user?.user_metadata?.firstName ?? '';
   const lastName = profile?.last_name ?? user?.user_metadata?.lastName ?? '';
   const displayName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name || user?.email);
@@ -26,10 +31,10 @@ export function Header() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-800">
-            Welcome back, {displayName ?? "Guest"}!
+            {t('welcome', { name: displayName ?? common('guest') })}
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            {new Date().toLocaleDateString("en-US", {
+            {new Date().toLocaleDateString(locale === "ja" ? "ja-JP" : "en-US", {
               weekday: "long",
               year: "numeric",
               month: "long",

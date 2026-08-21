@@ -18,11 +18,14 @@ import { useCompany } from "../hooks/useCompany";
 import { supabase } from '../../../lib/supabaseClient'
 import { startTransition, useEffect, useState } from 'react'
 import { authFetch } from "@/lib/authFetch";
+import { useTranslations } from "next-intl";
 
 export function Sidebar() {
   const router = useRouter();
   const { user, profile } = useAuth();
   const { selected } = useCompany();
+  const t = useTranslations("nav")
+  const common = useTranslations("common")
   const [isAdmin, setIsAdmin] = useState(false);
   const [membershipRole, setMembershipRole] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -108,7 +111,7 @@ export function Sidebar() {
       <div className="p-6 border-b border-gray-200 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-black">Shiftly</h1>
-          <p className="text-sm text-gray-500 mt-1">Shift Management</p>
+          <p className="text-sm text-gray-500 mt-1">{t('tagline')}</p>
         </div>
         <div>
           <button
@@ -118,7 +121,7 @@ export function Sidebar() {
             aria-expanded={menuOpen}
           >
             <span>
-              {mounted ? (selected?.name ?? "Select company") : "Select company"}
+              {mounted ? (selected?.name ?? t('selectCompany')) : t('selectCompany')}
             </span>
             <ChevronRight className="w-4 h-4 text-gray-400" />
           </button>
@@ -129,46 +132,46 @@ export function Sidebar() {
         <Link href="/dashboard" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
           <span className="flex items-center gap-2">
             <LayoutDashboard className="w-4 h-4" />
-            Dashboard
+            {t('dashboard')}
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
         <Link href="/schedule" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
           <span className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
-            Schedule
+            {t('schedule')}
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
         <Link href="/team" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
           <span className="flex items-center gap-2">
             <Users className="w-4 h-4" />
-            Team
+            {t('team')}
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
         <Link href="/requests" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
           <span className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            Requests
+            {t('requests')}
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
         <Link href="/company" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
           <span className="flex items-center gap-2">
             <Building className="w-4 h-4" />
-            Company
+            {t('company')}
           </span>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
 
         {(isAdmin || inferredIsAdmin) && (
           <>
-            <span className="text-xs font-semibold text-gray-400 uppercase px-4 mt-6 mb-2">Management</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase px-4 mt-6 mb-2">{t('management')}</span>
             <Link href="/manageemployees" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
               <span className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
-                Manage Employees
+                {t('manageEmployees')}
               </span>
               <ChevronRight className="w-4 h-4 text-gray-400" />
             </Link>
@@ -176,7 +179,7 @@ export function Sidebar() {
             <Link href="/manageshifts" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
               <span className="flex items-center gap-2">
                 <ClipboardList className="w-4 h-4" />
-                Manage Shifts
+                {t('manageShifts')}
               </span>
               <ChevronRight className="w-4 h-4 text-gray-400" />
             </Link>
@@ -184,7 +187,7 @@ export function Sidebar() {
             <Link href="/analytics" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
               <span className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                Analytics
+                {t('analytics')}
               </span>
               <ChevronRight className="w-4 h-4 text-gray-400" />
             </Link>
@@ -201,8 +204,8 @@ export function Sidebar() {
                 {(displayName?.charAt(0) ?? user?.email?.charAt(0) ?? "U").toUpperCase()}
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium text-gray-800">{displayName ?? "Guest"}</div>
-                <div className="text-xs text-gray-500">{displayRole ?? 'Employee'}</div>
+                <div className="text-sm font-medium text-gray-800">{displayName ?? common('guest')}</div>
+                <div className="text-xs text-gray-500">{displayRole ?? common('employee')}</div>
               </div>
             </div>
           </Link>

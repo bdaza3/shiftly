@@ -8,11 +8,17 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import { authFetch } from "@/lib/authFetch";
 import { sanitizeString, sanitizePhone } from "../../../lib/inputSanitizer";
+import { useTranslations } from "next-intl";
+import { useLocalePreference } from "../i18n/LocaleProvider";
 
 export function Profile() {
   const router = useRouter();
   const { user, profile, signOut, refreshProfile } = useAuth();
   const { selected } = useCompany();
+  const t = useTranslations("profile")
+  const common = useTranslations("common")
+  const settings = useTranslations("settings")
+  const { locale } = useLocalePreference()
 
   const [membershipRole, setMembershipRole] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -123,7 +129,7 @@ export function Profile() {
       // refresh global profile state so header/sidebar reflect changes
       try { await refreshProfile(); } catch (e) { /* ignore */ }
       setEditing(false);
-      alert('Profile updated');
+      alert(t('profileUpdated'));
     } catch (e: any) {
       console.error('profile save failed', e);
       alert(e?.message || String(e));
@@ -139,8 +145,8 @@ export function Profile() {
         <div className="flex items-center gap-4">
           <User className="w-6 h-6 text-blue-600" />
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Profile</h2>
-            <p className="text-sm text-gray-500 mt-1">Manage your account settings</p>
+            <h2 className="text-2xl font-bold text-gray-900">{t('title')}</h2>
+            <p className="text-sm text-gray-500 mt-1">{t('description')}</p>
           </div>
         </div>
       </div>
@@ -154,16 +160,16 @@ export function Profile() {
               {(displayName || user.email || 'U').charAt(0).toUpperCase()}
             </div>
             <div className="pb-2">
-              <h3 className="text-2xl font-bold text-gray-900">{displayName ?? 'Guest'}</h3>
-              <p className="text-gray-500 capitalize">{displayRole ?? 'Employee'}</p>
+              <h3 className="text-2xl font-bold text-gray-900">{displayName ?? common('guest')}</h3>
+              <p className="text-gray-500 capitalize">{displayRole ?? common('employee')}</p>
             </div>
             <div className="ml-auto">
               {!editing ? (
-                <button onClick={() => setEditing(true)} className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors hover:cursor-pointer">Edit</button>
+                <button onClick={() => setEditing(true)} className="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors hover:cursor-pointer">{common('edit')}</button>
               ) : (
                 <div className="flex gap-2">
-                  <button onClick={handleSave} disabled={saving} className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors hover:cursor-pointer">Save</button>
-                  <button onClick={() => setEditing(false)} className="px-3 py-2 border rounded hover:bg-gray-100 transition-colors hover:cursor-pointer">Cancel</button>
+                  <button onClick={handleSave} disabled={saving} className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors hover:cursor-pointer">{common('save')}</button>
+                  <button onClick={() => setEditing(false)} className="px-3 py-2 border rounded hover:bg-gray-100 transition-colors hover:cursor-pointer">{common('cancel')}</button>
                 </div>
               )}
             </div>
@@ -173,18 +179,18 @@ export function Profile() {
             <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
               <Mail className="w-5 h-5 text-gray-400" />
               <div className="flex-1">
-                <p className="text-sm text-gray-500">Email</p>
+                <p className="text-sm text-gray-500">{common('email')}</p>
                 <p className="font-medium text-gray-900">{user.email}</p>
               </div>
             </div>
 
             <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-500 mb-2">Name & phone</p>
+              <p className="text-sm text-gray-500 mb-2">{t('nameAndPhone')}</p>
               {editing ? (
                 <div className="grid grid-cols-1 gap-2">
-                  <input value={firstName} onChange={(e) => setFirstName(sanitizeString(e.target.value, 50))} placeholder="First name" className="w-full border p-2 rounded" />
-                  <input value={lastName} onChange={(e) => setLastName(sanitizeString(e.target.value, 50))} placeholder="Last name" className="w-full border p-2 rounded" />
-                  <input value={phone} onChange={(e) => setPhone(sanitizePhone(e.target.value))} placeholder="Phone" className="w-full border p-2 rounded" />
+                  <input value={firstName} onChange={(e) => setFirstName(sanitizeString(e.target.value, 50))} placeholder={settings('firstName')} className="w-full border p-2 rounded" />
+                  <input value={lastName} onChange={(e) => setLastName(sanitizeString(e.target.value, 50))} placeholder={settings('lastName')} className="w-full border p-2 rounded" />
+                  <input value={phone} onChange={(e) => setPhone(sanitizePhone(e.target.value))} placeholder={settings('phone')} className="w-full border p-2 rounded" />
                 </div>
               ) : (
                 <div>
@@ -197,8 +203,8 @@ export function Profile() {
             <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
               <Calendar className="w-5 h-5 text-gray-400" />
               <div>
-                <p className="text-sm text-gray-500">Member Since</p>
-                <p className="font-medium text-gray-900">{profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}</p>
+                <p className="text-sm text-gray-500">{t('memberSince')}</p>
+                <p className="font-medium text-gray-900">{profile?.created_at ? new Date(profile.created_at).toLocaleDateString(locale === "ja" ? "ja-JP" : "en-US") : common('notAvailable')}</p>
               </div>
             </div>
           </div>
@@ -206,7 +212,7 @@ export function Profile() {
           <div className="mt-6 pt-6 border-t border-gray-200">
             <button onClick={() => setShowLogoutConfirm(true)} className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors hover:cursor-pointer">
               <LogOut className="w-5 h-5" />
-              Sign Out
+              {common('signOut')}
             </button>
           </div>
         </div>
@@ -216,15 +222,15 @@ export function Profile() {
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => { if (!logoutLoading) setShowLogoutConfirm(false) }} />
           <div className="relative bg-white rounded-lg p-6 w-full max-w-sm z-10 shadow-lg" aria-busy={logoutLoading}>
             <div className="flex flex-col items-center gap-2 mb-4 text-center">
-              <h2 className="text-xl font-semibold text-gray-900">Confirm Sign Out</h2>
-              <p className="text-sm text-gray-500">Are you sure you want to sign out?</p>
+              <h2 className="text-xl font-semibold text-gray-900">{t('confirmSignOut')}</h2>
+              <p className="text-sm text-gray-500">{t('confirmSignOutQuestion')}</p>
             </div>
             <div className="mt-4 flex justify-center gap-3">
               <button
                 onClick={() => { if (!logoutLoading) setShowLogoutConfirm(false) }}
                 disabled={logoutLoading}
                 className={`px-3 py-1 rounded ${logoutLoading ? 'bg-gray-100 text-gray-400' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} transition-colors hover:cursor-pointer`}>
-                Cancel
+                {common('cancel')}
               </button>
               <button
                 onClick={async () => {
@@ -251,10 +257,10 @@ export function Profile() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                     </svg>
-                    <span>Logging out...</span>
+                    <span>{t('loggingOut')}</span>
                   </>
                 ) : (
-                  'Sign Out'
+                  common('signOut')
                 )}
               </button>
             </div>

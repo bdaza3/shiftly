@@ -9,9 +9,14 @@ import { useShifts } from "../hooks/useShifts";
 import useRequests from "../hooks/useRequests";
 import { useRole } from "../hooks/useRole";
 import { useCompanyMembers } from "../hooks/useCompanyMembers";
+import { useTranslations } from "next-intl";
+import { useLocalePreference } from "../i18n/LocaleProvider";
 
 export function Dashboard() {
   const { user, userloading } = useAuth();
+  const t = useTranslations("dashboard")
+  const common = useTranslations("common")
+  const { locale } = useLocalePreference()
   const { companies, selected, loading: companiesLoading } = useCompany();
   const router = useRouter();
   const [ready, setReady] = useState(false)
@@ -61,8 +66,8 @@ export function Dashboard() {
   }, [allRequests])
 
   return (
-    userloading || (!user && !ready) ? <div className="p-6">Loading...</div> :
-    !user ? <div className="p-6">Redirecting...</div> :
+    userloading || (!user && !ready) ? <div className="p-6">{common('loading')}</div> :
+    !user ? <div className="p-6">{common('loading')}</div> :
     <div className="space-y-6">
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -70,7 +75,7 @@ export function Dashboard() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">{isAdmin ? 'Total Employees' : "Today's Shifts"}</p>
+              <p className="text-sm text-gray-500">{isAdmin ? t('totalEmployees') : t('todaysShifts')}</p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
                 {isAdmin ? (membersLoading ? 'N/A' : (companyMembers.length + 1)) : todayShifts.length}
               </p>
@@ -84,7 +89,7 @@ export function Dashboard() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Pending Requests</p>
+              <p className="text-sm text-gray-500">{t('pendingRequests')}</p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
                 {pendingRequests.length}
               </p>
@@ -99,7 +104,7 @@ export function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">
-                {isAdmin ? "Pending Requests" : "My Shifts This Week"}
+                {isAdmin ? t('pendingRequests') : t('myShiftsThisWeek')}
               </p>
               <p className="text-3xl font-bold text-gray-900 mt-1">
                 {isAdmin ? (requestsLoading ? 'N/A' : pendingRequests.length) : myShifts.length}
@@ -115,9 +120,9 @@ export function Dashboard() {
       {/* Today's Shifts */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
-          <h3 className="text-xl font-semibold text-gray-900">Today's Shifts</h3>
+          <h3 className="text-xl font-semibold text-gray-900">{t('todaysShifts')}</h3>
           <p className="text-sm text-gray-500 mt-1">
-            {today.toLocaleDateString("en-US", {
+            {today.toLocaleDateString(locale === "ja" ? "ja-JP" : "en-US", {
               weekday: "long",
               month: "long",
               day: "numeric",
@@ -126,7 +131,7 @@ export function Dashboard() {
         </div>
         <div className="p-6">
           {todayShifts.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No shifts scheduled for today</p>
+            <p className="text-gray-500 text-center py-8">{t('noShiftsToday')}</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {todayShifts.map((shift) => (
@@ -172,11 +177,11 @@ export function Dashboard() {
       {/* Notifications Panel */}
       {effectiveMembershipRole === "employee" && upcomingShift && (
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 shadow-sm text-white">
-          <h3 className="text-lg font-semibold mb-2">Your Next Shift</h3>
+          <h3 className="text-lg font-semibold mb-2">{t('yourNextShift')}</h3>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white/90">
-                {new Date(upcomingShift.date).toLocaleDateString("en-US", {
+                {new Date(upcomingShift.date).toLocaleDateString(locale === "ja" ? "ja-JP" : "en-US", {
                   weekday: "long",
                   month: "short",
                   day: "numeric",
@@ -198,7 +203,7 @@ export function Dashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900">
-              Pending Approvals
+              {t('pendingApprovals')}
             </h3>
           </div>
           <div className="p-6 space-y-3">
@@ -221,10 +226,10 @@ export function Dashboard() {
                 </div>
                 <div className="flex gap-2">
                   <button className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors hover:cursor-pointer ">
-                    Approve
+                    {common('approve')}
                   </button>
                   <button className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors hover:cursor-pointer">
-                    Reject
+                    {common('reject')}
                   </button>
                 </div>
               </div>

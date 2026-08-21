@@ -6,10 +6,13 @@ import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../../../lib/supabaseClient";
 import { LogIn, Globe } from "lucide-react";
 import { sanitizeEmail, sanitizePassword } from "../../../lib/inputSanitizer";
+import { useTranslations } from "next-intl";
 
 export function Signup() {
   const { signUp, userloading } = useAuth();
   const router = useRouter();
+  const t = useTranslations("signup")
+  const login = useTranslations("login")
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -37,14 +40,14 @@ export function Signup() {
         return;
       }
       // Always send new signups to the registration flow so they complete their profile.
-      alert("Account created. Continue registration to complete your profile.");
+      alert(t("accountCreated"));
       // Supabase may take a short moment to update session; wait briefly before redirecting
       await new Promise((res) => setTimeout(res, 500));
       console.log('SignUp.handleSignUp: navigating to /register')
       router.push("/register");
     } catch (err: any) {
       console.error("signup error", err);
-      alert(err?.message || String(err) || "Signup failed");
+      alert(err?.message || String(err) || t("signupFailed"));
       setLoading(false);
     }
   };
@@ -68,13 +71,13 @@ export function Signup() {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div className="p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-blue-600 mb-2">Create account</h1>
-            <p className="text-gray-500">Sign up to manage your shifts</p>
+            <h1 className="text-3xl font-bold text-blue-600 mb-2">{t('title')}</h1>
+            <p className="text-gray-500">{t('description')}</p>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">{login('emailAddress')}</label>
               <input
                 id="email"
                 type="email"
@@ -87,7 +90,7 @@ export function Signup() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">{login('password')}</label>
               <input
                 id="password"
                 type="password"
@@ -101,24 +104,24 @@ export function Signup() {
 
             <button onClick={handleSignUp} disabled={loading || userloading} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:cursor-pointer">
               <LogIn className="w-5 h-5" />
-              Create account
+              {t('createAccount')}
             </button>
 
             <div className="flex items-center gap-3">
               <hr className="flex-1 border-gray-200" />
-              <span className="text-xs text-gray-400">or</span>
+              <span className="text-xs text-gray-400">{t('or')}</span>
               <hr className="flex-1 border-gray-200" />
             </div>
 
             <button onClick={handleGoogle} type="button" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:cursor-pointer">
               <Globe className="w-5 h-5" />
-              Continue with Google
+              {t('continueGoogle')}
             </button>
 
             <div className="text-center text-sm text-gray-500">
-              Already have an account? 
+              {t('alreadyHaveAccount')} {" "}
               <a href="/" className="text-blue-600 hover:text-blue-700 font-medium">
-                Sign in
+                {t('signIn')}
               </a>
             </div>
           </div>

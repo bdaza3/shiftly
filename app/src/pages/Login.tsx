@@ -7,11 +7,13 @@ import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
 import React, { useRef } from "react";
 import { sanitizeEmail, sanitizePassword } from "../../../lib/inputSanitizer";
+import { useTranslations } from "next-intl";
 
 export function Login() {
   const { signIn, user, loading, refreshProfile } = useAuth()
   const { refresh: refreshCompanies } = useCompany()
   const router = useRouter();
+  const t = useTranslations("login")
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [submitting, setSubmitting] = React.useState(false)
@@ -72,7 +74,7 @@ export function Login() {
       }
       
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Unable to sign in"
+      const message = error instanceof Error ? error.message : t('unableToSignIn')
       alert(message)
       setRedirectPending(false)
     } finally {
@@ -86,7 +88,7 @@ export function Login() {
         <div className="p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-blue-600 mb-2">Shiftly</h1>
-            <p className="text-gray-500">Spend less time on scheduling, more time with your team.</p>
+            <p className="text-gray-500">{t('tagline')}</p>
           </div>
 
           <div className="space-y-6">
@@ -95,7 +97,7 @@ export function Login() {
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Email Address
+                {t('emailAddress')}
               </label>
               <input
                 type="email"
@@ -114,7 +116,7 @@ export function Login() {
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Password
+                {t('password')}
               </label>
               <input
                 type="password"
@@ -134,13 +136,13 @@ export function Login() {
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogIn className="w-5 h-5" />
-              {submitting ? "Signing In..." : "Sign In"}
+              {submitting ? t('signingIn') : t('signIn')}
             </button>
           </div>
 
           <div className="mt-6 text-center">
             <Link href="/signup" className="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline hover:cursor-pointer">
-              Don&apos;t have an account? Sign up
+              {t('signUpPrompt')}
             </Link>
           </div>
         </div>

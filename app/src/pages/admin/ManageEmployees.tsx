@@ -6,9 +6,12 @@ import { supabase } from "@/lib/supabaseClient";
 import { useCompany } from "../../hooks/useCompany";
 import { useAuth } from "../../hooks/useAuth";
 import { authFetch } from "@/lib/authFetch";
+import { useTranslations } from "next-intl";
 import { sanitizeEmail, sanitizeString } from "@/lib/inputSanitizer";
 
 export function ManageEmployees() {
+  const t = useTranslations("admin")
+  const common = useTranslations("common")
   const [employees, setEmployees] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [emailInput, setEmailInput] = useState("");
@@ -168,8 +171,8 @@ export function ManageEmployees() {
           <div className="flex items-center gap-4">
             <Users className="w-6 h-6 text-blue-600" />
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Manage Employees</h2>
-              <p className="text-sm text-gray-500 mt-1">View and manage employee information and roles</p>
+              <h2 className="text-2xl font-bold text-gray-900">{t('manageEmployees')}</h2>
+              <p className="text-sm text-gray-500 mt-1">{t('manageEmployeesDescription')}</p>
             </div>
           </div>
             <div className="ml-4 flex items-center gap-4 relative">
@@ -252,8 +255,8 @@ export function ManageEmployees() {
               </div>
 
               <div className="flex gap-2 pt-4 border-t border-gray-200">
-                <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer"><Pencil className="w-4 h-4" />Edit</button>
-                <button onClick={() => handleRemove(employee.id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors hover:cursor-pointer"><Trash2 className="w-4 h-4" />Remove</button>
+                <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer"><Pencil className="w-4 h-4" />{common('edit')}</button>
+                <button onClick={() => handleRemove(employee.id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors hover:cursor-pointer"><Trash2 className="w-4 h-4" />{t('remove')}</button>
               </div>
             </div>
           ))
