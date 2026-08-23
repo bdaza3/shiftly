@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, Plus, Pencil, Trash2 } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useCompany } from "../../hooks/useCompany";
@@ -27,6 +27,7 @@ export function ManageEmployees() {
   const [joinCode, setJoinCode] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
   const [showJoinPopup, setShowJoinPopup] = useState(false);
+  const [actionMenuOpenFor, setActionMenuOpenFor] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [sortBy, setSortBy] = useState<"name-asc" | "name-desc" | "start-newest" | "start-oldest">("name-asc");
@@ -167,6 +168,7 @@ export function ManageEmployees() {
   }, [selectedId, user?.id, companiesLoading])
 
   const handleRemove = async (userId: string) => {
+    setActionMenuOpenFor(null)
     if (!selected) return;
     try {
       const resp = await authFetch('/api/company_members/remove', {
@@ -180,6 +182,11 @@ export function ManageEmployees() {
       console.warn("could not remove member", err);
     }
   };
+
+  const handleEditEmployee = (name: string) => {
+    setActionMenuOpenFor(null)
+    alert(`Edit for ${name} is coming soon.`)
+  }
 
   return (
     <div className="space-y-6">
@@ -298,9 +305,32 @@ export function ManageEmployees() {
                 <p className="text-sm text-gray-500">Started: {new Date(employee.startDate).toLocaleDateString()}</p>
               </div>
 
-              <div className="flex gap-2 pt-4 border-t border-gray-200">
-                <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors hover:cursor-pointer"><Pencil className="w-4 h-4" />{common('edit')}</button>
-                <button onClick={() => handleRemove(employee.id)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors hover:cursor-pointer"><Trash2 className="w-4 h-4" />{t('remove')}</button>
+              <div className="relative pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setActionMenuOpenFor((prev) => (prev === employee.id ? null : employee.id))}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:cursor-pointer"
+                >
+                  Actions
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                {actionMenuOpenFor === employee.id && (
+                  <div className="absolute right-0 z-10 mt-2 w-44 rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
+                    <button
+                      onClick={() => handleEditEmployee(employee.name)}
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 hover:cursor-pointer"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      {common('edit')}
+                    </button>
+                    <button
+                      onClick={() => handleRemove(employee.id)}
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 hover:cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {t('remove')}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))
