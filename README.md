@@ -1,5 +1,5 @@
 # Shiftly
-Shiftly is a shift scheduling and team coordination app built with a Next.js, Typescript frontend connected with a Supabase backend. It supports email/password auth, Google OAuth, company onboarding, role-based company membership, shift management, and employee requests.
+Shiftly is a shift scheduling and team coordination app built with a Next.js, Typescript frontend connected with a Supabase backend. It supports shift management, and employee requests, Auth0 email & password authentification, company onboarding, and role-based company membership.
 
 ## What It Does
 
@@ -12,7 +12,6 @@ Shiftly is a shift scheduling and team coordination app built with a Next.js, Ty
 ## Stack
 
 - Next.js 16
-- React 19
-- Supabase Auth, Postgres
 - TypeScript
+- Supabase, Postgres
 - Tailwind CSS
