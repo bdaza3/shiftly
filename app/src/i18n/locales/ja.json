@@ -140,5 +140,23 @@
     "newShift": "新しいシフト",
     "copy": "コピー",
     "remove": "削除"
+  },
+  "filters": {
+    "title": "絞り込み",
+    "clear": "絞り込みを解除",
+    "allEmployees": "すべての従業員",
+    "allRoles": "すべての役割",
+    "allLocations": "すべての勤務地",
+    "employee": "従業員",
+    "role": "役割・シフト種類",
+    "location": "勤務地",
+    "date": "日付",
+    "searchEmployees": "従業員を検索",
+    "sortBy": "並び順",
+    "nameAZ": "名前（昇順）",
+    "nameZA": "名前（降順）",
+    "newestFirst": "登録日の新しい順",
+    "oldestFirst": "登録日の古い順",
+    "noMatches": "この条件に一致する従業員はいません。"
   }
 }

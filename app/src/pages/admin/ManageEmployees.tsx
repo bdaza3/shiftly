@@ -12,6 +12,7 @@ import { sanitizeEmail, sanitizeString } from "@/lib/inputSanitizer";
 export function ManageEmployees() {
   const t = useTranslations("admin")
   const common = useTranslations("common")
+  const filterText = useTranslations("filters")
   const [employees, setEmployees] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [emailInput, setEmailInput] = useState("");
@@ -26,6 +27,23 @@ export function ManageEmployees() {
   const [joinCode, setJoinCode] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
   const [showJoinPopup, setShowJoinPopup] = useState(false);
+  const [searchFilter, setSearchFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"name-asc" | "name-desc" | "start-newest" | "start-oldest">("name-asc");
+
+  const employeeRoles = Array.from(new Set(employees.map((employee) => String(employee.role ?? "").trim()).filter(Boolean))).sort();
+  const visibleEmployees = [...employees]
+    .filter((employee) => {
+      const query = searchFilter.trim().toLowerCase();
+      const matchesSearch = !query || [employee.name, employee.email, employee.position].some((value) => String(value ?? "").toLowerCase().includes(query));
+      return matchesSearch && (!roleFilter || employee.role === roleFilter);
+    })
+    .sort((left, right) => {
+      if (sortBy === "name-desc") return String(right.name).localeCompare(String(left.name));
+      if (sortBy === "start-newest") return new Date(right.startDate ?? 0).getTime() - new Date(left.startDate ?? 0).getTime();
+      if (sortBy === "start-oldest") return new Date(left.startDate ?? 0).getTime() - new Date(right.startDate ?? 0).getTime();
+      return String(left.name).localeCompare(String(right.name));
+    });
 
   const openAdd = () => {
     setEmailInput("");
@@ -229,13 +247,39 @@ export function ManageEmployees() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex-1 min-w-52">
+          <label htmlFor="employee-search" className="mb-1 block text-xs font-medium text-gray-600">{filterText('searchEmployees')}</label>
+          <input id="employee-search" value={searchFilter} onChange={(event) => setSearchFilter(event.target.value)} placeholder={filterText('searchEmployees')} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label htmlFor="employee-role-filter" className="mb-1 block text-xs font-medium text-gray-600">{filterText('role')}</label>
+          <select id="employee-role-filter" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+            <option value="">{filterText('allRoles')}</option>
+            {employeeRoles.map((role) => <option key={role} value={role}>{role}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="employee-sort" className="mb-1 block text-xs font-medium text-gray-600">{filterText('sortBy')}</label>
+          <select id="employee-sort" value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+            <option value="name-asc">{filterText('nameAZ')}</option>
+            <option value="name-desc">{filterText('nameZA')}</option>
+            <option value="start-newest">{filterText('newestFirst')}</option>
+            <option value="start-oldest">{filterText('oldestFirst')}</option>
+          </select>
+        </div>
+        {(searchFilter || roleFilter || sortBy !== "name-asc") && <button onClick={() => { setSearchFilter(""); setRoleFilter(""); setSortBy("name-asc"); }} className="px-3 py-2 text-sm text-blue-600 hover:underline">{filterText('clear')}</button>}
+      </div>
+
       {/* Employee Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* currently, employee invites do not work, and are only available for existing users via signed up emails */}
         {employees.length === 0 ? (
           <div className="col-span-full text-gray-500">No employees added yet. Use "Add Employee" to invite a user.</div>
+        ) : visibleEmployees.length === 0 ? (
+          <div className="col-span-full text-gray-500">{filterText('noMatches')}</div>
         ) : (
-          employees.map((employee) => (
+          visibleEmployees.map((employee) => (
             <div key={employee.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">

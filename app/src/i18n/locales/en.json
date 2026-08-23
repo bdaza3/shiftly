@@ -151,5 +151,23 @@
     "newShift": "New Shift",
     "copy": "Copy",
     "remove": "Remove"
+  },
+  "filters": {
+    "title": "Filters",
+    "clear": "Clear filters",
+    "allEmployees": "All employees",
+    "allRoles": "All roles",
+    "allLocations": "All locations",
+    "employee": "Employee",
+    "role": "Role / shift type",
+    "location": "Location",
+    "date": "Date",
+    "searchEmployees": "Search employees",
+    "sortBy": "Sort by",
+    "nameAZ": "Name (A–Z)",
+    "nameZA": "Name (Z–A)",
+    "newestFirst": "Newest first",
+    "oldestFirst": "Oldest first",
+    "noMatches": "No employees match these filters."
   }
 }

@@ -21,6 +21,7 @@ import { useCompany } from "../hooks/useCompany";
 import { useRole } from "../hooks/useRole";
 import { useShifts } from "../hooks/useShifts";
 import { authFetch } from "@/lib/authFetch";
+import { useTranslations } from "next-intl";
 
 type SaveState = { kind: "idle" | "saving" | "saved" | "error"; message: string };
 type HistoryEntry = { label: string; undo: () => Promise<void>; redo: () => Promise<void> };
@@ -62,6 +63,7 @@ export function Schedule() {
   const { user } = useAuth();
   const { selected } = useCompany();
   const { isAdmin } = useRole();
+  const filterText = useTranslations("filters")
   const { shifts, createShift, updateShift, deleteShift } = useShifts(selected?.id);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"week" | "month">("week");
@@ -75,6 +77,10 @@ export function Schedule() {
   const [redoHistory, setRedoHistory] = useState<HistoryEntry[]>([]);
   const [copiedShift, setCopiedShift] = useState<ShiftDraft | null>(null);
   const [dragPreview, setDragPreview] = useState<{ visible: boolean; x: number; y: number; title?: string }>({ visible: false, x: 0, y: 0 });
+  const [employeeFilter, setEmployeeFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
   const resetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setStatus = useCallback((kind: SaveState["kind"], message: string) => {
@@ -124,6 +130,16 @@ export function Schedule() {
   }, [shifts]);
 
   const assignableEmployees = useMemo(() => companyMembers.filter((m) => !["admin", "manager"].includes((m.role || "").toLowerCase()) && m.id !== user?.id), [companyMembers, user?.id]);
+  const roleOptions = useMemo(() => Array.from(new Set(shifts.map((shift) => String(shift.role ?? "").trim()).filter(Boolean))).sort(), [shifts]);
+  const locationOptions = useMemo(() => Array.from(new Set(shifts.map((shift) => String(shift.location ?? "").trim()).filter(Boolean))).sort(), [shifts]);
+  const filteredShifts = useMemo(() => shifts.filter((shift) => {
+    const assignedEmployees = Array.isArray(shift.employees) ? shift.employees : [];
+    const matchesEmployee = !employeeFilter || assignedEmployees.includes(employeeFilter) || shift.employeeId === employeeFilter;
+    const matchesRole = !roleFilter || shift.role === roleFilter;
+    const matchesLocation = !locationFilter || shift.location === locationFilter;
+    const matchesDate = !dateFilter || shift.date === dateFilter;
+    return matchesEmployee && matchesRole && matchesLocation && matchesDate;
+  }), [dateFilter, employeeFilter, locationFilter, roleFilter, shifts]);
   const pushHistory = useCallback((entry: HistoryEntry) => { setHistory((prev) => [...prev, entry]); setRedoHistory([]); }, []);
   const withCompany = useCallback((draft: ShiftDraft) => ({ ...draft, ...(selected?.id ? { company_id: selected.id } : {}) }), [selected?.id]);
   const toDraft = useCallback((shift: any, overrides: Partial<ShiftDraft> = {}): ShiftDraft => {
@@ -173,11 +189,11 @@ export function Schedule() {
     return new Date(y, m - 1, d);
   };
 
-  const getShiftsForDate = useCallback((date: Date) => shifts.filter((shift) => {
+  const getShiftsForDate = useCallback((date: Date) => filteredShifts.filter((shift) => {
     const shiftDate = parseYMD(shift.date);
     if (!shiftDate) return false;
     return shiftDate.getDate() === date.getDate() && shiftDate.getMonth() === date.getMonth() && shiftDate.getFullYear() === date.getFullYear();
-  }), [shifts]);
+  }), [filteredShifts]);
 
   const isToday = (date: Date) => {
     const today = new Date();
@@ -347,6 +363,34 @@ export function Schedule() {
             <button onClick={goToPrevious} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50 hover:cursor-pointer"><ChevronLeft className="h-5 w-5" /></button>
             <button onClick={goToNext} className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50 hover:cursor-pointer"><ChevronRight className="h-5 w-5" /></button>
           </div>
+        </div>
+        <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-4">
+          <div>
+            <label htmlFor="schedule-employee-filter" className="mb-1 block text-xs font-medium text-gray-600">{filterText('employee')}</label>
+            <select id="schedule-employee-filter" value={employeeFilter} onChange={(event) => setEmployeeFilter(event.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+              <option value="">{filterText('allEmployees')}</option>
+              {companyMembers.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="schedule-role-filter" className="mb-1 block text-xs font-medium text-gray-600">{filterText('role')}</label>
+            <select id="schedule-role-filter" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+              <option value="">{filterText('allRoles')}</option>
+              {roleOptions.map((role) => <option key={role} value={role}>{role}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="schedule-location-filter" className="mb-1 block text-xs font-medium text-gray-600">{filterText('location')}</label>
+            <select id="schedule-location-filter" value={locationFilter} onChange={(event) => setLocationFilter(event.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm">
+              <option value="">{filterText('allLocations')}</option>
+              {locationOptions.map((location) => <option key={location} value={location}>{location}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="schedule-date-filter" className="mb-1 block text-xs font-medium text-gray-600">{filterText('date')}</label>
+            <input id="schedule-date-filter" type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+          </div>
+          {(employeeFilter || roleFilter || locationFilter || dateFilter) && <button onClick={() => { setEmployeeFilter(""); setRoleFilter(""); setLocationFilter(""); setDateFilter(""); }} className="px-3 py-2 text-sm text-blue-600 hover:underline">{filterText('clear')}</button>}
         </div>
       </div>
 
