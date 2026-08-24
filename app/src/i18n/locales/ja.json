@@ -118,7 +118,15 @@
     "rejected": "却下"
   },
   "team": { "title": "チーム", "description": "従業員一覧", "noMembers": "チームメンバーが見つかりません。" },
-  "notifications": { "title": "通知", "emailDescription": "メールで通知を受け取ります。", "browserPush": "ブラウザのプッシュ通知", "pushDescription": "ブラウザでプッシュ通知を許可します。" },
+  "notifications": {
+    "title": "通知",
+    "adminDescription": "会社の従業員と申請に関する最近のアクティビティです。",
+    "employeeDescription": "ご自身の申請に関する最近のアクティビティです。",
+    "employeeJoined": "従業員が参加しました",
+    "allCaughtUp": "すべて確認済みです",
+    "emptyDescription": "新しい従業員の参加や申請はここに表示されます。",
+    "locale": "ja"
+  },
   "profile": {
     "title": "プロフィール",
     "description": "アカウント設定を管理します",

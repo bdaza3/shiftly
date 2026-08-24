@@ -126,9 +126,12 @@
   },
   "notifications": {
     "title": "Notifications",
-    "emailDescription": "Receive notifications by email.",
-    "browserPush": "Browser push notifications",
-    "pushDescription": "Allow push notifications in your browser."
+    "adminDescription": "Recent employee and request activity for your company.",
+    "employeeDescription": "Recent activity related to your requests.",
+    "employeeJoined": "Employee joined",
+    "allCaughtUp": "You're all caught up",
+    "emptyDescription": "New employee joins and requests will appear here.",
+    "locale": "en"
   },
   "profile": {
     "title": "Profile",
