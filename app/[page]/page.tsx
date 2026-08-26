@@ -24,7 +24,7 @@ import { Notifications } from "../src/pages/Notifications";
 
 import { ManageEmployees } from "../src/pages/admin/ManageEmployees";
 import { ManageShifts } from "../src/pages/admin/ManageShifts";
-import { Analytics } from "../src/pages/admin/Analytics";
+import { Reports } from "../src/pages/admin/Reports";
 
 // Map of page names to components - add new pages here
 const PAGES: Record<string, React.ComponentType<any>> = {
@@ -52,7 +52,7 @@ const PAGES: Record<string, React.ComponentType<any>> = {
   // admin
   manageemployees: ManageEmployees,
   manageshifts: ManageShifts,
-  analytics: Analytics,
+  reports: Reports,
 };
 
 export default async function Page({ params }: { params: Promise<{ page: string }> | { page: string } }) {

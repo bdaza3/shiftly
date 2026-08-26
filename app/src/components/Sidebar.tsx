@@ -184,10 +184,10 @@ export function Sidebar() {
               <ChevronRight className="w-4 h-4 text-gray-400" />
             </Link>
 
-            <Link href="/analytics" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
+            <Link href="/reports" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">
               <span className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                {t('analytics')}
+                {t('reports')}
               </span>
               <ChevronRight className="w-4 h-4 text-gray-400" />
             </Link>
