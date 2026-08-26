@@ -83,7 +83,7 @@ export function SetupSuccess() {
                     Explore features
                   </p>
                   <p className="text-sm text-gray-600">
-                    Check out time-off requests, shift swaps, and analytics
+                    Check out time-off requests, shift swaps, and reports
                   </p>
                 </div>
               </li>

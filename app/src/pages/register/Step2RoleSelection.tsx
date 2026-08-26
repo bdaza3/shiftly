@@ -111,7 +111,7 @@ export function Step2RoleSelection() {
                 </li>
                 <li className="flex items-start">
                   <span className="text-[#F59E0B] mr-2">✓</span>
-                  Approve requests & view analytics
+                  Approve requests & view reports
                 </li>
               </ul>
               <div className="mt-6 flex items-center text-[#F59E0B] font-medium">
