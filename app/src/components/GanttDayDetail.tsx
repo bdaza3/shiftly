@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Copy, LoaderCircle, Redo2, Sparkles, Trash2, Undo2 } from "lucide-react";
 
@@ -13,6 +13,17 @@ function parseTimeToMinutes(t: string) {
   const h = parseInt(parts[0], 10) || 0;
   const m = parseInt(parts[1], 10) || 0;
   return h * 60 + m;
+}
+
+function initials(name: string) {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+}
+
+function EmployeeAvatar({ name, avatarUrl }: { name: string; avatarUrl?: string }) {
+  return avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={avatarUrl} alt="" title={name} className="h-7 w-7 shrink-0 rounded-full border-2 border-blue-700 object-cover" />
+  ) : <span aria-label={name} title={name} className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-blue-700 bg-blue-100 text-[10px] font-semibold text-blue-900">{initials(name)}</span>;
 }
 
 export default function GanttDayDetail({
@@ -36,7 +47,7 @@ export default function GanttDayDetail({
   date: Date;
   shifts: any[];
   onClose: () => void;
-  companyMembers?: { id: string; name: string }[];
+  companyMembers?: { id: string; name: string; avatarUrl?: string }[];
   onUpdateShift?: (id: string, startTime: string, endTime: string) => Promise<any> | void;
   onEditShift?: (shift: any) => void;
   onDeleteShift?: (id: string) => Promise<any> | void;
@@ -100,6 +111,18 @@ export default function GanttDayDetail({
 
   const [viewHours, setViewHours] = useState<number>(24);
   const [viewStartMinutes, setViewStartMinutes] = useState<number>(0);
+
+  // A shared shift is shown once per assigned employee here so each person remains visible.
+  const ganttShifts = useMemo(() => (shifts || []).flatMap((shift: any, shiftIndex: number) => {
+    const employeeIds = Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees : [undefined];
+    return employeeIds.map((employeeId: string | undefined, employeeIndex: number) => {
+      const employee = employeeId ? companyMembers?.find((member) => member.id === employeeId) : undefined;
+      const employeeName = employeeId
+        ? employee?.name ?? employeeId
+        : shift.employeeName ?? shift.name ?? "Unassigned";
+      return { ...shift, ganttId: `${shift.id ?? `idx-${shiftIndex}`}:${employeeId ?? employeeIndex}`, sourceId: shift.id, employeeId, employeeName, avatarUrl: employee?.avatarUrl };
+    });
+  }), [companyMembers, shifts]);
   
   // local copy of shifts in minutes for live updates
   // include employee metadata so assignment persists when moving days
@@ -107,10 +130,10 @@ export default function GanttDayDetail({
   useEffect(() => {
     setLocalShifts((prev) => {
       const map: Record<string, { start: number; end: number; employees?: string[]; employeeName?: string }> = {};
-      (shifts || []).forEach((s: any, idx: number) => {
+      ganttShifts.forEach((s: any, idx: number) => {
         const st = parseTimeToMinutes(s.startTime || s.start || "00:00");
         const en = parseTimeToMinutes(s.endTime || s.end || "00:00");
-        const key = s.id ?? `idx-${idx}`;
+        const key = s.ganttId ?? s.id ?? `idx-${idx}`;
         const existing = prev[key];
         map[key] = {
           start: st,
@@ -122,7 +145,7 @@ export default function GanttDayDetail({
       console.debug("GanttDayDetail.localShifts set", { keysPreview: Object.keys(map).slice(0, 5), total: Object.keys(map).length });
       return map;
     });
-  }, [shifts]);
+  }, [ganttShifts]);
 
   // recompute view window based on local shift ranges
   useEffect(() => {
@@ -170,7 +193,7 @@ export default function GanttDayDetail({
                 <span>{saveState.message}</span>
               </div>
             )}
-            <button onClick={() => onPasteShift?.()} disabled={!canPaste} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+            <button onClick={() => onPasteShift?.()} disabled={!canPaste} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 hover: cursor-pointer">
               <Copy className="h-4 w-4" />
               Paste
             </button>
@@ -205,22 +228,16 @@ export default function GanttDayDetail({
 
               {/* shift bars (draggable + resizable) */}
               <div className="absolute left-0 right-0 top-0 bottom-0">
-                {shifts.map((s, idx) => {
-                  const id = s.id ?? `idx-${idx}`;
+                {ganttShifts.map((s, idx) => {
+                  const id = s.ganttId ?? s.id ?? `idx-${idx}`;
                   const rawStart = parseTimeToMinutes(s.startTime || s.start || "00:00");
                   const rawEnd = parseTimeToMinutes(s.endTime || s.end || "00:00");
                   const ls = localShifts[id] ?? { start: rawStart, end: rawEnd };
                   const dur = Math.max(15, ls.end - ls.start);
                   const left = ((ls.start - viewStartMinutes) / (viewHours * 60)) * 100;
                   const width = (dur / (viewHours * 60)) * 100;
-                  const assignedEmployees = (localShifts[id]?.employees ?? s.employees);
                   const assignedEmployeeName = localShifts[id]?.employeeName ?? s.employeeName ?? s.name;
-                  let empName = 'Unassigned';
-                  if (assignedEmployees && assignedEmployees.length > 0 && companyMembers) {
-                    empName = companyMembers.find((c) => c.id === assignedEmployees[0])?.name ?? assignedEmployees[0];
-                  } else if (assignedEmployeeName) {
-                    empName = assignedEmployeeName;
-                  }
+                  const empName = assignedEmployeeName || 'Unassigned';
 
                   const top = 16 + idx * perShift; // simple stacking
 
@@ -237,10 +254,10 @@ export default function GanttDayDetail({
                   };
 
                   return (
-                    <React.Fragment key={s.id ?? idx}>
+                    <React.Fragment key={id}>
                       <motion.div
                         layout
-                        layoutId={s.id ? `shift-${s.id}` : `shift-idx-${idx}`}
+                        layoutId={`gantt-shift-${id}`}
                         drag="x"
                         dragMomentum={false}
                         onDragStart={() => {
@@ -285,14 +302,15 @@ export default function GanttDayDetail({
                           const newStartStr = normalizeClock(newStart);
                           const newEndStr = normalizeClock(newEnd);
                           console.log("GanttDayDetail.dragEnd", { id, newStartStr, newEndStr });
-                          if (onUpdateShift && s.id) onUpdateShift(s.id, newStartStr, newEndStr);
+                          if (onUpdateShift && s.sourceId) onUpdateShift(s.sourceId, newStartStr, newEndStr);
                           setTimeout(() => ensureVisible(newStart), 40);
                         }}
                         className="absolute rounded shadow-md bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center px-3 text-sm cursor-grab touch-none"
                         style={{ left: `${left}%`, width: `${width}%`, top: top, height: perShift - 10, zIndex: 20, touchAction: 'none' }}
                         whileTap={{ cursor: 'grabbing' }}
                       >
-                        <div className="flex-1 truncate pointer-events-none">
+                        <EmployeeAvatar name={empName} avatarUrl={s.avatarUrl} />
+                        <div className="ml-2 flex-1 truncate pointer-events-none">
                           <div className="font-semibold">{empName}</div>
                           <div className="text-xs opacity-80">{(() => {
                             const cur = localShifts[id] ?? { start: rawStart, end: rawEnd };
@@ -336,7 +354,7 @@ export default function GanttDayDetail({
                                 const newStartStr = normalizeClock(newStart);
                                 const newEndStr = normalizeClock(state.initEnd);
                                 console.log("GanttDayDetail.resizeStart", { id, newStartStr, newEndStr });
-                                if (onUpdateShift && s.id) onUpdateShift(s.id, newStartStr, newEndStr);
+                                if (onUpdateShift && s.sourceId) onUpdateShift(s.sourceId, newStartStr, newEndStr);
                                 setTimeout(() => ensureVisible(newStart), 40);
                                 window.removeEventListener('pointermove', onMove as any);
                                 window.removeEventListener('pointerup', onUp as any);
@@ -384,7 +402,7 @@ export default function GanttDayDetail({
                             const newStartStr = normalizeClock(state.initStart);
                             const newEndStr = normalizeClock(newEnd);
                               console.log("GanttDayDetail.resizeEnd", { id, newStartStr, newEndStr });
-                              if (onUpdateShift && s.id) onUpdateShift(s.id, newStartStr, newEndStr);
+                              if (onUpdateShift && s.sourceId) onUpdateShift(s.sourceId, newStartStr, newEndStr);
                             setTimeout(() => ensureVisible(state.initStart), 40);
                             window.removeEventListener('pointermove', onMove as any);
                             window.removeEventListener('pointerup', onUp as any);

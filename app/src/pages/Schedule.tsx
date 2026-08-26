@@ -25,7 +25,7 @@ import { useTranslations } from "next-intl";
 
 type SaveState = { kind: "idle" | "saving" | "saved" | "error"; message: string };
 type HistoryEntry = { label: string; undo: () => Promise<void>; redo: () => Promise<void> };
-type EmployeeOption = { id: string; name: string; role?: string };
+type EmployeeOption = { id: string; name: string; role?: string; avatarUrl?: string };
 type ShiftDraft = {
   date: string;
   startTime: string;
@@ -39,6 +39,47 @@ type ShiftDraft = {
 };
 
 const EMPTY_STATE: SaveState = { kind: "idle", message: "" };
+
+function firstName(name: string) {
+  return name.trim().split(/\s+/)[0] || "Unassigned";
+}
+
+function initials(name: string) {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+}
+
+function EmployeeAvatar({ employee, className = "" }: { employee: EmployeeOption; className?: string }) {
+  return employee.avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={employee.avatarUrl} alt="" className={`rounded-full object-cover ${className}`} />
+  ) : (
+    <span aria-label={employee.name} title={employee.name} className={`inline-flex shrink-0 items-center justify-center rounded-full bg-blue-200 font-semibold text-blue-900 ${className}`}>
+      {initials(employee.name)}
+    </span>
+  );
+}
+
+type ShiftGroup = { key: string; shifts: any[]; employees: EmployeeOption[]; startTime: string; endTime: string };
+
+function groupShiftsByStartTime(shifts: any[], members: EmployeeOption[], meta: Record<string, { employees?: string[]; employeeName?: string }>): ShiftGroup[] {
+  const groups = new Map<string, ShiftGroup>();
+  shifts.forEach((shift, index) => {
+    const startTime = shift.startTime ?? shift.start ?? "00:00";
+    const key = String(startTime);
+    const group: ShiftGroup = groups.get(key) ?? { key, shifts: [], employees: [], startTime, endTime: shift.endTime ?? shift.end ?? "" };
+    const shiftMeta = meta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };
+    const employeeIds = shiftMeta.employees?.length ? shiftMeta.employees : [];
+    const employees = employeeIds.length
+      ? employeeIds.map((id) => members.find((member) => member.id === id) ?? { id, name: id })
+      : [{ id: shift.id ?? `unassigned-${index}`, name: shiftMeta.employeeName ?? "Unassigned" }];
+    group.shifts.push(shift);
+    employees.forEach((employee) => {
+      if (!group.employees.some((current) => current.id === employee.id)) group.employees.push(employee);
+    });
+    groups.set(key, group);
+  });
+  return Array.from(groups.values()).sort((left, right) => left.startTime.localeCompare(right.startTime));
+}
 
 function formatLocalYMD(date: Date) {
   return [
@@ -106,7 +147,7 @@ export function Schedule() {
         if (!response.ok) throw new Error(result?.error || "Failed to load company members");
         if (!mounted) return;
         setCompanyMembers((result.members || [])
-          .map((member: any) => ({ id: member.id, name: member.name || member.email || member.id, role: member.role }))
+          .map((member: any) => ({ id: member.id, name: member.name || member.email || member.id, role: member.role, avatarUrl: member.avatarUrl ?? member.avatar_url ?? member.imageUrl ?? member.image_url }))
           .filter((member: EmployeeOption) => member.id !== user?.id));
         console.log("Schedule.members loaded", { selectedId: selected?.id, membersCount: (result.members || []).length });
       } catch (error) {
@@ -406,32 +447,14 @@ export function Schedule() {
         <div className="grid grid-cols-7">
           {weekDates.map((date, index) => {
             const dayShifts = getShiftsForDate(date);
+            const shiftGroups = groupShiftsByStartTime(dayShifts, companyMembers, shiftMeta);
             const dateStr = formatLocalYMD(date);
             return <div key={index} onDragOver={(e) => { e.preventDefault(); setDragPreview((prev) => ({ ...prev, visible: true, x: e.clientX + 12, y: e.clientY + 12 })); }} onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/plain"); if (id) { console.log("Schedule.onDrop", { id, dateStr }); void handleMoveShift(id, dateStr); } setDragPreview((prev) => ({ ...prev, visible: false })); }} className={`min-h-[220px] border-r border-b border-gray-200 p-3 last:border-r-0 ${isToday(date) ? "bg-blue-600/5" : "bg-white"}`}>
               <div className="mb-3 flex items-start justify-between gap-2">
                 <span onClick={() => setExpandedDate(dateStr)} className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full ${isToday(date) ? "bg-blue-600 font-bold text-white" : "text-gray-700"}`}>{date.getDate()}</span>
                 {isAdmin ? dayActions(dateStr) : null}
               </div>
-              <div className="space-y-2">{dayShifts.map((shift) => <motion.div key={shift.id} layoutId={shift.id ? `shift-${shift.id}` : undefined} draggable onDragStartCapture={(e) => startDrag(e, shift.id)} onClick={() => openShift(shift)} className="cursor-pointer rounded bg-blue-600 p-2 text-xs text-white hover:bg-blue-700">
-                {(() => {
-                  const meta = shiftMeta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };
-                  const names = meta.employees?.length ? meta.employees.map((employeeId: string) => companyMembers.find((member) => member.id === employeeId)?.name ?? employeeId) : [meta.employeeName ?? "Unassigned"];
-                  return <>
-                    {names.map((name: string) => <p key={name} className="truncate font-semibold">{name}</p>)}
-                    <p className="text-white/75">{shift.startTime} - {shift.endTime}</p>
-                    <div className="mt-2 flex gap-2">
-                      {isAdmin ? (
-                        <>
-                          <button onClick={(event) => { event.stopPropagation(); handleCopyShift(shift); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Copy</button>
-                          <button onClick={(event) => { event.stopPropagation(); void handleDeleteShift(shift.id); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Delete</button>
-                        </>
-                      ) : (
-                        <div className="text-xs text-white/60">Read-only</div>
-                      )}
-                    </div>
-                  </>;
-                })()}
-              </motion.div>)}</div>
+              <div className="space-y-2">{shiftGroups.map((group) => <SharedShiftBlock key={group.key} group={group} isAdmin={isAdmin} onDragStart={startDrag} onEdit={openShift} onExpand={() => setExpandedDate(dateStr)} onCopy={handleCopyShift} onDelete={handleDeleteShift} />)}</div>
             </div>;
           })}
         </div>
@@ -440,6 +463,51 @@ export function Schedule() {
 
       {view === "month" && !expandedDate && <MonthGrid monthDate={currentDate} getShiftsForDate={getShiftsForDate} isToday={isToday} onMoveShift={handleMoveShift} onEditShift={openShift} companyMembers={companyMembers} shiftMeta={shiftMeta} onExpandDate={setExpandedDate} onCopyShift={handleCopyShift} onPasteShift={handlePasteShift} onAutoCreate={handleAutoCreate} canPaste={!!copiedShift} />}
     </div>
+  );
+}
+
+function SharedShiftBlock({ group, isAdmin, onDragStart, onEdit, onExpand, onCopy, onDelete }: {
+  group: ShiftGroup;
+  isAdmin: boolean;
+  onDragStart: (event: React.DragEvent<HTMLDivElement>, shiftId: string) => void;
+  onEdit: (shift: any) => void;
+  onExpand: () => void;
+  onCopy: (shift: any) => void;
+  onDelete?: (id: string) => Promise<void> | void;
+}) {
+  const primaryShift = group.shifts[0];
+  const employeeCount = group.employees.length;
+  const isShared = employeeCount > 1 || group.shifts.length > 1;
+  const primaryEmployee = group.employees[0] ?? { id: "unassigned", name: "Unassigned" };
+  const label = isShared ? `${firstName(primaryEmployee.name)} and ${employeeCount - 1} more` : primaryEmployee.name;
+
+  return (
+    <motion.div
+      layoutId={group.shifts.length === 1 && primaryShift.id ? `shift-${primaryShift.id}` : undefined}
+      draggable={group.shifts.length === 1}
+      onDragStartCapture={(event) => { if (group.shifts.length === 1) onDragStart(event, primaryShift.id); }}
+      onClick={() => isShared && group.shifts.length > 1 ? onExpand() : onEdit(primaryShift)}
+      className="cursor-pointer rounded bg-blue-600 p-2 text-xs text-white hover:bg-blue-700"
+      title={group.employees.map((employee) => employee.name).join(", ")}
+    >
+      <div className="flex items-center gap-2">
+        <div className="flex shrink-0 -space-x-1.5" aria-label={`${employeeCount} assigned employee${employeeCount === 1 ? "" : "s"}`}>
+          {group.employees.slice(0, 3).map((employee) => <EmployeeAvatar key={employee.id} employee={employee} className="h-6 w-6 border-2 border-blue-600 text-[9px]" />)}
+        </div>
+        <p className="min-w-0 truncate font-semibold">{label}</p>
+      </div>
+      <p className="mt-1 text-white/75">{group.startTime} - {group.endTime}</p>
+      <div className="mt-2 flex gap-2">
+        {isShared && group.shifts.length > 1 ? (
+          <button onClick={(event) => { event.stopPropagation(); onExpand(); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">View team</button>
+        ) : isAdmin ? (
+          <>
+            <button onClick={(event) => { event.stopPropagation(); onCopy(primaryShift); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Copy</button>
+            {onDelete ? <button onClick={(event) => { event.stopPropagation(); void onDelete(primaryShift.id); }} className="rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Delete</button> : null}
+          </>
+        ) : <div className="text-xs text-white/60">Read-only</div>}
+      </div>
+    </motion.div>
   );
 }
 
@@ -473,17 +541,7 @@ function MonthGrid({ monthDate, getShiftsForDate, isToday, onMoveShift, onEditSh
             <button onClick={() => void onPasteShift(dateStr)} disabled={!canPaste} className="rounded border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 hover:cursor-pointer">Paste</button>
           </div>
         </div>
-        <div className="space-y-2">{dayShifts.map((shift) => <motion.div key={shift.id} layoutId={shift.id ? `shift-${shift.id}` : undefined} draggable onDragStartCapture={(e) => { e.dataTransfer.setData("text/plain", shift.id); }} onClick={() => onEditShift(shift)} className="cursor-pointer rounded bg-blue-600 p-2 text-xs text-white hover:bg-blue-700">
-          {(() => {
-            const meta = shiftMeta[shift.id] ?? { employees: shift.employees, employeeName: shift.employeeName ?? shift.name };
-            const names = meta.employees?.length ? meta.employees.map((employeeId: string) => companyMembers.find((member) => member.id === employeeId)?.name ?? employeeId) : [meta.employeeName ?? "Unassigned"];
-            return <>
-              {names.map((name: string) => <p key={name} className="truncate font-semibold">{name}</p>)}
-              <p className="text-white/75">{shift.startTime} - {shift.endTime}</p>
-              <button onClick={(event) => { event.stopPropagation(); onCopyShift(shift); }} className="mt-2 rounded bg-white/15 px-2 py-1 text-[11px] hover:bg-white/25">Copy</button>
-            </>;
-          })()}
-        </motion.div>)}</div>
+        <div className="space-y-2">{groupShiftsByStartTime(dayShifts, companyMembers, shiftMeta).map((group) => <SharedShiftBlock key={group.key} group={group} isAdmin onDragStart={(event, id) => event.dataTransfer.setData("text/plain", id)} onEdit={onEditShift} onExpand={() => onExpandDate(dateStr)} onCopy={onCopyShift} />)}</div>
       </div>;
     })}
   </div>;
