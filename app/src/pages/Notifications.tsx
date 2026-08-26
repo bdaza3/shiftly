@@ -1,6 +1,6 @@
 "use client"
 
-import { Bell, CheckCircle2, ClipboardList, Users } from "lucide-react"
+import { Bell, CalendarClock, CheckCircle2, ClipboardList, Users } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 import { authFetch } from "@/lib/authFetch"
@@ -9,7 +9,8 @@ import { useRole } from "../hooks/useRole"
 import useRequests, { type RequestRecord } from "../hooks/useRequests"
 
 type Member = { id: string; name?: string | null; email?: string | null; role?: string | null; startDate?: string | null }
-type Activity = { id: string; kind: "member" | "request"; timestamp: string; title: string; detail: string }
+type Activity = { id: string; kind: "member" | "request" | "shift"; timestamp: string; title: string; detail: string }
+type ShiftNotification = { id: string; title: string; detail: string; created_at: string }
 
 function relativeTime(value: string, locale: string) {
   const date = new Date(value)
@@ -31,6 +32,28 @@ export function Notifications() {
   const { requests, loading: requestsLoading } = useRequests()
   const [members, setMembers] = useState<Member[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
+  const [shiftNotifications, setShiftNotifications] = useState<ShiftNotification[]>([])
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    const loadNotifications = async () => {
+      setNotificationsLoading(true)
+      try {
+        const response = await authFetch("/api/notifications/list", { cache: "no-store" })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result?.error || "Unable to load notifications")
+        if (active) setShiftNotifications(result.notifications ?? [])
+      } catch (error) {
+        console.warn("Notifications: unable to load shift notifications", error)
+        if (active) setShiftNotifications([])
+      } finally {
+        if (active) setNotificationsLoading(false)
+      }
+    }
+    void loadNotifications()
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {//load company members when the selected company changes or when the user role changes
     let active = true
@@ -72,12 +95,19 @@ export function Notifications() {
       title: t("employeeJoined"),
       detail: `${member.name ?? member.email ?? common("unknown")} · ${member.role ?? common("employee")}`,
     }))
-    return [...requestActivities, ...memberActivities]
+    const shiftActivities = shiftNotifications.map((notification) => ({
+      id: `shift-${notification.id}`,
+      kind: "shift" as const,
+      timestamp: notification.created_at,
+      title: notification.title,
+      detail: notification.detail,
+    }))
+    return [...shiftActivities, ...requestActivities, ...memberActivities]
       .filter((activity) => Boolean(activity.timestamp))
       .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
-  }, [common, members, requestText, requests, t])
+  }, [common, members, requestText, requests, shiftNotifications, t])
 
-  const loading = requestsLoading || membersLoading
+  const loading = requestsLoading || membersLoading || notificationsLoading
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center gap-4">
@@ -89,7 +119,7 @@ export function Notifications() {
           <div className="p-10 text-center"><CheckCircle2 className="mx-auto h-8 w-8 text-green-500" /><p className="mt-3 font-medium text-gray-900">{t("allCaughtUp")}</p><p className="mt-1 text-sm text-gray-500">{t("emptyDescription")}</p></div>
         ) : activities.map((activity) => (
           <div key={activity.id} className="flex items-start gap-4 p-5">
-            <div className={`mt-0.5 rounded-full p-2 ${activity.kind === "member" ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600"}`}>{activity.kind === "member" ? <Users className="h-4 w-4" /> : <ClipboardList className="h-4 w-4" />}</div>
+            <div className={`mt-0.5 rounded-full p-2 ${activity.kind === "member" ? "bg-blue-50 text-blue-600" : activity.kind === "shift" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>{activity.kind === "member" ? <Users className="h-4 w-4" /> : activity.kind === "shift" ? <CalendarClock className="h-4 w-4" /> : <ClipboardList className="h-4 w-4" />}</div>
             <div className="min-w-0 flex-1"><p className="font-medium text-gray-900">{activity.title}</p><p className="mt-1 text-sm text-gray-600 truncate">{activity.detail}</p></div>
             <time dateTime={activity.timestamp} className="shrink-0 text-xs text-gray-500">{relativeTime(activity.timestamp, t("locale"))}</time>
           </div>

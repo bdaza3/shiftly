@@ -29,13 +29,13 @@ export async function POST(req: Request) {
     if (error) return NextResponse.json({ error: error.message || String(error) }, { status: 400 })
 
     const userIds = (rows || []).map((row: { user_id?: string }) => row.user_id).filter(Boolean)
-    let profiles: Array<{ id: string; first_name?: string | null; last_name?: string | null; phone?: string | null }> = []
+    let profiles: Array<{ id: string; first_name?: string | null; last_name?: string | null; phone?: string | null; avatar_url?: string | null; avatarUrl?: string | null; image_url?: string | null }> = []
     let users: Array<{ id: string; full_name?: string | null; email?: string | null; role?: string | null }> = []
 
     if (userIds.length > 0) {
       const { data: profileRows, error: profileError } = await auth.service
         .from("profiles")
-        .select("id, first_name, last_name, phone")
+        .select("*")
         .in("id", userIds)
       if (!profileError) profiles = profileRows || []
 
@@ -61,6 +61,7 @@ export async function POST(req: Request) {
         name,
         email: user?.email ?? null,
         phone: profile?.phone ?? null,
+        avatarUrl: profile?.avatar_url ?? profile?.avatarUrl ?? profile?.image_url ?? null,
       }
     })
 

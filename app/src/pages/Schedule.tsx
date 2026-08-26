@@ -36,6 +36,8 @@ type ShiftDraft = {
   role: string;
   location?: string;
   company_id?: string;
+  notifyPeople?: boolean;
+  notificationMessage?: string;
 };
 
 const EMPTY_STATE: SaveState = { kind: "idle", message: "" };
@@ -148,7 +150,7 @@ export function Schedule() {
         if (!mounted) return;
         setCompanyMembers((result.members || [])
           .map((member: any) => ({ id: member.id, name: member.name || member.email || member.id, role: member.role, avatarUrl: member.avatarUrl ?? member.avatar_url ?? member.imageUrl ?? member.image_url }))
-          .filter((member: EmployeeOption) => member.id !== user?.id));
+        );
         console.log("Schedule.members loaded", { selectedId: selected?.id, membersCount: (result.members || []).length });
       } catch (error) {
         console.warn("Schedule members load failed", error);
@@ -170,7 +172,7 @@ export function Schedule() {
     });
   }, [shifts]);
 
-  const assignableEmployees = useMemo(() => companyMembers.filter((m) => !["admin", "manager"].includes((m.role || "").toLowerCase()) && m.id !== user?.id), [companyMembers, user?.id]);
+  const assignableEmployees = useMemo(() => companyMembers.filter((m) => m.id === user?.id || !["admin", "manager"].includes((m.role || "").toLowerCase())), [companyMembers, user?.id]);
   const roleOptions = useMemo(() => Array.from(new Set(shifts.map((shift) => String(shift.role ?? "").trim()).filter(Boolean))).sort(), [shifts]);
   const locationOptions = useMemo(() => Array.from(new Set(shifts.map((shift) => String(shift.location ?? "").trim()).filter(Boolean))).sort(), [shifts]);
   const filteredShifts = useMemo(() => shifts.filter((shift) => {
@@ -270,12 +272,31 @@ export function Schedule() {
     } else {
       let createdId = "";
       await runAction("Creating shift", async () => { const created = await createShift(draft); createdId = created.id; });
+      if (payload.notifyPeople && payload.employees?.length && selected?.id) {
+        try {
+          const response = await authFetch("/api/notifications/create", {
+            method: "POST",
+            body: JSON.stringify({
+              company_id: selected.id,
+              shift_id: createdId,
+              recipient_ids: payload.employees,
+              date: payload.date,
+              start_time: payload.startTime,
+              end_time: payload.endTime,
+              message: payload.notificationMessage,
+            }),
+          });
+          if (!response.ok) throw new Error((await response.json())?.error || "Unable to notify assignees");
+        } catch (error) {
+          console.warn("Schedule: shift created but notifications could not be sent", error);
+        }
+      }
       console.log("Schedule.created shift", { createdId });
       pushHistory({ label: "Create shift", undo: async () => { await deleteShift(createdId); }, redo: async () => { const recreated = await createShift(draft); createdId = recreated.id; } });
     }
     setEditingShift(null);
     setShowCreateModal(false);
-  }, [createShift, deleteShift, pushHistory, runAction, shifts, toDraft, updateShift, withCompany]);
+  }, [createShift, deleteShift, pushHistory, runAction, selected?.id, shifts, toDraft, updateShift, withCompany]);
 
   const handleDeleteShift = useCallback(async (id: string) => {
     console.log("Schedule.handleDeleteShift called", { id });
@@ -435,7 +456,7 @@ export function Schedule() {
         </div>
       </div>
 
-      <CreateShiftModal visible={showCreateModal} onClose={() => { setShowCreateModal(false); setEditingShift(null); }} onSave={handleSaveShift} onDelete={handleDeleteShift} initialData={editingShift} employees={assignableEmployees} />
+      <CreateShiftModal visible={showCreateModal} onClose={() => { setShowCreateModal(false); setEditingShift(null); }} onSave={handleSaveShift} onDelete={handleDeleteShift} initialData={editingShift} employees={assignableEmployees} currentUserId={user?.id} />
 
       {expandedDate && (() => {
         const d = parseYMD(expandedDate);

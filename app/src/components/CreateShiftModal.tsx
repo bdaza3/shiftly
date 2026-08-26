@@ -1,8 +1,24 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Search, UserPlus, X } from "lucide-react";
 
-type Employee = { id: string; name: string; role?: string };
+type Employee = { id: string; name: string; role?: string; avatarUrl?: string };
+
+function initials(name: string) {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+}
+
+function EmployeeAvatar({ employee, className = "" }: { employee: Employee; className?: string }) {
+  return employee.avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={employee.avatarUrl} alt="" className={`shrink-0 rounded-full object-cover ${className}`} />
+  ) : (
+    <span aria-hidden="true" className={`inline-flex shrink-0 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-700 ${className}`}>
+      {initials(employee.name)}
+    </span>
+  );
+}
 
 export default function CreateShiftModal({
   visible,
@@ -11,6 +27,7 @@ export default function CreateShiftModal({
   onDelete,
   initialData,
   employees,
+  currentUserId,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -18,6 +35,7 @@ export default function CreateShiftModal({
   onDelete?: (id: string) => void;
   initialData?: any;
   employees: Employee[];
+  currentUserId?: string;
 }) {
   const localYMD = () => {
     const d = new Date();
@@ -34,6 +52,9 @@ export default function CreateShiftModal({
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [role, setRole] = useState<string>("Staff");
   const [location, setLocation] = useState<string>("");
+  const [assigneeQuery, setAssigneeQuery] = useState("");
+  const [notifyPeople, setNotifyPeople] = useState(true);
+  const [notificationMessage, setNotificationMessage] = useState("");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -44,6 +65,8 @@ export default function CreateShiftModal({
       setSelectedEmployees(initialData.employees || []);
       setRole(initialData.role || "Staff");
       setLocation(initialData.location || "");
+      setNotifyPeople(Boolean(initialData.notifyPeople));
+      setNotificationMessage(initialData.notificationMessage || "");
       if (initialData.startTime === "07:00") setShiftType("morning");
       else if (initialData.startTime === "15:00") setShiftType("afternoon");
       else if (initialData.startTime === "23:00") setShiftType("night");
@@ -56,6 +79,9 @@ export default function CreateShiftModal({
       setSelectedEmployees([]);
       setRole("Staff");
       setLocation("");
+      setAssigneeQuery("");
+      setNotifyPeople(true);
+      setNotificationMessage("");
     }
     // trigger enter animation
     setMounted(true);
@@ -68,6 +94,20 @@ export default function CreateShiftModal({
       if (primary?.role) setRole(primary.role);
     }
   }, [selectedEmployees, employees]);
+
+  const selectedPeople = selectedEmployees
+    .map((id) => employees.find((employee) => employee.id === id))
+    .filter((employee): employee is Employee => Boolean(employee));
+  const matchingPeople = useMemo(() => {
+    const query = assigneeQuery.trim().toLocaleLowerCase();
+    return employees.filter((employee) => employee.id !== currentUserId && !selectedEmployees.includes(employee.id) && (!query || employee.name.toLocaleLowerCase().includes(query)));
+  }, [assigneeQuery, currentUserId, employees, selectedEmployees]);
+  const currentUser = employees.find((employee) => employee.id === currentUserId);
+
+  const addEmployee = (id: string) => {
+    setSelectedEmployees((current) => current.includes(id) ? current : [...current, id]);
+    setAssigneeQuery("");
+  };
 
   if (!visible) return null;
 
@@ -100,6 +140,8 @@ export default function CreateShiftModal({
       // include role/location required by DB
       role,
       ...(location ? { location } : {}),
+      notifyPeople,
+      ...(notificationMessage.trim() ? { notificationMessage: notificationMessage.trim() } : {}),
     };
 
     onSave(payload);
@@ -136,23 +178,37 @@ export default function CreateShiftModal({
           </div>
         )}
 
-        <label className="block text-sm text-gray-600 mb-2">Assign Employees</label>
-        <div className="max-h-40 overflow-auto border p-2 rounded mb-4">
-          {employees.length === 0 && <div className="text-sm text-gray-500">No employees available</div>}
-          {employees.map((emp) => (
-            <label key={emp.id} className="flex items-center gap-2 p-1">
-              <input
-                type="checkbox"
-                checked={selectedEmployees.includes(emp.id)}
-                onChange={(e) => {
-                  if (e.target.checked) setSelectedEmployees((s) => [...s, emp.id]);
-                  else setSelectedEmployees((s) => s.filter((id) => id !== emp.id));
-                }}
-              />
-              <span className="text-sm">{emp.name} <span className="text-xs text-gray-400">({emp.role})</span></span>
-            </label>
-          ))}
+        <label htmlFor="shift-assignee-search" className="block text-sm font-medium text-gray-700 mb-2">Assign to someone</label>
+        <div className="mb-4 rounded-lg border border-gray-300 bg-white shadow-sm">
+          <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
+            <Search className="h-4 w-4 text-gray-400" />
+            <input id="shift-assignee-search" type="text" value={assigneeQuery} onChange={(event) => setAssigneeQuery(event.target.value)} placeholder="Search by name" className="min-w-0 flex-1 border-0 p-0 text-sm outline-none placeholder:text-gray-400" />
+          </div>
+          {selectedPeople.length > 0 && <div className="space-y-1 border-b border-gray-100 p-2">
+            {selectedPeople.map((employee) => <div key={employee.id} className="flex items-center gap-2 rounded-md px-1 py-1.5">
+              <EmployeeAvatar employee={employee} className="h-7 w-7 text-[10px]" />
+              <span className="min-w-0 flex-1 truncate text-sm text-gray-800">{employee.name}</span>
+              <span className="hidden text-xs text-gray-400 sm:inline">{employee.role}</span>
+              <button type="button" onClick={() => setSelectedEmployees((current) => current.filter((id) => id !== employee.id))} aria-label={`Remove ${employee.name}`} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4 hover:cursor-pointer" /></button>
+            </div>)}
+          </div>}
+          <div className="max-h-36 overflow-auto p-1">
+            {currentUser && !selectedEmployees.includes(currentUser.id) && !assigneeQuery.trim() && <button type="button" onClick={() => addEmployee(currentUser.id)} className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left font-medium text-blue-700 hover:bg-blue-50 hover:cursor-pointer">
+              <EmployeeAvatar employee={currentUser} className="h-8 w-8 text-[10px]" />
+              <span className="flex-1 text-sm">Assign to me</span>
+              <UserPlus className="h-4 w-4" />
+            </button>}
+            {matchingPeople.length === 0 ? <p className="px-2 py-3 text-sm text-gray-500">{employees.length === 0 ? "No employees available" : assigneeQuery ? "No matching people" : "Everyone has been assigned"}</p> : matchingPeople.map((employee) => <button key={employee.id} type="button" onClick={() => addEmployee(employee.id)} className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-blue-50 hover:cursor-pointer">
+              <EmployeeAvatar employee={employee} className="h-8 w-8 text-[10px]" />
+              <span className="min-w-0 flex-1 truncate text-sm text-gray-800">{employee.name}</span>
+              {employee.role && <span className="text-xs text-gray-400">{employee.role}</span>}
+              <UserPlus className="h-4 w-4 text-blue-600" />
+            </button>)}
+          </div>
         </div>
+
+        <label className="mb-2 flex cursor-pointer items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={notifyPeople} onChange={(event) => setNotifyPeople(event.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600" />Notify people</label>
+        {notifyPeople && <textarea value={notificationMessage} onChange={(event) => setNotificationMessage(event.target.value)} maxLength={500} rows={2} placeholder="Add an optional message" className="mb-4 w-full resize-none rounded border border-gray-300 p-2 text-sm placeholder:text-gray-400" />}
 
         <div className="flex justify-between">
           <div>
