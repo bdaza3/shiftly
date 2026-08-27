@@ -8,6 +8,7 @@ import { useRole } from "../hooks/useRole";
 import { supabase } from "../../../lib/supabaseClient";
 import { authFetch } from "@/lib/authFetch";
 import { sanitizeString, sanitizePhone } from "../../../lib/inputSanitizer";
+import { useTranslations } from "next-intl";
 
 const INDUSTRIES = [
   "Restaurant",
@@ -43,6 +44,8 @@ interface CompanyData {
 }
 
 export function Company() {
+  const t = useTranslations("companyPage");
+  const common = useTranslations("common");
   const { user } = useAuth();
   const { isAdmin } = useRole();
   const { selected, refresh, addCompany } = useCompany();
@@ -133,9 +136,9 @@ export function Company() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Company Settings</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{t("title")}</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Manage your company information and settings
+            {t("description")}
           </p>
         </div>
         {isAdmin && !isEditing && (
@@ -144,7 +147,7 @@ export function Company() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer"
           >
             <Edit2 className="w-4 h-4" />
-            Edit Settings
+            {t("editSettings")}
           </button>
         )}
       </div>
@@ -154,7 +157,7 @@ export function Company() {
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
           <Check className="w-5 h-5 text-green-600" />
           <p className="text-sm font-medium text-green-900">
-            Company settings saved successfully!
+            {t("saved")}
           </p>
         </div>
       )}
@@ -168,10 +171,10 @@ export function Company() {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                Company Information
+                {t("companyInformation")}
               </h3>
               <p className="text-sm text-gray-500">
-                Basic details about your organization
+                {t("basicDetails")}
               </p>
             </div>
           </div>
@@ -181,7 +184,7 @@ export function Company() {
           {/* Company Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Company Name
+              {t("companyName")}
             </label>
             {isEditing ? (
                 <input
@@ -198,7 +201,7 @@ export function Company() {
           {/* Industry */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Industry
+              {t("industry")}
             </label>
             {isEditing ? (
               <select
@@ -222,7 +225,7 @@ export function Company() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
-                Timezone
+                {t("timezone")}
               </div>
             </label>
             {isEditing ? (
@@ -247,7 +250,7 @@ export function Company() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
-                Company Size
+                {t("companySize")}
               </div>
             </label>
             {isEditing ? (
@@ -258,19 +261,19 @@ export function Company() {
               >
                 {COMPANY_SIZES.map((size) => (
                   <option key={size} value={size}>
-                    {size} employees
+                    {t("employees", { count: size })}
                   </option>
                 ))}
               </select>
             ) : (
-              <p className="text-gray-900">{companyData.companySize} employees</p>
+              <p className="text-gray-900">{t("employees", { count: companyData.companySize })}</p>
             )}
           </div>
 
           {/* Address */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Address
+              {t("address")}
             </label>
             {isEditing ? (
               <input
@@ -288,7 +291,7 @@ export function Company() {
           {/* Phone */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Phone Number
+              {t("phoneNumber")}
             </label>
             {isEditing ? (
               <input
@@ -306,7 +309,7 @@ export function Company() {
           {/* Website */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Website
+              {t("website")}
             </label>
             {isEditing ? (
               <input
@@ -378,7 +381,7 @@ export function Company() {
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {common('cancel')}
               </button>
             </div>
           )}
@@ -395,10 +398,10 @@ export function Company() {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                Work Settings
+                {t("workSettings")}
               </h3>
               <p className="text-sm text-gray-500">
-                Configure default shift and scheduling settings
+                {t("workSettingsDescription")}
               </p>
             </div>
           </div>
@@ -407,7 +410,7 @@ export function Company() {
         <div className="p-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Default Shift Length (hours)
+              {t("defaultShiftLength")}
             </label>
             {isEditing ? (
               <input
@@ -422,10 +425,10 @@ export function Company() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
               />
             ) : (
-              <p className="text-gray-900">{companyData.defaultShiftLength} hours</p>
+              <p className="text-gray-900">{t("hours", { count: companyData.defaultShiftLength })}</p>
             )}
             <p className="mt-1 text-xs text-gray-500">
-              This will be used as the default when creating new shifts
+              {t("defaultShiftHint")}
             </p>
           </div>
         </div>
@@ -443,10 +446,10 @@ export function Company() {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Employee Invites
+                  {t("employeeInvites")}
                 </h3>
                 <p className="text-sm text-gray-500">
-                  Share these with employees to join your company
+                  {t("inviteDescription")}
                 </p>
               </div>
             </div>
@@ -465,7 +468,7 @@ export function Company() {
             {/* Join Code */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Join Code
+                {t("joinCode")}
               </label>
               <div className="flex gap-2">
                 <input
@@ -498,7 +501,7 @@ export function Company() {
             {/* Invite Link */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Invite Link
+                {t("inviteLink")}
               </label>
               <div className="flex gap-2">
                 <input
@@ -512,7 +515,7 @@ export function Company() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 hover:cursor-pointer"
                 >
                   <Copy className="w-4 h-4" />
-                  Copy
+                  {common("copy")}
                 </button>
               </div>
             </div>

@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react"
 import { AlertCircle, BarChart3, CalendarDays, CheckCircle2, Clock3 } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { useLocalePreference } from "../../i18n/LocaleProvider"
 import { useCompany } from "../../hooks/useCompany"
 import { useCompanyMembers } from "../../hooks/useCompanyMembers"
 import useRequests from "../../hooks/useRequests"
@@ -35,6 +36,7 @@ function periodStart(range: Range) {
 
 export function Reports() {
   const t = useTranslations("reports")
+  const { locale } = useLocalePreference()
   const common = useTranslations("common")
   const { selected } = useCompany()
   const { members, loading: membersLoading } = useCompanyMembers(selected?.id ?? null)
@@ -86,11 +88,12 @@ export function Reports() {
       else date.setDate(date.getDate() - ((range === "week" ? 6 : 29) - index))
       const key = localDateKey(date)
       const hours = rangeShifts.filter((shift) => shift.date === key).reduce((sum, shift) => sum + shiftHours(shift) * Math.max(1, shift.employees?.length ?? 0), 0)
-      return { key, label: range === "quarter" ? date.toLocaleDateString(undefined, { month: "short", day: "numeric" }) : date.toLocaleDateString(undefined, { weekday: range === "week" ? "short" : undefined, month: range === "month" ? "short" : undefined, day: range === "month" ? "numeric" : undefined }), hours }
+      const dateLocale = locale === "ja" ? "ja-JP" : "en-US"
+      return { key, label: range === "quarter" ? date.toLocaleDateString(dateLocale, { month: "short", day: "numeric" }) : date.toLocaleDateString(dateLocale, { weekday: range === "week" ? "short" : undefined, month: range === "month" ? "short" : undefined, day: range === "month" ? "numeric" : undefined }), hours }
     })
     const maxDailyHours = Math.max(...days.map((day) => day.hours), 1)
     return { rangeShifts, rangeRequests, totalHours, averageShiftLength, coverage, unassignedCount, pendingRequests, roles, employeeWorkload, days, maxDailyHours }
-  }, [members, range, requests, shifts, t])
+  }, [locale, members, range, requests, shifts, t])
 
   const loading = shiftsLoading || membersLoading || requestsLoading
   const totalRoles = data.rangeShifts.length || 1

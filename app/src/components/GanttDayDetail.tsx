@@ -5,6 +5,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Copy, LoaderCircle, Redo2, Sparkles, Trash2, Undo2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 function parseTimeToMinutes(t: string) {
   if (!t) return 0;
@@ -61,6 +62,8 @@ export default function GanttDayDetail({
   canRedo?: boolean;
   saveState?: { kind: "idle" | "saving" | "saved" | "error"; message: string };
 }) {
+  const t = useTranslations("gantt");
+  const common = useTranslations("common");
   const dayLabel = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -178,7 +181,7 @@ export default function GanttDayDetail({
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-lg font-semibold">{dayLabel}</h3>
-            <p className="text-sm text-gray-500">Detailed Gantt view</p>
+            <p className="text-sm text-gray-500">{t("detailedView")}</p>
           </div>
           <div className="flex items-center gap-2">
             {saveState?.kind && saveState.kind !== "idle" && (
@@ -195,13 +198,13 @@ export default function GanttDayDetail({
             )}
             <button onClick={() => onPasteShift?.()} disabled={!canPaste} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 hover: cursor-pointer">
               <Copy className="h-4 w-4" />
-              Paste
+              {common("paste")}
             </button>
             <button onClick={() => onAutoCreate?.()} className="inline-flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 hover:cursor-pointer">
               <Sparkles className="h-4 w-4" />
-              Auto Fill Day
+              {t("autoFillDay")}
             </button>
-            <button onClick={onClose} className="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50 hover:cursor-pointer">Close</button>
+            <button onClick={onClose} className="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50 hover:cursor-pointer">{common("close")}</button>
           </div>
         </div>
 

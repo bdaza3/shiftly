@@ -63,9 +63,35 @@ export function Dashboard() {
   if (loading || !user) return <div className="p-6 text-sm text-gray-500">{t("loading")}</div>
 
   return <div className="mx-auto max-w-7xl space-y-6">
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label={t("todaysShifts")} value={String(data.todayShifts.length)} detail={data.todayShifts.length === 1 ? t("oneShiftToday") : t("shiftsScheduledToday")} icon={<CalendarDays className="h-5 w-5" />} tone="blue" /><Metric label={t("todayCoverage")} value={`${data.coverage}%`} detail={data.unassigned.length ? t("openShiftsNext7", { count: data.unassigned.length }) : t("allUpcomingCovered")} icon={<CheckCircle2 className="h-5 w-5" />} tone="green" /><Metric label={t("peopleScheduled")} value={String(data.assigned)} detail={t("assignmentsToday")} icon={<Users className="h-5 w-5" />} tone="violet" /><Metric label={t("pendingRequests")} value={String(data.pending.length)} detail={isManager ? t("awaitingDecision") : t("yourRequestsAwaiting")} icon={<AlertCircle className="h-5 w-5" />} tone="amber" /></section>
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-3"><section className="rounded-xl border border-gray-200 bg-white shadow-sm xl:col-span-2"><PanelHeader title={t("todaysSchedule")} detail={t("allAssigneesShown")} link={t("openSchedule")} />{data.todayShifts.length ? <div className="divide-y divide-gray-100">{data.todayShifts.map((shift) => <ShiftRow key={shift.id} shift={shift} members={memberMap} />)}</div> : <Empty text={t("noShiftsToday")} action={t("planDay")} />}</section><aside className="rounded-xl border border-gray-200 bg-white shadow-sm"><PanelHeader title={t("needsAttention")} detail={t("coverageImpact")} />{data.unassigned.length || (isManager && data.pending.length) ? <div className="space-y-3 p-4">{data.unassigned.slice(0, 3).map((shift) => <Link key={shift.id} href="/schedule" className="block rounded-lg bg-amber-50 p-3 text-sm text-amber-950"><AlertCircle className="mr-2 inline h-4 w-4 text-amber-600" />{t("unassignedShift")}<p className="mt-1 text-xs text-amber-800">{formatDate(shift.date, { month: "short", day: "numeric" })} · {shift.startTime}–{shift.endTime}</p></Link>)}{isManager && data.pending.slice(0, 3).map((request) => <Link key={request.id} href="/requests" className="block rounded-lg bg-violet-50 p-3 text-sm text-violet-950">{t("submittedRequest", { name: request.employeeName ?? common("employee") })}<p className="mt-1 text-xs text-violet-700">{request.type === "time-off" ? t("timeOff") : t("shiftSwap")}</p></Link>)}</div> : <div className="p-8 text-center"><CheckCircle2 className="mx-auto h-7 w-7 text-emerald-500" /><p className="mt-2 text-sm font-medium">{t("everythingCovered")}</p><p className="mt-1 text-xs text-gray-500">{t("nothingNeedsAction")}</p></div>}</aside></div>
-    <section className="rounded-xl border border-gray-200 bg-white shadow-sm"><PanelHeader title={t("next7Days")} detail={t("upcomingDescription")} link={t("fullCalendar")} />{data.upcoming.length ? <div className="grid divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">{data.upcoming.map((shift) => <ShiftRow key={shift.id} shift={shift} members={memberMap} />)}</div> : <Empty text={t("noUpcomingShifts")} />}</section>
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <Metric label={t("todaysShifts")} value={String(data.todayShifts.length)} detail={data.todayShifts.length === 1 ? t("oneShiftToday") : t("shiftsScheduledToday")} icon={<CalendarDays className="h-5 w-5" />} tone="blue" />
+      <Metric label={t("todayCoverage")} value={`${data.coverage}%`} detail={data.unassigned.length ? t("openShiftsNext7", { count: data.unassigned.length }) : t("allUpcomingCovered")} icon={<CheckCircle2 className="h-5 w-5" />} tone="green" />
+      <Metric label={t("peopleScheduled")} value={String(data.assigned)} detail={t("assignmentsToday")} icon={<Users className="h-5 w-5" />} tone="violet" />
+      <Metric label={t("pendingRequests")} value={String(data.pending.length)} detail={isManager ? t("awaitingDecision") : t("yourRequestsAwaiting")} icon={<AlertCircle className="h-5 w-5" />} tone="amber" />
+    </section>
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+      <section className="rounded-xl border border-gray-200 bg-white shadow-sm xl:col-span-2">
+        <PanelHeader title={t("todaysSchedule")} detail={t("allAssigneesShown")} link={t("openSchedule")} />{data.todayShifts.length ?
+        <div className="divide-y divide-gray-100">{data.todayShifts.map((shift) => <ShiftRow key={shift.id} shift={shift} members={memberMap} />)}
+        </div> : <Empty text={t("noShiftsToday")} action={t("planDay")} />}
+      </section>
+      <aside className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <PanelHeader title={t("needsAttention")} detail={t("coverageImpact")} />
+        {data.unassigned.length || (isManager && data.pending.length) ?
+        <div className="space-y-3 p-4">{data.unassigned.slice(0, 3).map((shift) =>
+        <Link key={shift.id} href="/schedule" className="block rounded-lg bg-amber-50 p-3 text-sm text-amber-950">
+          <AlertCircle className="mr-2 inline h-4 w-4 text-amber-600" />{t("unassignedShift")}
+          <p className="mt-1 text-xs text-amber-800">{formatDate(shift.date, { month: "short", day: "numeric" })} · {shift.startTime}–{shift.endTime}</p>
+        </Link>)}{isManager && data.pending.slice(0, 3).map((request) =>
+        <Link key={request.id} href="/requests" className="block rounded-lg bg-violet-50 p-3 text-sm text-violet-950">
+          {t("submittedRequest", { name: request.employeeName ?? common("employee") })}<p className="mt-1 text-xs text-violet-700">{request.type === "time-off" ? t("timeOff") : t("shiftSwap")}</p></Link>)}</div> : <div className="p-8 text-center"><CheckCircle2 className="mx-auto h-7 w-7 text-emerald-500" /><p className="mt-2 text-sm font-medium">{t("everythingCovered")}</p><p className="mt-1 text-xs text-gray-500">{t("nothingNeedsAction")}</p></div>}</aside></div>
+    <section className="rounded-xl border border-gray-200 bg-white shadow-sm">
+      <PanelHeader title={t("next7Days")} detail={t("upcomingDescription")} link={t("fullCalendar")} />
+      {data.upcoming.length ?
+      <div className="grid divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">
+        {data.upcoming.map((shift) => <ShiftRow key={shift.id} shift={shift} members={memberMap} />)}
+      </div> : <Empty text={t("noUpcomingShifts")} />}
+    </section>
   </div>
 }
 
