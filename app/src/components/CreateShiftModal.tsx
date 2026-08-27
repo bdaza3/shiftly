@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Search, UserPlus, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type Employee = { id: string; name: string; role?: string; avatarUrl?: string };
 
@@ -37,6 +38,8 @@ export default function CreateShiftModal({
   employees: Employee[];
   currentUserId?: string;
 }) {
+  const t = useTranslations("shiftModal");
+  const common = useTranslations("common");
   const localYMD = () => {
     const d = new Date();
     const y = d.getFullYear();
@@ -158,17 +161,17 @@ export default function CreateShiftModal({
           mounted ? "opacity-100 scale-100" : "opacity-0 scale-95"
         }`}
       >
-        <h3 className="text-lg font-semibold mb-4">{initialData ? "Edit Shift" : "Create Shift"}</h3>
+        <h3 className="text-lg font-semibold mb-4">{initialData ? t("editTitle") : t("createTitle")}</h3>
 
-        <label className="block text-sm text-gray-600">Date</label>
+        <label className="block text-sm text-gray-600">{t("date")}</label>
         <input type="date" className="w-full border p-2 rounded mb-3" value={date} onChange={(e) => setDate(e.target.value)} />
 
-        <label className="block text-sm text-gray-600">Shift Type</label>
+        <label className="block text-sm text-gray-600">{t("shiftType")}</label>
         <select className="w-full border p-2 rounded mb-3" value={shiftType} onChange={(e) => setShiftType(e.target.value)}>
-          <option value="morning">Morning</option>
-          <option value="afternoon">Afternoon</option>
-          <option value="night">Night</option>
-          <option value="custom">Custom</option>
+          <option value="morning">{t("morning")}</option>
+          <option value="afternoon">{t("afternoon")}</option>
+          <option value="night">{t("night")}</option>
+          <option value="custom">{t("custom")}</option>
         </select>
 
         {shiftType === "custom" && (
@@ -178,27 +181,27 @@ export default function CreateShiftModal({
           </div>
         )}
 
-        <label htmlFor="shift-assignee-search" className="block text-sm font-medium text-gray-700 mb-2">Assign to someone</label>
+        <label htmlFor="shift-assignee-search" className="block text-sm font-medium text-gray-700 mb-2">{t("assignToSomeone")}</label>
         <div className="mb-4 rounded-lg border border-gray-300 bg-white shadow-sm">
           <div className="flex items-center gap-2 border-b border-gray-100 px-3 py-2">
             <Search className="h-4 w-4 text-gray-400" />
-            <input id="shift-assignee-search" type="text" value={assigneeQuery} onChange={(event) => setAssigneeQuery(event.target.value)} placeholder="Search by name" className="min-w-0 flex-1 border-0 p-0 text-sm outline-none placeholder:text-gray-400" />
+            <input id="shift-assignee-search" type="text" value={assigneeQuery} onChange={(event) => setAssigneeQuery(event.target.value)} placeholder={t("searchByName")} className="min-w-0 flex-1 border-0 p-0 text-sm outline-none placeholder:text-gray-400" />
           </div>
           {selectedPeople.length > 0 && <div className="space-y-1 border-b border-gray-100 p-2">
             {selectedPeople.map((employee) => <div key={employee.id} className="flex items-center gap-2 rounded-md px-1 py-1.5">
               <EmployeeAvatar employee={employee} className="h-7 w-7 text-[10px]" />
               <span className="min-w-0 flex-1 truncate text-sm text-gray-800">{employee.name}</span>
               <span className="hidden text-xs text-gray-400 sm:inline">{employee.role}</span>
-              <button type="button" onClick={() => setSelectedEmployees((current) => current.filter((id) => id !== employee.id))} aria-label={`Remove ${employee.name}`} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4 hover:cursor-pointer" /></button>
+              <button type="button" onClick={() => setSelectedEmployees((current) => current.filter((id) => id !== employee.id))} aria-label={t("removePerson", { name: employee.name })} className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4 hover:cursor-pointer" /></button>
             </div>)}
           </div>}
           <div className="max-h-36 overflow-auto p-1">
             {currentUser && !selectedEmployees.includes(currentUser.id) && !assigneeQuery.trim() && <button type="button" onClick={() => addEmployee(currentUser.id)} className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left font-medium text-blue-700 hover:bg-blue-50 hover:cursor-pointer">
               <EmployeeAvatar employee={currentUser} className="h-8 w-8 text-[10px]" />
-              <span className="flex-1 text-sm">Assign to me</span>
+              <span className="flex-1 text-sm">{t("assignToMe")}</span>
               <UserPlus className="h-4 w-4" />
             </button>}
-            {matchingPeople.length === 0 ? <p className="px-2 py-3 text-sm text-gray-500">{employees.length === 0 ? "No employees available" : assigneeQuery ? "No matching people" : "Everyone has been assigned"}</p> : matchingPeople.map((employee) => <button key={employee.id} type="button" onClick={() => addEmployee(employee.id)} className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-blue-50 hover:cursor-pointer">
+            {matchingPeople.length === 0 ? <p className="px-2 py-3 text-sm text-gray-500">{employees.length === 0 ? t("noEmployees") : assigneeQuery ? t("noMatches") : t("everyoneAssigned")}</p> : matchingPeople.map((employee) => <button key={employee.id} type="button" onClick={() => addEmployee(employee.id)} className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-blue-50 hover:cursor-pointer">
               <EmployeeAvatar employee={employee} className="h-8 w-8 text-[10px]" />
               <span className="min-w-0 flex-1 truncate text-sm text-gray-800">{employee.name}</span>
               {employee.role && <span className="text-xs text-gray-400">{employee.role}</span>}
@@ -207,19 +210,19 @@ export default function CreateShiftModal({
           </div>
         </div>
 
-        <label className="mb-2 flex cursor-pointer items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={notifyPeople} onChange={(event) => setNotifyPeople(event.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600" />Notify people</label>
-        {notifyPeople && <textarea value={notificationMessage} onChange={(event) => setNotificationMessage(event.target.value)} maxLength={500} rows={2} placeholder="Add an optional message" className="mb-4 w-full resize-none rounded border border-gray-300 p-2 text-sm placeholder:text-gray-400" />}
+        <label className="mb-2 flex cursor-pointer items-center gap-2 text-sm text-gray-700"><input type="checkbox" checked={notifyPeople} onChange={(event) => setNotifyPeople(event.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600" />{t("notifyPeople")}</label>
+        {notifyPeople && <textarea value={notificationMessage} onChange={(event) => setNotificationMessage(event.target.value)} maxLength={500} rows={2} placeholder={t("optionalMessage")} className="mb-4 w-full resize-none rounded border border-gray-300 p-2 text-sm placeholder:text-gray-400" />}
 
         <div className="flex justify-between">
           <div>
             {initialData?.id && onDelete && (
-              <button className="px-3 py-2 rounded border text-red-600 hover:bg-red-200 hover:cursor-pointer" onClick={() => onDelete(initialData.id)}>Delete</button>
+              <button className="px-3 py-2 rounded border text-red-600 hover:bg-red-200 hover:cursor-pointer" onClick={() => onDelete(initialData.id)}>{common("delete")}</button>
             )}
           </div>
 
           <div className="flex gap-2">
-            <button className="px-3 py-2 rounded border hover:bg-gray-200 hover:cursor-pointer" onClick={onClose}>Cancel</button>
-            <button className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 hover:cursor-pointer" onClick={handleSave}>{initialData ? 'Save' : 'Create'}</button>
+            <button className="px-3 py-2 rounded border hover:bg-gray-200 hover:cursor-pointer" onClick={onClose}>{common("cancel")}</button>
+            <button className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 hover:cursor-pointer" onClick={handleSave}>{initialData ? common("save") : common("create")}</button>
           </div>
         </div>
       </div>

@@ -1,242 +1,74 @@
-"use client";
+"use client"
 
-import { Clock, MapPin, AlertCircle, CheckCircle2 } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
-import { useCompany } from "../hooks/useCompany";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useShifts } from "../hooks/useShifts";
-import useRequests from "../hooks/useRequests";
-import { useRole } from "../hooks/useRole";
-import { useCompanyMembers } from "../hooks/useCompanyMembers";
-import { useTranslations } from "next-intl";
-import { useLocalePreference } from "../i18n/LocaleProvider";
+import Link from "next/link"
+import { useMemo, type ReactNode } from "react"
+import { AlertCircle, CalendarDays, CheckCircle2, Clock3, MapPin, Users } from "lucide-react"
+import { useTranslations } from "next-intl"
+import { useAuth } from "../hooks/useAuth"
+import { useCompany } from "../hooks/useCompany"
+import { useCompanyMembers } from "../hooks/useCompanyMembers"
+import { useRole } from "../hooks/useRole"
+import { useShifts, type Shift } from "../hooks/useShifts"
+import useRequests from "../hooks/useRequests"
+import { useLocalePreference } from "../i18n/LocaleProvider"
+
+type Member = { id?: string; user_id?: string; name?: string; email?: string; avatarUrl?: string }
+
+function dateKey(date: Date) { return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-") }
+function minutes(value?: string) { const [hours, mins] = String(value ?? "").split(":").map(Number); return Number.isFinite(hours) && Number.isFinite(mins) ? hours * 60 + mins : Number.MAX_SAFE_INTEGER }
+function initials(name: string) { return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?" }
+
+function Avatar({ name, src }: { name: string; src?: string }) {
+  return src ? <img src={src} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" /> : <span title={name} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[8px] font-semibold text-blue-700">{initials(name)}</span>
+}
+
+function Metric({ icon, label, value, detail, tone }: { icon: ReactNode; label: string; value: string; detail: string; tone: "blue" | "green" | "amber" | "violet" }) {
+  const tones = { blue: "bg-blue-50 text-blue-600", green: "bg-emerald-50 text-emerald-600", amber: "bg-amber-50 text-amber-600", violet: "bg-violet-50 text-violet-600" }
+  return <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"><div className="flex justify-between gap-3"><div><p className="text-sm text-gray-500">{label}</p><p className="mt-2 text-3xl font-bold text-gray-900">{value}</p></div><div className={`rounded-lg p-3 ${tones[tone]}`}>{icon}</div></div><p className="mt-3 text-xs text-gray-500">{detail}</p></div>
+}
 
 export function Dashboard() {
-  const { user, userloading } = useAuth();
   const t = useTranslations("dashboard")
   const common = useTranslations("common")
   const { locale } = useLocalePreference()
-  const { companies, selected, loading: companiesLoading } = useCompany();
-  const router = useRouter();
-  const [ready, setReady] = useState(false)
-  const { role: membershipRole, isAdmin, loading: roleLoading } = useRole()
-  const effectiveMembershipRole = membershipRole ?? selected?.current_user_role ?? null
-  const { members: companyMembers, loading: membersLoading } = useCompanyMembers(selected?.id ?? null)
+  const { user, profile, userloading } = useAuth()
+  const { selected, loading: companiesLoading } = useCompany()
+  const { role, loading: roleLoading } = useRole()
+  const { members, loading: membersLoading } = useCompanyMembers(selected?.id ?? null)
+  const { shifts, loading: shiftsLoading } = useShifts(selected?.id)
+  const { requests, loading: requestsLoading } = useRequests()
+  const today = useMemo(() => new Date(), [])
+  const todayKey = dateKey(today)
+  const isManager = ["admin", "manager", "owner"].includes((role ?? selected?.current_user_role ?? "").toLowerCase())
+  const userName = `${profile?.first_name ?? user?.user_metadata?.firstName ?? ""} ${profile?.last_name ?? user?.user_metadata?.lastName ?? ""}`.trim() || user?.user_metadata?.full_name || user?.email || common("employee")
+  const memberMap = useMemo(() => {
+    const map = new Map<string, Member>()
+    members.forEach((member: Member) => { const id = member.id ?? member.user_id; if (id) map.set(id, member) })
+    if (user?.id) map.set(user.id, { id: user.id, name: userName })
+    return map
+  }, [members, user?.id, userName])
+  const data = useMemo(() => {
+    const end = dateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 6))
+    const ordered = [...shifts].sort((a, b) => a.date.localeCompare(b.date) || minutes(a.startTime) - minutes(b.startTime))
+    const todayShifts = ordered.filter((shift) => shift.date === todayKey)
+    const upcoming = ordered.filter((shift) => shift.date >= todayKey && shift.date <= end).slice(0, 8)
+    const unassigned = upcoming.filter((shift) => !(shift.employees?.length || shift.employeeId))
+    const pending = requests.filter((request) => request.status === "pending")
+    const covered = todayShifts.filter((shift) => shift.employees?.length || shift.employeeId).length
+    return { todayShifts, upcoming, unassigned, pending, coverage: todayShifts.length ? Math.round((covered / todayShifts.length) * 100) : 100, assigned: todayShifts.reduce((sum, shift) => sum + (shift.employees?.length ?? (shift.employeeId ? 1 : 0)), 0) }
+  }, [requests, shifts, today, todayKey])
+  const loading = userloading || companiesLoading || roleLoading || membersLoading || shiftsLoading || requestsLoading
+  const formatDate = (value: string, options: Intl.DateTimeFormatOptions) => new Date(`${value}T00:00:00`).toLocaleDateString(locale === "ja" ? "ja-JP" : "en-US", options)
 
-  useEffect(() => {//if user is signed in but has no companies, send to company onboarding (case where user goes directly to dashboard)
-    if (ready && !userloading && !user) {
-      router.replace('/')
-      return
-    }
-    if (ready && !userloading && user?.id && !companiesLoading && Array.isArray(companies) && companies.length === 0) {
-      router.replace('/register?step=2&sub=create-company')
-    }
-  }, [user?.id, userloading, user, companies?.length, companiesLoading, ready, router]);
+  if (loading || !user) return <div className="p-6 text-sm text-gray-500">{t("loading")}</div>
 
-  useEffect(() => { setReady(true) }, [])
-
-  // role is now fetched via useRole()
-  const { shifts = [], loading } = useShifts(selected?.id);
-
-  const today = new Date();
-  const todayDateStr = [today.getFullYear(), today.getMonth() + 1, today.getDate()]
-    .map((part, index) => index === 0 ? String(part) : String(part).padStart(2, "0"))
-    .join("-");
-
-  // Compute derived lists from DB-backed shifts
-  const todayShifts = (loading ? [] : shifts).filter((s: any) => s.date === todayDateStr);
-  const myShifts = effectiveMembershipRole === "employee" ? (shifts || []).filter((s: any) => Array.isArray(s.employees) && s.employees.includes(user.id)) : [];
-  const upcomingShift = myShifts.find((s) => new Date(s.date) >= new Date());
-  
-  //get pending requests for manager/admin view from database (filtering for pending status and future dates)
-  //const pendingRequests = sampleRequests.filter((r) => r.status === "pending");
-
-  const { requests: allRequests, loading: requestsLoading, fetchRequests } = useRequests();
-  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
-
-  useEffect(() => {
-    // refresh when selected company changes
-    fetchRequests().catch(() => {})
-  }, [selected?.id]);
-
-  useEffect(() => {
-    const pending = (allRequests || []).filter((r: any) => (r.status === 'pending'))
-    setPendingRequests(pending)
-  }, [allRequests])
-
-  return (
-    userloading || (!user && !ready) ? <div className="p-6">{common('loading')}</div> :
-    !user ? <div className="p-6">{common('loading')}</div> :
-    <div className="space-y-6">
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">{isAdmin ? t('totalEmployees') : t('todaysShifts')}</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {isAdmin ? (membersLoading ? 'N/A' : (companyMembers.length + 1)) : todayShifts.length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-blue-600 bg-opacity-10 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">{t('pendingRequests')}</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {pendingRequests.length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-[#F59E0B] bg-opacity-10 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-[#F59E0B]" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">
-                {isAdmin ? t('pendingRequests') : t('myShiftsThisWeek')}
-              </p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">
-                {isAdmin ? (requestsLoading ? 'N/A' : pendingRequests.length) : myShifts.length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-500 bg-opacity-10 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-green-500" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Today's Shifts */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-xl font-semibold text-gray-900">{t('todaysShifts')}</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            {today.toLocaleDateString(locale === "ja" ? "ja-JP" : "en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
-        </div>
-        <div className="p-6">
-          {todayShifts.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">{t('noShiftsToday')}</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {todayShifts.map((shift) => (
-                <div
-                  key={shift.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-blue-600 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
-                        {((shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "N/A"))||"N/A").charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{shift.employeeName ?? (Array.isArray(shift.employees) && shift.employees.length > 0 ? shift.employees[0] : "N/A")}</p>
-                        <p className="text-sm text-gray-500">{shift.role}</p>
-                      </div>
-                    </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                      {shift.status ?? "scheduled"}
-                    </span>
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock className="w-4 h-4" />
-                      <span>
-                        {shift.startTime} - {shift.endTime}
-                      </span>
-                    </div>
-                    {shift.location && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <MapPin className="w-4 h-4" />
-                        <span>{shift.location}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Notifications Panel */}
-      {effectiveMembershipRole === "employee" && upcomingShift && (
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 shadow-sm text-white">
-          <h3 className="text-lg font-semibold mb-2">{t('yourNextShift')}</h3>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-white/90">
-                {new Date(upcomingShift.date).toLocaleDateString(locale === "ja" ? "ja-JP" : "en-US", {
-                  weekday: "long",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </p>
-              <p className="text-2xl font-bold mt-1">
-                {upcomingShift.startTime} - {upcomingShift.endTime}
-              </p>
-              <p className="text-white/80 mt-1">
-                {upcomingShift.role} • {upcomingShift.location}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Admin Notifications */}
-      {(effectiveMembershipRole === "manager" || effectiveMembershipRole === "admin") && pendingRequests.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-xl font-semibold text-gray-900">
-              {t('pendingApprovals')}
-            </h3>
-          </div>
-          <div className="p-6 space-y-3">
-            {pendingRequests.slice(0, 3).map((request) => (
-              <div
-                key={request.id}
-                className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <AlertCircle className="w-5 h-5 text-[#F59E0B]" />
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {request.employeeName}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {request.type === "time-off" ? "Time Off" : "Shift Swap"} •{" "}
-                      {new Date(request.date).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors hover:cursor-pointer ">
-                    {common('approve')}
-                  </button>
-                  <button className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors hover:cursor-pointer">
-                    {common('reject')}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      </div>
-  );
+  return <div className="mx-auto max-w-7xl space-y-6">
+    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label={t("todaysShifts")} value={String(data.todayShifts.length)} detail={data.todayShifts.length === 1 ? t("oneShiftToday") : t("shiftsScheduledToday")} icon={<CalendarDays className="h-5 w-5" />} tone="blue" /><Metric label={t("todayCoverage")} value={`${data.coverage}%`} detail={data.unassigned.length ? t("openShiftsNext7", { count: data.unassigned.length }) : t("allUpcomingCovered")} icon={<CheckCircle2 className="h-5 w-5" />} tone="green" /><Metric label={t("peopleScheduled")} value={String(data.assigned)} detail={t("assignmentsToday")} icon={<Users className="h-5 w-5" />} tone="violet" /><Metric label={t("pendingRequests")} value={String(data.pending.length)} detail={isManager ? t("awaitingDecision") : t("yourRequestsAwaiting")} icon={<AlertCircle className="h-5 w-5" />} tone="amber" /></section>
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-3"><section className="rounded-xl border border-gray-200 bg-white shadow-sm xl:col-span-2"><PanelHeader title={t("todaysSchedule")} detail={t("allAssigneesShown")} link={t("openSchedule")} />{data.todayShifts.length ? <div className="divide-y divide-gray-100">{data.todayShifts.map((shift) => <ShiftRow key={shift.id} shift={shift} members={memberMap} />)}</div> : <Empty text={t("noShiftsToday")} action={t("planDay")} />}</section><aside className="rounded-xl border border-gray-200 bg-white shadow-sm"><PanelHeader title={t("needsAttention")} detail={t("coverageImpact")} />{data.unassigned.length || (isManager && data.pending.length) ? <div className="space-y-3 p-4">{data.unassigned.slice(0, 3).map((shift) => <Link key={shift.id} href="/schedule" className="block rounded-lg bg-amber-50 p-3 text-sm text-amber-950"><AlertCircle className="mr-2 inline h-4 w-4 text-amber-600" />{t("unassignedShift")}<p className="mt-1 text-xs text-amber-800">{formatDate(shift.date, { month: "short", day: "numeric" })} · {shift.startTime}–{shift.endTime}</p></Link>)}{isManager && data.pending.slice(0, 3).map((request) => <Link key={request.id} href="/requests" className="block rounded-lg bg-violet-50 p-3 text-sm text-violet-950">{t("submittedRequest", { name: request.employeeName ?? common("employee") })}<p className="mt-1 text-xs text-violet-700">{request.type === "time-off" ? t("timeOff") : t("shiftSwap")}</p></Link>)}</div> : <div className="p-8 text-center"><CheckCircle2 className="mx-auto h-7 w-7 text-emerald-500" /><p className="mt-2 text-sm font-medium">{t("everythingCovered")}</p><p className="mt-1 text-xs text-gray-500">{t("nothingNeedsAction")}</p></div>}</aside></div>
+    <section className="rounded-xl border border-gray-200 bg-white shadow-sm"><PanelHeader title={t("next7Days")} detail={t("upcomingDescription")} link={t("fullCalendar")} />{data.upcoming.length ? <div className="grid divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">{data.upcoming.map((shift) => <ShiftRow key={shift.id} shift={shift} members={memberMap} />)}</div> : <Empty text={t("noUpcomingShifts")} />}</section>
+  </div>
 }
+
+function PanelHeader({ title, detail, link }: { title: string; detail: string; link?: string }) { return <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-6 py-5"><div><h2 className="font-semibold text-gray-900">{title}</h2><p className="mt-1 text-sm text-gray-500">{detail}</p></div>{link && <Link href="/schedule" className="shrink-0 text-sm font-semibold text-blue-600">{link}</Link>}</div> }
+function Empty({ text, action }: { text: string; action?: string }) { return <div className="p-10 text-center text-sm text-gray-500"><p>{text}</p>{action && <Link href="/schedule" className="mt-2 inline-block font-semibold text-blue-600">{action}</Link>}</div> }
+function ShiftRow({ shift, members }: { shift: Shift; members: Map<string, Member> }) { const t = useTranslations("dashboard"); const common = useTranslations("common"); const ids = shift.employees?.length ? shift.employees : shift.employeeId ? [shift.employeeId] : []; return <div className="flex gap-4 p-5"><div className="min-w-14 text-right text-sm"><p className="font-semibold">{shift.startTime ?? "—"}</p><p className="text-gray-500">{shift.endTime ?? "—"}</p></div><div className="h-10 w-1 rounded-full bg-blue-500" /><div className="min-w-0 flex-1"><p className="font-semibold text-gray-900">{shift.role ?? t("scheduledShift")}</p>{shift.location && <p className="mt-1 flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3.5 w-3.5" />{shift.location}</p>}<div className="mt-3 flex flex-wrap gap-2">{ids.length ? ids.map((id) => { const member = members.get(id); const name = member?.name ?? member?.email ?? id; return <span key={id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 py-1 pl-1 pr-2 text-xs"><Avatar name={name} src={member?.avatarUrl} />{name}</span> }) : <span className="rounded-full bg-amber-50 px-2 py-1 text-xs text-amber-700">{common("unassigned")}</span>}</div></div></div> }
