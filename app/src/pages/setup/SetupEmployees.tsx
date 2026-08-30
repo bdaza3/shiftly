@@ -1,13 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Users, ArrowRight, Mail, Plus, X, Link as LinkIcon, LightbulbIcon } from "lucide-react";
+import { useCompany } from "../../hooks/useCompany";
+import { authFetch } from "@/lib/authFetch";
 
 export function SetupEmployees() {
   const [emails, setEmails] = useState<string[]>([""]);
   const [inviteLink, setInviteLink] = useState("");
   const router = useRouter();
+  const { selected, loading: companiesLoading } = useCompany();
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadInviteLink = async () => {
+      const joinCode = selected?.join_code ?? selected?.joinCode;
+      if (joinCode) {
+        if (mounted) setInviteLink(`https://shiftly.app/join/${joinCode}`);
+        return;
+      }
+
+      if (companiesLoading || !selected?.id) return;
+
+      try {
+        const response = await authFetch("/api/companies/mine", {
+          method: "POST",
+          body: JSON.stringify({}),
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+
+        const { companies = [] } = await response.json();
+        const company = companies.find((item: { id: string }) => item.id === selected.id);
+        const persistedCode = company?.join_code ?? company?.joinCode;
+        if (persistedCode && mounted) {
+          setInviteLink(`https://shiftly.app/join/${persistedCode}`);
+        }
+      } catch (error) {
+        console.warn("SetupEmployees: could not load company join code", error);
+      }
+    };
+
+    loadInviteLink();
+    return () => { mounted = false; };
+  }, [selected?.id, selected?.join_code, selected?.joinCode, companiesLoading]);
 
   const addEmailField = () => {
     setEmails([...emails, ""]);
@@ -21,12 +59,6 @@ export function SetupEmployees() {
     const newEmails = [...emails];
     newEmails[index] = value;
     setEmails(newEmails);
-  };
-
-  const generateInviteLink = () => {
-    // Mock: Generate a random invite code
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setInviteLink(`https://shiftly.app/join/${code}`);
   };
 
   const handleContinue = () => {
@@ -142,13 +174,9 @@ export function SetupEmployees() {
                 Share Invite Link
               </label>
               {!inviteLink ? (
-                <button
-                  type="button"
-                  onClick={generateInviteLink}
-                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-indigo-50 transition-colors text-gray-600 font-medium hover:cursor-pointer"
-                >
-                  Generate Invite Link
-                </button>
+                <div className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 font-medium">
+                  {companiesLoading ? "Loading the company invite link…" : "Invite link unavailable. You can find it later from Manage Employees."}
+                </div>
               ) : (
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-sm font-medium text-green-900 mb-2">
@@ -183,7 +211,7 @@ export function SetupEmployees() {
               <p className="text-sm text-blue-900">
                 <LightbulbIcon className="inline w-4 h-4 mr-1" />
                 <strong>Tip:</strong> You can always invite more employees
-                later from your dashboard. Don't worry about getting everyone set
+                later from your dashboard. Do not worry about getting everyone set
                 up right now!
               </p>
             </div>
