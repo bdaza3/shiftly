@@ -15,9 +15,7 @@ import {
 import CompanySelector from "./CompanySelector";
 import { useAuth } from "../hooks/useAuth";
 import { useCompany } from "../hooks/useCompany";
-import { supabase } from '../../../lib/supabaseClient'
-import { startTransition, useEffect, useState } from 'react'
-import { authFetch } from "@/lib/authFetch";
+import { useEffect, useState } from 'react'
 import { useTranslations } from "next-intl";
 
 export function Sidebar() {
@@ -26,78 +24,16 @@ export function Sidebar() {
   const { selected } = useCompany();
   const t = useTranslations("nav")
   const common = useTranslations("common")
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [membershipRole, setMembershipRole] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   
   const [mounted, setMounted] = useState(false)
-  const inferredMembershipRole = membershipRole ?? selected?.current_user_role ?? null
+  const inferredMembershipRole = selected?.current_user_role ?? null
   const inferredIsAdmin = /manager|admin|owner|company/.test(String(inferredMembershipRole || '').toLowerCase())
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  
-  useEffect(() => {
-    let mounted = true
-    const load = async () => {
-      if (!selected?.id || !user?.id) {
-        if (mounted) {
-          setMembershipRole(selected?.current_user_role ?? null)
-          setIsAdmin(/manager|admin|owner|company/.test(String(selected?.current_user_role || '').toLowerCase()))
-        }
-        return
-      }
-      try {
-        const { data } = await supabase.from('company_members').select('role').eq('company_id', selected.id).eq('user_id', user.id).limit(1)
-        let role = data && data[0] && data[0].role
-        // if client-side read returns no role (common with RLS until server sync), fallback to server API
-        if (!role) {
-          try {
-            const resp = await authFetch('/api/company_members/get', { method: 'POST', body: JSON.stringify({ company_id: selected.id, user_id: user.id }) })
-            if (resp.ok) {
-              const json = await resp.json()
-              role = json?.membership?.role
-            }
-          } catch (e) {
-            // ignore fallback error; will treat as no role
-          }
-        }
-        if (mounted) {
-          console.log('Sidebar: fetched membership role (client)', { role, companyId: selected.id, userId: user.id })
-          setMembershipRole(role ?? null)
-          const normalized = String(role || '').toLowerCase()
-          const adminMatch = /manager|admin|owner|company/.test(normalized)
-          setIsAdmin(adminMatch)
-          console.log('Sidebar: isAdmin set ->', adminMatch)
-        }
-      } catch (e) {
-        // fallback to server-side lookup when client read is blocked
-        try {
-          const resp = await authFetch('/api/company_members/get', { method: 'POST', body: JSON.stringify({ company_id: selected?.id, user_id: user?.id }) })
-          if (resp.ok) {
-            const json = await resp.json()
-            const role = json?.membership?.role
-            if (mounted) {
-              console.log('Sidebar: fetched membership role (server fallback)', { role, companyId: selected?.id, userId: user?.id })
-              setMembershipRole(role ?? null)
-              const normalized = String(role || '').toLowerCase()
-              const adminMatch = /manager|admin|owner|company/.test(normalized)
-              setIsAdmin(adminMatch)
-              console.log('Sidebar: isAdmin set (fallback) ->', adminMatch)
-            }
-          } else {
-            if (mounted) setIsAdmin(false)
-          }
-        } catch (e2) {
-          if (mounted) setIsAdmin(false)
-        }
-      }
-    }
-    load()
-    return () => { mounted = false }
-  }, [selected?.id, user?.id])
   const firstName = profile?.first_name ?? user?.user_metadata?.firstName ?? '';
   const lastName = profile?.last_name ?? user?.user_metadata?.lastName ?? '';
   const displayName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : user?.user_metadata?.full_name || user?.email);
@@ -170,7 +106,7 @@ export function Sidebar() {
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </Link>
 
-        {(isAdmin || inferredIsAdmin) && (
+        {inferredIsAdmin && (
           <>
             <span className="text-xs font-semibold text-gray-400 uppercase px-4 mt-6 mb-2">{t('management')}</span>
             <Link href="/manageemployees" className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100">

@@ -20,7 +20,6 @@ export function Profile() {
   const settings = useTranslations("settings")
   const { locale } = useLocalePreference()
 
-  const [membershipRole, setMembershipRole] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   const [editing, setEditing] = useState(false);
@@ -30,7 +29,7 @@ export function Profile() {
   const [saving, setSaving] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
-  const effectiveMembershipRole = membershipRole ?? selected?.current_user_role ?? null
+  const effectiveMembershipRole = selected?.current_user_role ?? null
 
   useEffect(() => {
     if (!user) return;
@@ -42,46 +41,6 @@ export function Profile() {
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    let mountedLocal = true
-    const load = async () => {
-      if (!selected?.id || !user?.id) {
-        if (mountedLocal) setMembershipRole(null)
-        return
-      }
-      try {
-        const { data } = await supabase.from('company_members').select('role').eq('company_id', selected.id).eq('user_id', user.id).limit(1)
-        let role = data && data[0] && data[0].role
-        if (!role) {
-          try {
-            const resp = await authFetch('/api/company_members/get', { method: 'POST', body: JSON.stringify({ company_id: selected.id, user_id: user.id }) })
-            if (resp.ok) {
-              const json = await resp.json()
-              role = json?.membership?.role
-            }
-          } catch (e) {
-            // ignore fallback error
-          }
-        }
-        if (mountedLocal) setMembershipRole(role ?? null)
-      } catch (e) {
-        try {
-          const resp = await authFetch('/api/company_members/get', { method: 'POST', body: JSON.stringify({ company_id: selected?.id, user_id: user?.id }) })
-          if (resp.ok) {
-            const json = await resp.json()
-            if (mountedLocal) setMembershipRole(json?.membership?.role ?? null)
-          } else {
-            if (mountedLocal) setMembershipRole(null)
-          }
-        } catch (e2) {
-          if (mountedLocal) setMembershipRole(null)
-        }
-      }
-    }
-    load()
-    return () => { mountedLocal = false }
-  }, [selected?.id, user?.id])
 
   const handleLogout = async () => {
     try {

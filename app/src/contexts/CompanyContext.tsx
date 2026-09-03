@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { authFetch } from '@/lib/authFetch'
 
@@ -14,9 +14,10 @@ export type Company = {
   owner?: string
   website?: string
   join_code?: string
-  // optional alternate camelCase
+  // optional alternate camelCase vvv
   joinCode?: string
-  current_user_role?: string
+  current_user_role?: string | null
+
   // common admin fields used in UI
   timezone?: string
   industry?: string
@@ -138,7 +139,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     try { localStorage.setItem('activeCompanyId', company.id) } catch {}
   }
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     if (!user?.id) return
     try {
       setLoadingCompanies(true)
@@ -167,7 +168,7 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
     finally {
       setLoadingCompanies(false)
     }
-  }
+  }, [user?.id])
 
   useEffect(() => {
     console.log('CompanyContext: companies state changed', companies)
