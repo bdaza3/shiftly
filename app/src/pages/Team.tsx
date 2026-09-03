@@ -1,10 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { useCompany } from "../hooks/useCompany";
 import { useCompanyMembers } from "../hooks/useCompanyMembers";
-import { useAuth } from "../hooks/useAuth";
 import { useTranslations } from "next-intl";
 
 export function Team() {
@@ -12,10 +9,6 @@ export function Team() {
   const t = useTranslations("team")
   const common = useTranslations("common")
   const { members, loading } = useCompanyMembers(selected?.id ?? null);
-  const { user } = useAuth();
-  //const [members, setMembers] = useState<{ id: string; name: string; role: string; email?: string; full_name?: string; first_name?: string; last_name?: string; user_id?: string }[]>([])
-  //const [loading, setLoading] = useState(false)
-
 
   return (
     <div className="space-y-6">
@@ -36,7 +29,6 @@ export function Team() {
             {members.map((m) => {
               const fullName =
                 m.full_name ||
-                (m.first_name || m.last_name ? `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim() : null) ||
                 m.name ||
                 m.email ||
                 m.id ||

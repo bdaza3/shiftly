@@ -35,7 +35,7 @@ type CompanyContextValue = {
   selectCompany: (id: string) => void
   addCompany: (c: Company) => void
   refresh: () => Promise<void>
-  loading?: boolean
+  loading: boolean
 }
 
 export const CompanyContext = createContext<CompanyContextValue | undefined>(undefined)
