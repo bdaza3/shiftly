@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useMemo, type ReactNode } from "react"
-import { AlertCircle, CalendarDays, CheckCircle2, Clock3, MapPin, Users } from "lucide-react"
+import { AlertCircle, CalendarDays, CheckCircle2, MapPin, Users } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useAuth } from "../hooks/useAuth"
 import { useCompany } from "../hooks/useCompany"
@@ -12,13 +12,13 @@ import { useShifts, type Shift } from "../hooks/useShifts"
 import useRequests from "../hooks/useRequests"
 import { useLocalePreference } from "../i18n/LocaleProvider"
 
-type Member = { id?: string; user_id?: string; name?: string; email?: string; avatarUrl?: string }
+type Member = { id?: string; user_id?: string; name?: string | null; email?: string | null; avatarUrl?: string | null }
 
 function dateKey(date: Date) { return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-") }
 function minutes(value?: string) { const [hours, mins] = String(value ?? "").split(":").map(Number); return Number.isFinite(hours) && Number.isFinite(mins) ? hours * 60 + mins : Number.MAX_SAFE_INTEGER }
 function initials(name: string) { return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?" }
 
-function Avatar({ name, src }: { name: string; src?: string }) {
+function Avatar({ name, src }: { name: string; src?: string | null }) {
   return src ? <img src={src} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" /> : <span title={name} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[8px] font-semibold text-blue-700">{initials(name)}</span>
 }
 
@@ -95,6 +95,84 @@ export function Dashboard() {
   </div>
 }
 
-function PanelHeader({ title, detail, link }: { title: string; detail: string; link?: string }) { return <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-6 py-5"><div><h2 className="font-semibold text-gray-900">{title}</h2><p className="mt-1 text-sm text-gray-500">{detail}</p></div>{link && <Link href="/schedule" className="shrink-0 text-sm font-semibold text-blue-600">{link}</Link>}</div> }
-function Empty({ text, action }: { text: string; action?: string }) { return <div className="p-10 text-center text-sm text-gray-500"><p>{text}</p>{action && <Link href="/schedule" className="mt-2 inline-block font-semibold text-blue-600">{action}</Link>}</div> }
-function ShiftRow({ shift, members }: { shift: Shift; members: Map<string, Member> }) { const t = useTranslations("dashboard"); const common = useTranslations("common"); const ids = shift.employees?.length ? shift.employees : shift.employeeId ? [shift.employeeId] : []; return <div className="flex gap-4 p-5"><div className="min-w-14 text-right text-sm"><p className="font-semibold">{shift.startTime ?? "—"}</p><p className="text-gray-500">{shift.endTime ?? "—"}</p></div><div className="h-10 w-1 rounded-full bg-blue-500" /><div className="min-w-0 flex-1"><p className="font-semibold text-gray-900">{shift.role ?? t("scheduledShift")}</p>{shift.location && <p className="mt-1 flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3.5 w-3.5" />{shift.location}</p>}<div className="mt-3 flex flex-wrap gap-2">{ids.length ? ids.map((id) => { const member = members.get(id); const name = member?.name ?? member?.email ?? id; return <span key={id} className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 py-1 pl-1 pr-2 text-xs"><Avatar name={name} src={member?.avatarUrl} />{name}</span> }) : <span className="rounded-full bg-amber-50 px-2 py-1 text-xs text-amber-700">{common("unassigned")}</span>}</div></div></div> }
+function PanelHeader({ title, detail, link }: { title: string; detail: string; link?: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-6 py-5">
+      <div>
+        <h2 className="font-semibold text-gray-900">{title}</h2>
+        <p className="mt-1 text-sm text-gray-500">{detail}</p>
+      </div>
+      {link && (
+        <Link href="/schedule" className="shrink-0 text-sm font-semibold text-blue-600">
+          {link}
+        </Link>
+      )}
+    </div>
+  )
+}
+
+function Empty({ text, action }: { text: string; action?: string }) {
+  return (
+    <div className="p-10 text-center text-sm text-gray-500">
+      <p>{text}</p>
+      {action && (
+        <Link href="/schedule" className="mt-2 inline-block font-semibold text-blue-600">
+          {action}
+        </Link>
+      )}
+    </div>
+  )
+}
+
+function ShiftRow({ shift, members }: { shift: Shift; members: Map<string, Member> }) {
+  const t = useTranslations("dashboard")
+  const common = useTranslations("common")
+  const ids = shift.employees?.length
+    ? shift.employees
+    : shift.employeeId
+      ? [shift.employeeId]
+      : []
+
+  return (
+    <div className="flex gap-4 p-5">
+      <div className="min-w-14 text-right text-sm">
+        <p className="font-semibold">{shift.startTime ?? "—"}</p>
+        <p className="text-gray-500">{shift.endTime ?? "—"}</p>
+      </div>
+      <div className="h-10 w-1 rounded-full bg-blue-500" />
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-gray-900">
+          {shift.role ?? t("scheduledShift")}
+        </p>
+        {shift.location && (
+          <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+            <MapPin className="h-3.5 w-3.5" />
+            {shift.location}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {ids.length ? (
+            ids.map((id) => {
+              const member = members.get(id)
+              const name = member?.name ?? member?.email ?? id
+
+              return (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 py-1 pl-1 pr-2 text-xs"
+                >
+                  <Avatar name={name} src={member?.avatarUrl} />
+                  {name}
+                </span>
+              )
+            })
+          ) : (
+            <span className="rounded-full bg-amber-50 px-2 py-1 text-xs text-amber-700">
+              {common("unassigned")}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
