@@ -22,46 +22,52 @@ export async function POST(req: Request) {
 
     const { data: rows, error } = await auth.service
       .from("company_members")
-      .select("*")
+      .select("user_id, role, created_at")
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
 
     if (error) return NextResponse.json({ error: error.message || String(error) }, { status: 400 })
 
-    const userIds = (rows || []).map((row: { user_id?: string }) => row.user_id).filter(Boolean)
-    let profiles: Array<{ id: string; first_name?: string | null; last_name?: string | null; phone?: string | null; avatar_url?: string | null; avatarUrl?: string | null; image_url?: string | null }> = []
-    let users: Array<{ id: string; full_name?: string | null; email?: string | null; role?: string | null }> = []
+    const memberRows = rows || []
+    const userIds = memberRows.map((row: { user_id?: string }) => row.user_id).filter(Boolean)
+    let profiles: Array<{ id: string; first_name?: string | null; last_name?: string | null; phone?: string | null }> = []
+    let users: Array<{ id: string; full_name?: string | null; email?: string | null }> = []
 
     if (userIds.length > 0) {
-      const { data: profileRows, error: profileError } = await auth.service
-        .from("profiles")
-        .select("*")
-        .in("id", userIds)
-      if (!profileError) profiles = profileRows || []
+      const [profileResult, userResult] = await Promise.all([
+        auth.service
+          .from("profiles")
+          .select("id, first_name, last_name, phone")
+          .in("id", userIds),
+        auth.service
+          .from("users")
+          .select("id, full_name, email")
+          .in("id", userIds),
+      ])
 
-      const { data: userRows, error: userError } = await auth.service
-        .from("users")
-        .select("id, full_name, email, role")
-        .in("id", userIds)
-      if (!userError) users = userRows || []
+      if (!profileResult.error) profiles = profileResult.data || []
+      if (!userResult.error) users = userResult.data || []
     }
 
-    const members = (rows || []).map((row: { user_id: string; role?: string | null; created_at?: string }) => {
-      const profile = profiles.find((entry) => entry.id === row.user_id)
-      const user = users.find((entry) => entry.id === row.user_id)
+    const profileMap = new Map(profiles.map((profile) => [profile.id, profile]))
+    const userMap = new Map(users.map((user) => [user.id, user]))
+
+    const members = memberRows.map((row: { user_id: string; role?: string | null; created_at?: string }) => {
+      const profile = profileMap.get(row.user_id)
+      const user = userMap.get(row.user_id)
       const name =
         profile && (profile.first_name || profile.last_name)
           ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim()
           : user?.full_name ?? user?.email ?? row.user_id
 
-      return {
+      return {//member object to return
         id: row.user_id,
         role: row.role,
         startDate: row.created_at,
         name,
         email: user?.email ?? null,
         phone: profile?.phone ?? null,
-        avatarUrl: profile?.avatar_url ?? profile?.avatarUrl ?? profile?.image_url ?? null,
+        avatarUrl: null,
       }
     })
 

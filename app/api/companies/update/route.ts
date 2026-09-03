@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   })
   if (!auth.ok) return auth.response
 
-  try {
+  try {// Parse and validate the request body
     const body = await parseJsonBody<{
       company_id: unknown
       name: unknown
@@ -41,6 +41,8 @@ export async function POST(req: Request) {
     const phone = normalizePhone(body.phone)
 
     let defaultShiftLength: number | null = null
+
+    // Validate default_shift_length if provided
     if (body.default_shift_length !== undefined && body.default_shift_length !== null && body.default_shift_length !== "") {
       const parsed = Number(body.default_shift_length)
       if (!Number.isInteger(parsed) || parsed < 1 || parsed > 24) {
@@ -49,6 +51,7 @@ export async function POST(req: Request) {
       defaultShiftLength = parsed
     }
 
+    // Update the company in the database
     const { data, error } = await auth.service
       .from("companies")
       .update({
