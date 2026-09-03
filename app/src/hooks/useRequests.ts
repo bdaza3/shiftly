@@ -20,6 +20,24 @@ export type RequestRecord = {
   company_id?: string
 }
 
+const requestsInFlight = new Map<string, Promise<RequestRecord[]>>()
+
+function loadRequests(companyId: string) {
+  const existing = requestsInFlight.get(companyId)
+  if (existing) return existing
+
+  const request = (async () => {
+    const resp = await authFetch('/api/requests/list', { method: 'POST', body: JSON.stringify({ company_id: companyId }), cache: 'no-store' })
+    const json = await resp.json()
+    if (!resp.ok) throw new Error(json?.error || 'Failed to load requests')
+    return json.requests || []
+  })()
+
+  requestsInFlight.set(companyId, request)
+  request.finally(() => requestsInFlight.delete(companyId)).catch(() => {})
+  return request
+}
+
 export function useRequests() {
   const { user } = useAuth()
   const { selected } = useCompany()
@@ -33,20 +51,18 @@ export function useRequests() {
         setRequests([])
         return
       }
-      const resp = await authFetch('/api/requests/list', { method: 'POST', body: JSON.stringify({ company_id: selected.id }), cache: 'no-store' })
-      const json = await resp.json()
-      if (!resp.ok) {
-        console.warn('useRequests: server list failed', json)
-        setRequests([])
-      } else {
-        const data = json.requests || []
-        setRequests((data || []).map((r: any) => ({
+      try {
+        const data = await loadRequests(selected.id)
+        setRequests((data || []).map((r: RequestRecord) => ({
           ...r,
           createdAt: r.created_at ?? r.createdAt,
           employeeName: r.employee_name ?? r.employeeName ?? null,
           reason: r.details ?? r.reason ?? null,
           date: r.date ? (typeof r.date === 'string' ? r.date : new Date(r.date).toISOString().split('T')[0]) : ''
         })))
+      } catch (error) {
+        console.warn('useRequests: server list failed', error)
+        setRequests([])
       }
     } catch (e) {
       console.warn('useRequests: unexpected fetch error', e)

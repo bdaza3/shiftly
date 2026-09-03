@@ -20,9 +20,13 @@ export async function POST(req: Request) {
     const companyId = normalizeUuid(body.company_id, "company_id")
     const membership = await requireMembership(auth.service, companyId, auth.user.id)
 
-    let query = auth.service.from("requests").select("*").eq("company_id", companyId).order("created_at", {
+    let query = auth.service
+      .from("requests")
+      .select("id, requester_id, employee_name, type, date, details, status, created_at, company_id")
+      .eq("company_id", companyId)
+      .order("created_at", {
       ascending: false,
-    })
+      })
 
     if (!isPrivilegedRole(membership.role)) {
       query = query.eq("requester_id", auth.user.id)
