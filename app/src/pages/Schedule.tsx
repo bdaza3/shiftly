@@ -261,17 +261,18 @@ export function Schedule() {
     catch { setRedoHistory((prev) => [...prev, entry]); }
   }, [redoHistory, runAction]);
 
+  //function to handle saving a shift, either creating a new one or updating an existing one
   const handleSaveShift = useCallback(async (payload: any) => {
     const draft = withCompany(payload);
     console.log("Schedule.handleSaveShift called", { payload, selectedCompany: selected?.id });
-    if (payload.id) {
+    if (payload.id) {// update existing shift
       const existing = shifts.find((shift) => shift.id === payload.id);
       if (!existing) return;
       const before = toDraft(existing);
       await runAction("Saving shift", async () => { await updateShift(payload.id, draft); });
       console.log("Schedule.saved shift", { id: payload.id });
       pushHistory({ label: "Edit shift", undo: async () => { await updateShift(payload.id, before); }, redo: async () => { await updateShift(payload.id, draft); } });
-    } else {
+    } else {// create new shift
       let createdId = "";
       await runAction("Creating shift", async () => { const created = await createShift(draft); createdId = created.id; });
       if (payload.notifyPeople && payload.employees?.length && selected?.id) {

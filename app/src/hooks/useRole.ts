@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useCompany } from '../hooks/useCompany'
 
