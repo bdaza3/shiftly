@@ -20,7 +20,6 @@ type Membership = {
 
 const joinCodePattern = /^[A-Z0-9]{6,12}$/
 const phonePattern = /^[0-9+()\-\s]{7,20}$/
-const memoryRateLimits = new Map<string, { count: number; resetAt: number }>()
 
 function jsonError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status })
@@ -83,22 +82,24 @@ function enforceSameOrigin(req: Request) {
   return null
 }
 
-function checkRateLimit(key: string, limit: number, windowMs: number) {
-  const now = Date.now()
-  const current = memoryRateLimits.get(key)
+async function enforceRateLimit(
+  service: ReturnType<typeof getServiceClient>,
+  key: string,
+  limit: number,
+  windowMs: number
+) {
+  const { data, error } = await service.rpc("consume_api_rate_limit", {
+    target_key: key,
+    max_requests: limit,
+    window_ms: windowMs,
+  })
 
-  if (!current || current.resetAt <= now) {
-    memoryRateLimits.set(key, { count: 1, resetAt: now + windowMs })
-    return null
+  if (error) {
+    console.error("API rate limit storage failed", error)
+    return jsonError("request protection is temporarily unavailable", 503)
   }
 
-  if (current.count >= limit) {
-    return jsonError("too many requests", 429)
-  }
-
-  current.count += 1
-  memoryRateLimits.set(key, current)
-  return null
+  return data ? null : jsonError("too many requests", 429)
 }
 
 export async function authenticateRequest(
@@ -121,12 +122,15 @@ export async function authenticateRequest(
     }
 
     if (options.rateLimitKey) {
-      const limited = checkRateLimit(
+      const service = getServiceClient()
+      const limited = await enforceRateLimit(
+        service,
         `${options.rateLimitKey}:${data.user.id}`,
         options.limit ?? 30,
         options.windowMs ?? 60_000
       )
       if (limited) return { ok: false, response: limited }
+      return { ok: true, user: data.user, service }
     }
 
     return { ok: true, user: data.user, service: getServiceClient() }
