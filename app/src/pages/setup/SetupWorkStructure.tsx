@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Settings, ArrowRight, CheckCircle, Sparkles } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { useTranslations } from "next-intl";
 
 const DAYS_OF_WEEK = [
   { id: "mon", label: "Mon" },
@@ -13,16 +14,17 @@ const DAYS_OF_WEEK = [
   { id: "fri", label: "Fri" },
   { id: "sat", label: "Sat" },
   { id: "sun", label: "Sun" },
-];
+] as const;
 
 const SHIFT_TYPES = [
   { id: "morning", label: "Morning", time: "6am-2pm" },
   { id: "afternoon", label: "Afternoon", time: "2pm-10pm" },
   { id: "evening", label: "Evening", time: "5pm-close" },
   { id: "night", label: "Night", time: "10pm-6am" },
-];
+] as const;
 
 export function SetupWorkStructure() {
+  const t = useTranslations("setup");
   const [workingDays, setWorkingDays] = useState<string[]>([
     "mon",
     "tue",
@@ -75,7 +77,7 @@ export function SetupWorkStructure() {
       // Navigate to success page
       router.push("/setupsuccess");
     } catch (error) {
-      alert("Something went wrong. Please try again.");
+      alert(t("setupError"));
     } finally {
       setLoading(false);
     }
@@ -91,10 +93,10 @@ export function SetupWorkStructure() {
               <Settings className="w-8 h-8 text-[#10B981]" />
             </div>
             <h1 className="text-3xl font-bold text-blue-600 mb-2">
-              Work Structure
+              {t("workStructureTitle")}
             </h1>
             <p className="text-gray-500">
-              Define your typical work schedule
+              {t("workStructureDescription")}
             </p>
           </div>
 
@@ -105,14 +107,14 @@ export function SetupWorkStructure() {
                 <div className="w-10 h-10 rounded-full bg-[#10B981] text-white flex items-center justify-center text-sm font-medium">
                   ✓
                 </div>
-                <span className="text-xs text-gray-500 mt-1">Schedule</span>
+                <span className="text-xs text-gray-500 mt-1">{t("schedule")}</span>
               </div>
               <div className="w-16 h-0.5 bg-[#10B981]"></div>
               <div className="flex flex-col items-center">
                 <div className="w-10 h-10 rounded-full bg-[#10B981] text-white flex items-center justify-center text-sm font-medium">
                   ✓
                 </div>
-                <span className="text-xs text-gray-500 mt-1">Employees</span>
+                <span className="text-xs text-gray-500 mt-1">{t("employees")}</span>
               </div>
               <div className="w-16 h-0.5 bg-[#10B981]"></div>
               <div className="flex flex-col items-center">
@@ -120,7 +122,7 @@ export function SetupWorkStructure() {
                   3
                 </div>
                 <span className="text-xs font-medium text-gray-900 mt-1">
-                  Settings
+                  {t("settings")}
                 </span>
               </div>
             </div>
@@ -131,7 +133,7 @@ export function SetupWorkStructure() {
             {/* Working Days */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Which days does your business typically operate?
+                {t("operatingDays")}
               </label>
               <div className="flex gap-2 flex-wrap">
                 {DAYS_OF_WEEK.map((day) => (
@@ -144,7 +146,7 @@ export function SetupWorkStructure() {
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                     }`}
                   >
-                    {day.label}
+                    {t(day.id)}
                   </button>
                 ))}
               </div>
@@ -153,7 +155,7 @@ export function SetupWorkStructure() {
             {/* Shift Types */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                What types of shifts do you typically have?
+                {t("shiftTypesQuestion")}
               </label>
               <div className="grid sm:grid-cols-2 gap-3">
                 {SHIFT_TYPES.map((shift) => (
@@ -169,9 +171,9 @@ export function SetupWorkStructure() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900">
-                          {shift.label}
+                          {t(shift.id)}
                         </p>
-                        <p className="text-sm text-gray-500">{shift.time}</p>
+                        <p className="text-sm text-gray-500">{t(`${shift.id}Time`)}</p>
                       </div>
                       {selectedShiftTypes.includes(shift.id) && (
                         <CheckCircle className="w-5 h-5 text-blue-600" />
@@ -188,11 +190,10 @@ export function SetupWorkStructure() {
                 <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-indigo-900 mb-1">
-                    Don't worry, these can be changed later.
+                    {t("settingsCanChange")}
                   </p>
                   <p className="text-sm text-indigo-700">
-                    This helps us set up your schedule faster. You can always
-                    customize shifts and add custom types later.
+                    {t("workStructureTip")}
                   </p>
                 </div>
               </div>
@@ -205,7 +206,7 @@ export function SetupWorkStructure() {
               onClick={() => router.push("/setup/employees")}
               className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium hover:cursor-pointer"
             >
-              Back
+              {t("back")}
             </button>
             <button
               onClick={handleFinish}
@@ -213,10 +214,10 @@ export function SetupWorkStructure() {
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium hover:cursor-pointer"
             >
               {loading ? (
-                "Finishing Setup..."
+                t("finishing")
               ) : (
                 <>
-                  Finish Setup
+                  {t("finish")}
                   <CheckCircle className="w-5 h-5" />
                 </>
               )}
@@ -225,7 +226,7 @@ export function SetupWorkStructure() {
 
           {/* Progress indicator */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">Step 3 of 3</p>
+            <p className="text-sm text-gray-500">{t("stepOfThree", { step: 3 })}</p>
           </div>
         </div>
       </div>

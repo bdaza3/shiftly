@@ -3,35 +3,37 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar, ArrowRight, Sparkles, FileText, Utensils, Store, Hospital } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const SCHEDULE_TEMPLATES = [
   {
     id: "blank",
-    name: "Start from Scratch",
-    description: "Build your schedule from the ground up",
+    nameKey: "startFromScratch",
+    descriptionKey: "blankDescription",
     icon: FileText,
   },
   {
     id: "restaurant",
-    name: "Restaurant Template",
-    description: "Morning, lunch, and dinner shifts with typical breaks",
+    nameKey: "restaurantTemplate",
+    descriptionKey: "restaurantDescription",
     icon: Utensils,
   },
   {
     id: "retail",
-    name: "Retail Template",
-    description: "Opening, mid-day, and closing shifts for 7 days",
+    nameKey: "retailTemplate",
+    descriptionKey: "retailDescription",
     icon: Store,
   },
   {
     id: "healthcare",
-    name: "Healthcare Template",
-    description: "24/7 coverage with day, evening, and night shifts",
+    nameKey: "healthcareTemplate",
+    descriptionKey: "healthcareDescription",
     icon: Hospital,
   },
-];
+] as const;
 
 export function SetupSchedule() {
+  const t = useTranslations("setup");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const router = useRouter();
 
@@ -56,10 +58,10 @@ export function SetupSchedule() {
               <Calendar className="w-8 h-8 text-[#10B981]" />
             </div>
             <h1 className="text-3xl font-bold text-blue-600 mb-2">
-              Create Your First Schedule
+              {t("scheduleTitle")}
             </h1>
             <p className="text-gray-500">
-              Choose a template or start from scratch
+              {t("scheduleDescription")}
             </p>
           </div>
 
@@ -71,7 +73,7 @@ export function SetupSchedule() {
                   1
                 </div>
                 <span className="text-xs font-medium text-gray-900 mt-1">
-                  Schedule
+                  {t("schedule")}
                 </span>
               </div>
               <div className="w-16 h-0.5 bg-gray-300"></div>
@@ -79,14 +81,14 @@ export function SetupSchedule() {
                 <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm font-medium">
                   2
                 </div>
-                <span className="text-xs text-gray-500 mt-1">Employees</span>
+                <span className="text-xs text-gray-500 mt-1">{t("employees")}</span>
               </div>
               <div className="w-16 h-0.5 bg-gray-300"></div>
               <div className="flex flex-col items-center">
                 <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm font-medium">
                   3
                 </div>
-                <span className="text-xs text-gray-500 mt-1">Settings</span>
+                <span className="text-xs text-gray-500 mt-1">{t("settings")}</span>
               </div>
             </div>
           </div>
@@ -113,10 +115,10 @@ export function SetupSchedule() {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 mb-1">
-                      {template.name}
+                      {t(template.nameKey)}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {template.description}
+                      {t(template.descriptionKey)}
                     </p>
                   </div>
                   {selectedTemplate === template.id && (
@@ -135,11 +137,10 @@ export function SetupSchedule() {
               <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-indigo-900 mb-1">
-                  Smart Tip
+                  {t("smartTip")}
                 </p>
                 <p className="text-sm text-indigo-700">
-                  Templates give you a head start with industry-specific shift
-                  patterns. You can customize everything later!
+                  {t("templateTip")}
                 </p>
               </div>
             </div>
@@ -151,21 +152,21 @@ export function SetupSchedule() {
               onClick={handleSkip}
               className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium hover:cursor-pointer"
             >
-              Skip Setup
+              {t("skipSetup")}
             </button>
             <button
               onClick={handleContinue}
               disabled={!selectedTemplate}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium hover:cursor-pointer"
             >
-              Continue
+              {t("continue")}
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>
 
           {/* Progress indicator */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">Step 1 of 3</p>
+            <p className="text-sm text-gray-500">{t("stepOfThree", { step: 1 })}</p>
           </div>
         </div>
       </div>

@@ -26,6 +26,8 @@ function SaveBadge({ state }: { state: SaveState }) {
 
 export function ManageShifts() {
   const t = useTranslations("admin")
+  const scheduleText = useTranslations("schedule")
+  const common = useTranslations("common")
   const { selected } = useCompany();
   const { user } = useAuth();
   const { isAdmin } = useRole();
@@ -44,7 +46,8 @@ export function ManageShifts() {
   const setStatus = useCallback((kind: SaveState["kind"], message: string) => {
     if (resetRef.current) clearTimeout(resetRef.current);
     setSaveState({ kind, message });
-    if (kind === "saved" || kind === "error") resetRef.current = setTimeout(() => setSaveState(EMPTY_STATE), 2200);
+    if (kind === "saved") resetRef.current = setTimeout(() => setSaveState(EMPTY_STATE), 2200);
+    if (kind === "error") resetRef.current = setTimeout(() => setSaveState(EMPTY_STATE), 7000);
   }, []);
 
   useEffect(() => () => { if (resetRef.current) clearTimeout(resetRef.current); }, []);
@@ -70,19 +73,19 @@ export function ManageShifts() {
     console.log("ManageShifts.runAction start", { label });
     try {
       await action();
-      setStatus("saved", "Saved changes");
+      setStatus("saved", scheduleText("savedChanges"));
       console.log("ManageShifts.runAction success", { label });
     } catch (error) {
       console.error(label, error);
       console.log("ManageShifts.runAction error", { label, error });
-      setStatus("error", "Could not save changes");
+      setStatus("error", error instanceof Error ? `${scheduleText("couldNotSave")}: ${error.message}` : scheduleText("couldNotSave"));
       throw error;
     }
-  }, [setStatus]);
+  }, [scheduleText, setStatus]);
 
   const pushHistory = (entry: HistoryEntry) => { setHistory((prev) => [...prev, entry]); setRedoHistory([]); };
-  const handleUndo = async () => { const entry = history[history.length - 1]; if (!entry) return; setHistory((prev) => prev.slice(0, -1)); try { await runAction(`Undoing ${entry.label.toLowerCase()}`, entry.undo); setRedoHistory((prev) => [...prev, entry]); } catch { setHistory((prev) => [...prev, entry]); } };
-  const handleRedo = async () => { const entry = redoHistory[redoHistory.length - 1]; if (!entry) return; setRedoHistory((prev) => prev.slice(0, -1)); try { await runAction(`Redoing ${entry.label.toLowerCase()}`, entry.redo); setHistory((prev) => [...prev, entry]); } catch { setRedoHistory((prev) => [...prev, entry]); } };
+  const handleUndo = async () => { const entry = history[history.length - 1]; if (!entry) return; setHistory((prev) => prev.slice(0, -1)); try { await runAction(scheduleText("undoing"), entry.undo); setRedoHistory((prev) => [...prev, entry]); } catch { setHistory((prev) => [...prev, entry]); } };
+  const handleRedo = async () => { const entry = redoHistory[redoHistory.length - 1]; if (!entry) return; setRedoHistory((prev) => prev.slice(0, -1)); try { await runAction(scheduleText("redoing"), entry.redo); setHistory((prev) => [...prev, entry]); } catch { setRedoHistory((prev) => [...prev, entry]); } };
 
   const handleSave = async (payload: any) => {
     const draft = withCompany(payload);
@@ -90,12 +93,12 @@ export function ManageShifts() {
     if (payload.id) {
       const existing = shifts.find((shift) => shift.id === payload.id); if (!existing) return;
       const before = toDraft(existing);
-      await runAction("Saving shift", async () => { await updateShift(payload.id, draft); });
+      await runAction(scheduleText("savingShift"), async () => { await updateShift(payload.id, draft); });
       console.log("ManageShifts.saved shift", { id: payload.id });
       pushHistory({ label: "Edit shift", undo: async () => { await updateShift(payload.id, before); }, redo: async () => { await updateShift(payload.id, draft); } });
     } else {
       let createdId = "";
-      await runAction("Creating shift", async () => { const created = await createShift(draft); createdId = created.id; });
+      await runAction(scheduleText("creatingShift"), async () => { const created = await createShift(draft); createdId = created.id; });
       console.log("ManageShifts.created shift", { createdId });
       pushHistory({ label: "Create shift", undo: async () => { await deleteShift(createdId); }, redo: async () => { const recreated = await createShift(draft); createdId = recreated.id; } });
     }
@@ -107,7 +110,7 @@ export function ManageShifts() {
     console.log("ManageShifts.handleDelete called", { id });
     const existing = shifts.find((shift) => shift.id === id); if (!existing) return;
     const before = toDraft(existing); let activeId = id;
-    await runAction("Deleting shift", async () => { await deleteShift(id); });
+    await runAction(scheduleText("deletingShift"), async () => { await deleteShift(id); });
     console.log("ManageShifts.deleted shift", { id });
     pushHistory({ label: "Delete shift", undo: async () => { const restored = await createShift(before); activeId = restored.id; }, redo: async () => { await deleteShift(activeId); } });
     setShowModal(false);
@@ -118,7 +121,7 @@ export function ManageShifts() {
     console.log("ManageShifts.handleCopy called", { shiftId: shift?.id });
     const draft = withCompany(toDraft(shift));
     let createdId = "";
-    await runAction("Copying shift", async () => { const created = await createShift(draft); createdId = created.id; });
+    await runAction(scheduleText("copyingShift"), async () => { const created = await createShift(draft); createdId = created.id; });
     console.log("ManageShifts.copied shift", { createdId });
     pushHistory({ label: "Copy shift", undo: async () => { await deleteShift(createdId); }, redo: async () => { const recreated = await createShift(draft); createdId = recreated.id; } });
   };
@@ -134,9 +137,9 @@ export function ManageShifts() {
       .slice(0, available.length)
       .map((template, index) => withCompany({ date: today, ...template, employees: [available[index].id], employeeId: available[index].id, employeeName: available[index].name }));
     console.log("ManageShifts.handleAutoCreate computed", { availableCount: available.length, draftsCount: drafts.length });
-    if (!drafts.length) return setStatus("error", "No available employees for auto-fill");
+    if (!drafts.length) return setStatus("error", scheduleText("noAvailableEmployees"));
     let createdIds: string[] = [];
-    await runAction("Auto-filling shifts", async () => { createdIds = []; for (const draft of drafts) { const created = await createShift(draft); createdIds.push(created.id); } });
+    await runAction(scheduleText("autoFilling"), async () => { createdIds = []; for (const draft of drafts) { const created = await createShift(draft); createdIds.push(created.id); } });
     console.log("ManageShifts.handleAutoCreate created", { createdCount: createdIds.length, createdIds });
     pushHistory({ label: "Auto-fill shifts", undo: async () => { for (const id of createdIds) await deleteShift(id); }, redo: async () => { const nextIds: string[] = []; for (const draft of drafts) { const created = await createShift(draft); nextIds.push(created.id); } createdIds = nextIds; } });
   };
@@ -157,7 +160,7 @@ export function ManageShifts() {
             <>
               <button onClick={() => { console.log("ManageShifts.click Undo"); void handleUndo(); }} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Undo2 className="h-4 w-4" />{t('undo')}</button>
               <button onClick={() => { console.log("ManageShifts.click Redo"); void handleRedo(); }} disabled={redoHistory.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"><Redo2 className="h-4 w-4" />{t('redo')}</button>
-              <button onClick={() => { console.log("ManageShifts.click Auto Today"); void handleAutoCreate(); }} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Sparkles className="h-4 w-4" />Auto Today</button>
+              <button onClick={() => { console.log("ManageShifts.click Auto Today"); void handleAutoCreate(); }} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Sparkles className="h-4 w-4" />{scheduleText("autoToday")}</button>
               <button onClick={() => { console.log("ManageShifts.click New Shift"); setEditingShift(null); setShowModal(true); }} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 hover:cursor-pointer"><Plus className="h-5 w-5" />{t('newShift')}</button>
             </>
           )}
@@ -168,7 +171,7 @@ export function ManageShifts() {
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead><tr className="border-b border-gray-200"><th className="p-4 text-left font-semibold text-gray-700">Employee</th><th className="p-4 text-left font-semibold text-gray-700">Date</th><th className="p-4 text-left font-semibold text-gray-700">Time</th><th className="p-4 text-left font-semibold text-gray-700">Role</th><th className="p-4 text-left font-semibold text-gray-700">Location</th><th className="p-4 text-left font-semibold text-gray-700">Actions</th></tr></thead>
+          <thead><tr className="border-b border-gray-200"><th className="p-4 text-left font-semibold text-gray-700">{t("tableEmployee")}</th><th className="p-4 text-left font-semibold text-gray-700">{t("tableDate")}</th><th className="p-4 text-left font-semibold text-gray-700">{t("tableTime")}</th><th className="p-4 text-left font-semibold text-gray-700">{t("tableRole")}</th><th className="p-4 text-left font-semibold text-gray-700">{t("tableLocation")}</th><th className="p-4 text-left font-semibold text-gray-700">{t("tableActions")}</th></tr></thead>
           <tbody>
             {(loading ? [] : shifts).map((shift: any) => {
               const names = (shift.employees && shift.employees.length)
@@ -186,12 +189,12 @@ export function ManageShifts() {
                   <div className="flex gap-2">
                     {isAdmin ? (
                       <>
-                        <button onClick={() => { console.log("ManageShifts.click Edit", { shiftId: shift.id }); setEditingShift(shift); setShowModal(true); }} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><PencilIcon className="h-4 w-4" />Edit</button>
-                        <button onClick={() => { console.log("ManageShifts.click Copy", { shiftId: shift.id }); void handleCopy(shift); }} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Copy className="h-4 w-4" />Copy</button>
-                        <button onClick={() => { console.log("ManageShifts.click Delete", { shiftId: shift.id }); void handleDelete(shift.id); }} className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:cursor-pointer"><Trash2 className="h-4 w-4" />Delete</button>
+                        <button onClick={() => { console.log("ManageShifts.click Edit", { shiftId: shift.id }); setEditingShift(shift); setShowModal(true); }} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><PencilIcon className="h-4 w-4" />{common("edit")}</button>
+                        <button onClick={() => { console.log("ManageShifts.click Copy", { shiftId: shift.id }); void handleCopy(shift); }} className="inline-flex items-center gap-2 rounded border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 hover:cursor-pointer"><Copy className="h-4 w-4" />{common("copy")}</button>
+                        <button onClick={() => { console.log("ManageShifts.click Delete", { shiftId: shift.id }); void handleDelete(shift.id); }} className="inline-flex items-center gap-2 rounded border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 hover:cursor-pointer"><Trash2 className="h-4 w-4" />{common("delete")}</button>
                       </>
                     ) : (
-                      <div className="text-sm text-gray-400">Restricted</div>
+                      <div className="text-sm text-gray-400">{common("restricted")}</div>
                     )}
                   </div>
                 </td>

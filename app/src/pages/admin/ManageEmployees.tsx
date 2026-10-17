@@ -185,7 +185,7 @@ export function ManageEmployees() {
 
   const handleEditEmployee = (name: string) => {
     setActionMenuOpenFor(null)
-    alert(`Edit for ${name} is coming soon.`)
+    alert(t("editComingSoon", { name }))
   }
 
   return (

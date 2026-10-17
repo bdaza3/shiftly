@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { Users, ArrowRight, Mail, Plus, X, Link as LinkIcon, LightbulbIcon } from "lucide-react";
 import { useCompany } from "../../hooks/useCompany";
 import { authFetch } from "@/lib/authFetch";
+import { useTranslations } from "next-intl";
 
 export function SetupEmployees() {
+  const t = useTranslations("setup");
   const [emails, setEmails] = useState<string[]>([""]);
   const [inviteLink, setInviteLink] = useState("");
   const router = useRouter();
@@ -82,10 +84,10 @@ export function SetupEmployees() {
               <Users className="w-8 h-8 text-[#F59E0B]" />
             </div>
             <h1 className="text-3xl font-bold text-blue-600 mb-2">
-              Invite Your Team
+              {t("employeesTitle")}
             </h1>
             <p className="text-gray-500">
-              Add employees to get started with scheduling
+              {t("employeesDescription")}
             </p>
           </div>
 
@@ -96,7 +98,7 @@ export function SetupEmployees() {
                 <div className="w-10 h-10 rounded-full bg-[#10B981] text-white flex items-center justify-center text-sm font-medium">
                   ✓
                 </div>
-                <span className="text-xs text-gray-500 mt-1">Schedule</span>
+                <span className="text-xs text-gray-500 mt-1">{t("schedule")}</span>
               </div>
               <div className="w-16 h-0.5 bg-[#10B981]"></div>
               <div className="flex flex-col items-center">
@@ -104,7 +106,7 @@ export function SetupEmployees() {
                   2
                 </div>
                 <span className="text-xs font-medium text-gray-900 mt-1">
-                  Employees
+                  {t("employees")}
                 </span>
               </div>
               <div className="w-16 h-0.5 bg-gray-300"></div>
@@ -112,7 +114,7 @@ export function SetupEmployees() {
                 <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm font-medium">
                   3
                 </div>
-                <span className="text-xs text-gray-500 mt-1">Settings</span>
+                <span className="text-xs text-gray-500 mt-1">{t("settings")}</span>
               </div>
             </div>
           </div>
@@ -123,7 +125,7 @@ export function SetupEmployees() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <Mail className="inline w-4 h-4 mr-1" />
-                Invite by Email
+                {t("inviteByEmail")}
               </label>
               <div className="space-y-2 mb-3">
                 {emails.map((email, index) => (
@@ -132,12 +134,13 @@ export function SetupEmployees() {
                       type="email"
                       value={email}
                       onChange={(e) => updateEmail(index, e.target.value)}
-                      placeholder="employee@example.com"
+                      placeholder={t("emailPlaceholder")}
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                     />
                     {emails.length > 1 && (
                       <button
                         type="button"
+                        aria-label={t("removeEmail")}
                         onClick={() => removeEmailField(index)}
                         className="p-2 text-gray-400 hover:text-red-500 transition-colors hover:cursor-pointer"
                       >
@@ -153,7 +156,7 @@ export function SetupEmployees() {
                 className="flex items-center gap-2 text-sm text-blue-600 hover:text-[#6366F1] font-medium hover:cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                Add another email
+                {t("addEmail")}
               </button>
             </div>
 
@@ -163,7 +166,7 @@ export function SetupEmployees() {
                 <div className="w-full border-t border-gray-300"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">OR</span>
+                <span className="px-4 bg-white text-gray-500">{t("or")}</span>
               </div>
             </div>
 
@@ -171,16 +174,16 @@ export function SetupEmployees() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <LinkIcon className="inline w-4 h-4 mr-1" />
-                Share Invite Link
+                {t("shareInviteLink")}
               </label>
               {!inviteLink ? (
                 <div className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 font-medium">
-                  {companiesLoading ? "Loading the company invite link…" : "Invite link unavailable. You can find it later from Manage Employees."}
+                  {companiesLoading ? t("loadingInviteLink") : t("inviteUnavailable")}
                 </div>
               ) : (
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-sm font-medium text-green-900 mb-2">
-                    Share this link with your team:
+                    {t("shareLinkWithTeam")}
                   </p>
                   <div className="flex gap-2">
                     <input
@@ -192,15 +195,15 @@ export function SetupEmployees() {
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(inviteLink);
-                        alert("Link copied!");
+                        alert(t("linkCopied"));
                       }}
                       className="px-4 py-2 bg-[#10B981] text-white rounded hover:bg-[#059669] transition-colors text-sm font-medium"
                     >
-                      Copy
+                      {t("copy")}
                     </button>
                   </div>
                   <p className="text-xs text-green-700 mt-2">
-                    Join Code: {inviteLink.split("/").pop()}
+                    {t("joinCode", { code: inviteLink.split("/").pop() })}
                   </p>
                 </div>
               )}
@@ -210,9 +213,7 @@ export function SetupEmployees() {
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-900">
                 <LightbulbIcon className="inline w-4 h-4 mr-1" />
-                <strong>Tip:</strong> You can always invite more employees
-                later from your dashboard. Do not worry about getting everyone set
-                up right now!
+                <strong>{t("tipTitle")}</strong> {t("inviteLaterTip")}
               </p>
             </div>
           </div>
@@ -223,20 +224,20 @@ export function SetupEmployees() {
               onClick={handleSkip}
               className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium hover:cursor-pointer"
             >
-              Skip for Now
+              {t("skipForNow")}
             </button>
             <button
               onClick={handleContinue}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium hover:cursor-pointer"
             >
-              Continue
+              {t("continue")}
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>
 
           {/* Progress indicator */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">Step 2 of 3</p>
+            <p className="text-sm text-gray-500">{t("stepOfThree", { step: 2 })}</p>
           </div>
         </div>
       </div>

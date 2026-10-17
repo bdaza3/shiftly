@@ -6,8 +6,10 @@ import { useCompany } from "../hooks/useCompany";
 import { useAuth } from "../hooks/useAuth";
 import { authFetch } from "@/lib/authFetch";
 import { sanitizeString } from "../../../lib/inputSanitizer";
+import { useTranslations } from "next-intl";
 
 export default function CompanySelector({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useTranslations("companySelector");
   const { companies, selectCompany, addCompany } = useCompany();
   const [newName, setNewName] = useState("");
   const { user } = useAuth();
@@ -25,11 +27,12 @@ export default function CompanySelector({ open, onClose }: { open: boolean; onCl
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md z-10 p-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Select Company</h2>
-          <button onClick={onClose} className="text-sm text-gray-500 hover:bg-gray-200 hover:cursor-pointer">Close</button>
+          <h2 className="text-lg font-semibold">{t("title")}</h2>
+          <button onClick={onClose} className="text-sm text-gray-500 hover:bg-gray-200 hover:cursor-pointer">{t("close")}</button>
         </div>
 
         <div className="mt-4 space-y-2 max-h-48 overflow-auto">
+          {companies.length === 0 && <p className="px-3 py-2 text-sm text-gray-500">{t("noCompanies")}</p>}
           {companies.map((c) => (
             <button
               key={c.id}
@@ -46,13 +49,13 @@ export default function CompanySelector({ open, onClose }: { open: boolean; onCl
         </div>
 
         <div className="mt-4 border-t pt-4">
-          <label className="text-sm text-gray-600">Create new company</label>
+          <label className="text-sm text-gray-600">{t("createNew")}</label>
           <div className="flex gap-2 mt-2">
             <input
               value={newName}
               onChange={(e) => setNewName(sanitizeString(e.target.value, 120))}
               className="flex-1 border rounded px-2 py-1 text-sm"
-              placeholder="Company name"
+              placeholder={t("companyName")}
             />
             <button
               onClick={async () => {
@@ -68,7 +71,7 @@ export default function CompanySelector({ open, onClose }: { open: boolean; onCl
                   });
                   const json = await resp.json();
                   if (!resp.ok) {
-                    const msg = json?.error || 'failed creating company';
+                    const msg = json?.error || t("createFailed");
                     setError(msg);
                     setCreating(false);
                     return;
@@ -86,8 +89,9 @@ export default function CompanySelector({ open, onClose }: { open: boolean; onCl
               disabled={creating || !newName.trim()}
               className="bg-blue-600 text-white px-3 py-1 rounded text-sm disabled:opacity-60 hover:bg-blue-700 disabled:bg-gray-500 transition-colors hover:cursor-pointer disabled:hover:cursor-not-allowed"
             >
-              {creating ? 'Creating…' : 'Create'}
+              {creating ? t("creating") : t("create")}
             </button>
+          {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
           </div>
         </div>
       </div>

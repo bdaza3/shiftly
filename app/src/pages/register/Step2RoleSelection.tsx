@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, Users, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function Step2RoleSelection() {
+  const t = useTranslations("roleSelection");
   const router = useRouter();
   const [role, setRole] = useState<"employee" | "manager" | null>(null);
 
@@ -33,19 +35,19 @@ export function Step2RoleSelection() {
         <div className="p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-blue-600 mb-2">Shiftly</h1>
-            <p className="text-gray-500">How will you be using Shiftly?</p>
+            <p className="text-gray-500">{t("description")}</p>
           </div>
 
           <div className="mb-8">
             <div className="flex items-center justify-center gap-2">
               <div className="flex items-center">
                 <div className="w-8 h-8 rounded-full bg-[#10B981] text-white flex items-center justify-center text-sm font-medium">✓</div>
-                <span className="ml-2 text-sm font-medium text-gray-500">Basic Info</span>
+                <span className="ml-2 text-sm font-medium text-gray-500">{t("basicInfo")}</span>
               </div>
               <div className="w-12 h-0.5 bg-[#10B981] mx-2"></div>
               <div className="flex items-center">
                 <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">2</div>
-                <span className="ml-2 text-sm font-medium text-gray-900">Account Setup</span>
+                <span className="ml-2 text-sm font-medium text-gray-900">{t("accountSetup")}</span>
               </div>
             </div>
           </div>
@@ -64,24 +66,24 @@ export function Step2RoleSelection() {
               <div className="w-14 h-14 rounded-full bg-blue-600 bg-opacity-10 flex items-center justify-center mb-4">
                 <Users className="w-7 h-7 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">I'm an Employee</h3>
-              <p className="text-gray-600 mb-4">Join your company's workspace using an invite code or request access.</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t("employeeTitle")}</h3>
+              <p className="text-gray-600 mb-4">{t("employeeDescription")}</p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start">
                   <span className="text-blue-600 mr-2">✓</span>
-                  View your schedule
+                  {t("viewSchedule")}
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-600 mr-2">✓</span>
-                  Request time off & shift swaps
+                  {t("requestTimeOff")}
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-600 mr-2">✓</span>
-                  Manage your availability
+                  {t("manageAvailability")}
                 </li>
               </ul>
               <div className="mt-6 flex items-center text-blue-600 font-medium">
-                Join Company
+                {t("joinCompany")}
                 <ArrowRight className="w-5 h-5 ml-2" />
               </div>
             </button>
@@ -98,24 +100,24 @@ export function Step2RoleSelection() {
               <div className="w-14 h-14 rounded-full bg-[#F59E0B] bg-opacity-10 flex items-center justify-center mb-4">
                 <Briefcase className="w-7 h-7 text-[#F59E0B]" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">I'm a Manager/Owner</h3>
-              <p className="text-gray-600 mb-4">Create your company workspace and invite your team</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t("managerTitle")}</h3>
+              <p className="text-gray-600 mb-4">{t("managerDescription")}</p>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start">
                   <span className="text-[#F59E0B] mr-2">✓</span>
-                  Create & manage schedules
+                  {t("manageSchedules")}
                 </li>
                 <li className="flex items-start">
                   <span className="text-[#F59E0B] mr-2">✓</span>
-                  Manage employees & shifts
+                  {t("manageEmployeesShifts")}
                 </li>
                 <li className="flex items-start">
                   <span className="text-[#F59E0B] mr-2">✓</span>
-                  Approve requests & view reports
+                  {t("approveRequestsReports")}
                 </li>
               </ul>
               <div className="mt-6 flex items-center text-[#F59E0B] font-medium">
-                Create Company
+                {t("createCompany")}
                 <ArrowRight className="w-5 h-5 ml-2" />
               </div>
             </button>
@@ -123,7 +125,7 @@ export function Step2RoleSelection() {
 
           <div className="flex items-center justify-center gap-2">
             <button onClick={() => router.push("/register")} className="w-1/5 py-3 text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium hover:cursor-pointer flex items-center justify-center gap-1 border border-gray-300 rounded-lg hover:bg-gray-50">
-              ← Go Back
+              ← {t("back")}
             </button>
           </div>
 

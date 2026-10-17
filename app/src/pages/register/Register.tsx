@@ -11,8 +11,10 @@ import { useAuth } from "../../hooks/useAuth";
 import { supabase } from "../../../../lib/supabaseClient";
 import { authFetch } from "@/lib/authFetch";
 import { sanitizeString, sanitizePhone } from "@/lib/inputSanitizer";
+import { useTranslations } from "next-intl";
 
 export function Register() {
+  const t = useTranslations("registration");
   const { user, refreshProfile, syncLocalAuth, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -111,7 +113,7 @@ export function Register() {
       console.error('Register: submission failed', err);
       const text = err?.message || String(err)
       setMessage(text)
-      alert(text);
+      alert(`${t("registrationFailed")}: ${text}`);
     } finally {
       setLoading(false);
     }
@@ -132,7 +134,7 @@ export function Register() {
   if (authLoading) {
     return (
       <div className="max-w-2xl mx-auto p-6">
-        <p className="text-center text-gray-600">Loading...</p>
+        <p className="text-center text-gray-600">{t("loading")}</p>
       </div>
     )
   }
@@ -140,7 +142,7 @@ export function Register() {
   if (!user) {
     return (
       <div className="max-w-2xl mx-auto p-6">
-        <p className="text-center text-gray-600">You must be signed in to complete registration.</p>
+        <p className="text-center text-gray-600">{t("signInRequired")}</p>
       </div>
     );
   }
@@ -164,26 +166,26 @@ export function Register() {
         <div className="p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-blue-600 mb-2">Shiftly</h1>
-            <p className="text-gray-500">Let's get started!</p>
+            <p className="text-gray-500">{t("getStarted")}</p>
           </div>
 
           <div className="mb-8">
             <div className="flex items-center justify-center gap-2">
               <div className="flex items-center">
                 <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">1</div>
-                <span className="ml-2 text-sm font-medium text-gray-900">Basic Info</span>
+                <span className="ml-2 text-sm font-medium text-gray-900">{t("basicInfo")}</span>
               </div>
               <div className="w-12 h-0.5 bg-gray-300 mx-2"></div>
               <div className="flex items-center">
                 <div className="w-8 h-8 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm font-medium">2</div>
-                <span className="ml-2 text-sm text-gray-500">Account Setup</span>
+                <span className="ml-2 text-sm text-gray-500">{t("accountSetup")}</span>
               </div>
             </div>
           </div>
 
           <form onSubmit={handleContinue} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">First name
+              <label className="block text-sm font-medium text-gray-700">{t("firstName")}
                 <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
               </label>
               <input
@@ -198,7 +200,7 @@ export function Register() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Last name
+              <label className="block text-sm font-medium text-gray-700">{t("lastName")}
                 <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
               </label>              
               <input
@@ -213,7 +215,7 @@ export function Register() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Phone number
+              <label className="block text-sm font-medium text-gray-700">{t("phoneNumber")}
                 <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
               </label>              
               <input
@@ -225,11 +227,11 @@ export function Register() {
                 placeholder="+1 (555) 000-0000"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
               />
-              <p className="mt-1 text-xs text-gray-500">We'll use this for shift reminders and notifications</p>
+              <p className="mt-1 text-xs text-gray-500">{t("phoneHint")}</p>
             </div>
 
             <button type="submit" className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors hover:cursor-pointer font-medium">
-              Continue
+              {t("continue")}
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
                 <path d="M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -238,7 +240,7 @@ export function Register() {
           </form>
 
           <div className="mt-6 text-center">
-            <Link href="/login" className="text-sm text-blue-600 hover:text-blue-700 font-medium">Already have an account? Sign in</Link>
+            <Link href="/login" className="text-sm text-blue-600 hover:text-blue-700 font-medium">{t("accountPrompt")} {t("signIn")}</Link>
           </div>
         </div>
       </div>

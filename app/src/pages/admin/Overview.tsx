@@ -13,8 +13,10 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useCompany } from "../../hooks/useCompany";
 import { authFetch } from "@/lib/authFetch";
+import { useTranslations } from "next-intl";
 
 export function Overview() {
+  const t = useTranslations("adminOverview");
   const { selected } = useCompany();
   const [loading, setLoading] = useState(false);
   const [Employees, setEmployees] = useState<any[]>([]);
@@ -107,9 +109,9 @@ export function Overview() {
         <div className="flex items-center gap-4">
           <BarChart3 className="w-6 h-6 text-blue-600" />
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t("title")}</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Analytics and insights for your team
+              {t("description")}
             </p>
           </div>
         </div>
@@ -120,13 +122,13 @@ export function Overview() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Employees</p>
+              <p className="text-sm text-gray-500">{t("totalEmployees")}</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
                 {totalEmployees}
               </p>
               <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
                 <TrendingUp className="w-4 h-4" />
-                <span>Active</span>
+                <span>{t("active")}</span>
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-600 bg-opacity-10 rounded-lg flex items-center justify-center">
@@ -138,11 +140,11 @@ export function Overview() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Shifts</p>
+              <p className="text-sm text-gray-500">{t("totalShifts")}</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
                 {totalShifts}
               </p>
-              <p className="text-sm text-gray-500 mt-2">This week</p>
+              <p className="text-sm text-gray-500 mt-2">{t("thisWeek")}</p>
             </div>
             <div className="w-12 h-12 bg-blue-600 bg-opacity-10 rounded-lg flex items-center justify-center">
               <Calendar className="w-6 h-6 text-blue-600" />
@@ -153,11 +155,11 @@ export function Overview() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Pending Requests</p>
+              <p className="text-sm text-gray-500">{t("pendingRequests")}</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
                 {pendingRequests}
               </p>
-              <p className="text-sm text-amber-600 mt-2">Needs review</p>
+              <p className="text-sm text-amber-600 mt-2">{t("needsReview")}</p>
             </div>
             <div className="w-12 h-12 bg-amber-500 bg-opacity-10 rounded-lg flex items-center justify-center">
               <Clock className="w-6 h-6 text-amber-500" />
@@ -168,11 +170,11 @@ export function Overview() {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Completed Shifts</p>
+              <p className="text-sm text-gray-500">{t("completedShifts")}</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
                 {completedShifts}
               </p>
-              <p className="text-sm text-green-600 mt-2">This month</p>
+              <p className="text-sm text-green-600 mt-2">{t("thisMonth")}</p>
             </div>
             <div className="w-12 h-12 bg-green-500 bg-opacity-10 rounded-lg flex items-center justify-center">
               <CheckCircle2 className="w-6 h-6 text-green-500" />
@@ -185,7 +187,7 @@ export function Overview() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Shifts by Role
+            {t("shiftsByRole")}
           </h3>
           <div className="space-y-4">
             {[
@@ -198,7 +200,7 @@ export function Overview() {
                   <span className="text-sm font-medium text-gray-700">
                     {item.role}
                   </span>
-                  <span className="text-sm text-gray-500">{item.count} shifts</span>
+                  <span className="text-sm text-gray-500">{t("shiftCount", { count: item.count })}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
@@ -213,34 +215,34 @@ export function Overview() {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Recent Activity
+            {t("recentActivity")}
           </h3>
           <div className="space-y-4">
             <div className="flex items-start gap-3 pb-4 border-b border-gray-200">
               <div className="w-2 h-2 rounded-full bg-green-500 mt-2" />
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  Shift approved for John Doe
+                  {t("shiftApproved", { name: "John Doe" })}
                 </p>
-                <p className="text-xs text-gray-500">2 hours ago</p>
+                <p className="text-xs text-gray-500">{t("hoursAgo", { count: 2 })}</p>
               </div>
             </div>
             <div className="flex items-start gap-3 pb-4 border-b border-gray-200">
               <div className="w-2 h-2 rounded-full bg-blue-500 mt-2" />
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  New request from Sarah Johnson
+                  {t("newRequest", { name: "Sarah Johnson" })}
                 </p>
-                <p className="text-xs text-gray-500">5 hours ago</p>
+                <p className="text-xs text-gray-500">{t("hoursAgo", { count: 5 })}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 rounded-full bg-purple-500 mt-2" />
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  Shift created for Mike Chen
+                  {t("shiftCreated", { name: "Mike Chen" })}
                 </p>
-                <p className="text-xs text-gray-500">1 day ago</p>
+                <p className="text-xs text-gray-500">{t("dayAgo")}</p>
               </div>
             </div>
           </div>

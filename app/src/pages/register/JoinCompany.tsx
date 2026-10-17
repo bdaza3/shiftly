@@ -7,8 +7,11 @@ import { useAuth } from "../../hooks/useAuth";
 import { useCompany } from "../../hooks/useCompany";
 import { authFetch } from "@/lib/authFetch";
 import { sanitizeJoinCode } from "@/lib/inputSanitizer";
+import { useTranslations } from "next-intl";
 
 export default function JoinCompany() {
+	const t = useTranslations("joinCompany");
+	const registrationText = useTranslations("registration");
 	const [joinCode, setJoinCode] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [companyPreview, setCompanyPreview] = useState<{
@@ -72,7 +75,7 @@ export default function JoinCompany() {
 		try {
 			const step1Data = JSON.parse(sessionStorage.getItem("registration_step1") || "{}");
 
-			if (!user?.id) throw new Error("Not signed in");
+			if (!user?.id) throw new Error(registrationText("notSignedIn"));
 
 			const resp = await authFetch("/api/companies/join", {
 				method: "POST",
@@ -86,7 +89,7 @@ export default function JoinCompany() {
 
 			const json = await resp.json();
 			if (!resp.ok || json?.error) {
-				throw new Error(json?.error || "Failed to join company");
+				throw new Error(json?.error || registrationText("companyJoinFailed"));
 			}
 
 			if (json?.company) {
@@ -107,7 +110,7 @@ export default function JoinCompany() {
 			router.replace("/dashboard");
 		} catch (error: unknown) {
 			const message = error instanceof Error ? error.message : String(error);
-			alert(message || "Invalid join code. Please check and try again.");
+			alert(`${t("joinFailed")}: ${message || t("invalidJoinCode")}`);
 		} finally {
 			setLoading(false);
 		}
@@ -121,8 +124,8 @@ export default function JoinCompany() {
 						<div className="w-16 h-16 rounded-full bg-blue-600 bg-opacity-10 flex items-center justify-center mx-auto mb-4">
 							<Building2 className="w-8 h-8 text-blue-600" />
 						</div>
-						<h1 className="text-3xl font-bold text-blue-600 mb-2">Join Your Company</h1>
-						<p className="text-gray-500">Enter the invite code from your manager</p>
+						<h1 className="text-3xl font-bold text-blue-600 mb-2">{t("title")}</h1>
+						<p className="text-gray-500">{t("description")}</p>
 					</div>
 
 					<div className="mb-8">
@@ -148,7 +151,7 @@ export default function JoinCompany() {
 					<form onSubmit={handleSubmit} className="space-y-6">
 						<div>
 							<label htmlFor="joinCode" className="block text-sm font-medium text-gray-700 mb-2">
-								Company Join Code
+								{t("joinCode")}
 							</label>
 							<div className="relative">
 								<Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -158,12 +161,12 @@ export default function JoinCompany() {
 									value={joinCode}
 									onChange={(e) => handleCodeChange(e.target.value)}
 									required
-									placeholder="ABC123"
+								placeholder={t("codePlaceholder")}
 									maxLength={6}
 									className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent uppercase tracking-wider text-center text-lg font-mono"
 								/>
 							</div>
-							<p className="mt-1 text-xs text-gray-500">Ask your manager for the 6-character join code</p>
+							<p className="mt-1 text-xs text-gray-500">{t("askManager")}</p>
 						</div>
 
 						{companyPreview && (
@@ -171,7 +174,7 @@ export default function JoinCompany() {
 								<div className="flex items-start gap-3">
 									<CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
 									<div>
-										<p className="text-sm font-medium text-green-900">You&apos;re joining:</p>
+						<p className="text-sm font-medium text-green-900">{t("joiningCompany")}</p>
 										<p className="text-lg font-semibold text-green-900 mt-1">{companyPreview.name}</p>
 										{companyPreview.industry && <p className="text-sm text-green-700 mt-0.5">{companyPreview.industry}</p>}
 									</div>
@@ -180,8 +183,8 @@ export default function JoinCompany() {
 						)}
 
 						<div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-							<p className="text-sm text-blue-900 font-medium mb-2">Don&apos;t have a join code?</p>
-							<p className="text-sm text-blue-700">Contact your manager or company owner to get an invite code. They can generate one from their admin dashboard.</p>
+							<p className="text-sm text-blue-900 font-medium mb-2">{t("noCodeTitle")}</p>
+							<p className="text-sm text-blue-700">{t("noCodeDescription")}</p>
 						</div>
 
 						<div className="flex gap-3 pt-4">
@@ -190,7 +193,7 @@ export default function JoinCompany() {
 								onClick={() => router.push("/register?step=2")}
 								className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium hover:cursor-pointer"
 							>
-								← Back
+								← {t("back")}
 							</button>
 							<button
 								type="submit"
@@ -198,10 +201,10 @@ export default function JoinCompany() {
 								className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium hover:cursor-pointer"
 							>
 								{loading ? (
-									"Joining..."
+									t("joining")
 								) : (
 									<>
-										Join Company
+										{t("join")}
 										<ArrowRight className="w-5 h-5" />
 									</>
 								)}
@@ -210,15 +213,15 @@ export default function JoinCompany() {
 					</form>
 
 					<div className="mt-6 pt-6 border-t border-gray-200">
-						<p className="text-center text-sm text-gray-600 mb-3">Or join using:</p>
+						<p className="text-center text-sm text-gray-600 mb-3">{t("orJoinUsing")}</p>
 						<div className="flex gap-3">
 							<button type="button" className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium hover:cursor-pointer flex items-center justify-center gap-1">
 								<MailIcon className="w-5 h-5 mr-2 inline" />
-								    Email Invite
+								    {t("emailInvite")}
 							</button>
 							<button type="button" className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium hover:cursor-pointer flex items-center justify-center gap-1">
 								<QrCodeIcon className="w-5 h-5 mr-2 inline" />
-								    QR Code
+								    {t("qrCode")}
 							</button>
 						</div>
 					</div>
