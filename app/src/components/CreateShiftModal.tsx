@@ -32,7 +32,7 @@ export default function CreateShiftModal({
 }: {
   visible: boolean;
   onClose: () => void;
-  onSave: (shift: any) => void;
+  onSave: (shift: any) => void | Promise<void>;
   onDelete?: (id: string) => void;
   initialData?: any;
   employees: Employee[];
@@ -147,7 +147,9 @@ export default function CreateShiftModal({
       ...(notificationMessage.trim() ? { notificationMessage: notificationMessage.trim() } : {}),
     };
 
-    onSave(payload);
+    // The schedule displays the save failure; consume the rejection here so a
+    // failed persistence request doesn't become an unhandled event promise.
+    void Promise.resolve().then(() => onSave(payload)).catch(() => undefined);
   };
 
   return (

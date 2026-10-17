@@ -13,6 +13,7 @@ import {
   Redo2,
   Sparkles,
   Undo2,
+  XCircle,
 } from "lucide-react";
 import CreateShiftModal from "../components/CreateShiftModal";
 import GanttDayDetail from "../components/GanttDayDetail";
@@ -96,7 +97,7 @@ function SaveBadge({ state }: { state: SaveState }) {
   const tone = state.kind === "saved" ? "bg-emerald-50 text-emerald-700" : state.kind === "error" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700";
   return (
     <div className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm ${tone}`}>
-      {state.kind === "saving" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+      {state.kind === "saving" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : state.kind === "error" ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
       <span>{state.message}</span>
     </div>
   );
@@ -131,7 +132,8 @@ export function Schedule() {
   const setStatus = useCallback((kind: SaveState["kind"], message: string) => {
     if (resetRef.current) clearTimeout(resetRef.current);
     setSaveState({ kind, message });
-    if (kind === "saved" || kind === "error") resetRef.current = setTimeout(() => setSaveState(EMPTY_STATE), 2200);
+    if (kind === "saved") resetRef.current = setTimeout(() => setSaveState(EMPTY_STATE), 2200);
+    if (kind === "error") resetRef.current = setTimeout(() => setSaveState(EMPTY_STATE), 7000);
   }, []);
 
   useEffect(() => () => { if (resetRef.current) clearTimeout(resetRef.current); }, []);
@@ -212,7 +214,7 @@ export function Schedule() {
       setStatus("saved", "Saved changes");
     } catch (error) {
       console.error(label, error);
-      setStatus("error", "Could not save changes");
+      setStatus("error", error instanceof Error ? error.message : "Could not save changes");
       throw error;
     }
   }, [setStatus]);

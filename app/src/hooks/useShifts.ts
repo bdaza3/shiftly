@@ -22,6 +22,48 @@ const mapRow = (r: any): Shift => ({
   ...r,
 });
 
+async function readAssignments(shiftId: string) {
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select("shift_id, user_id")
+    .eq("shift_id", shiftId);
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function replaceAssignments(shiftId: string, userIds: string[]) {
+  const uniqueUserIds = [...new Set(userIds)];
+  const previous = await readAssignments(shiftId);
+  const { error: deleteError } = await supabase
+    .from("shift_assignments")
+    .delete()
+    .eq("shift_id", shiftId);
+  if (deleteError) throw deleteError;
+
+  if (uniqueUserIds.length === 0) return;
+
+  const { error: insertError } = await supabase
+    .from("shift_assignments")
+    .insert(uniqueUserIds.map((user_id) => ({ shift_id: shiftId, user_id })));
+  if (!insertError) return;
+
+  // PostgREST doesn't provide a transaction spanning these requests. Restore
+  // the previous assignments if inserting the replacement set fails.
+  if (previous.length > 0) {
+    const { error: restoreError } = await supabase
+      .from("shift_assignments")
+      .insert(previous);
+    if (restoreError) {
+      throw new Error(`Could not save shift assignments and could not restore the previous assignments: ${restoreError.message}`, { cause: insertError });
+    }
+  }
+  throw insertError;
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function useShifts(companyId?: string | null) {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -183,18 +225,17 @@ export function useShifts(companyId?: string | null) {
     // If client provided employees but DB schema doesn't store them on shifts,
     // try to persist assignments in `shift_assignments` and ensure returned shift
     // object contains `employees` and a usable `employeeName` to avoid UI crashes.
-    if (payload.employees && Array.isArray(payload.employees) && payload.employees.length > 0) {
+    if (Array.isArray(payload.employees) && payload.employees.length > 0) {
       try {
-        const assignments = payload.employees.map((uid: string) => ({ shift_id: mapped.id, user_id: uid }));
-        try {
-          await supabase.from('shift_assignments').insert(assignments);
-        } catch (e) {
-          // ignore assignment creation errors (RLS/missing table/etc.)
+        await replaceAssignments(mapped.id, payload.employees);
+      } catch (assignmentError) {
+        const { error: cleanupError } = await supabase.from("shifts").delete().eq("id", mapped.id);
+        if (cleanupError) {
+          throw new Error(`Shift was created, but assignments could not be saved (${errorMessage(assignmentError)}). The shift cleanup also failed (${cleanupError.message}).`, { cause: assignmentError });
         }
-        mapped = { ...mapped, employees: payload.employees, employeeName: payload.employeeName ?? payload.employees[0] };
-      } catch (e) {
-        // ignore
+        throw new Error(`Shift was not saved because assignments could not be saved: ${errorMessage(assignmentError)}`, { cause: assignmentError });
       }
+      mapped = { ...mapped, employees: payload.employees, employeeName: payload.employeeName ?? payload.employees[0] };
     }
     // ensure local state contains it (realtime may also add it)
     setShifts((s) => (s.some((x) => x.id === mapped.id) ? s : [...s, mapped]));
@@ -202,6 +243,13 @@ export function useShifts(companyId?: string | null) {
   };
 
   const updateShift = async (id: string, payload: Partial<Shift>) => {
+    const { data: previousRow, error: readError } = await supabase
+      .from("shifts")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (readError) throw readError;
+
     // build update object; include employee_id if available
     const upd: any = { date: payload.date, start_time: payload.startTime, end_time: payload.endTime };
     if (payload.employees) upd.employees = payload.employees;
@@ -231,26 +279,24 @@ export function useShifts(companyId?: string | null) {
       }
     }
     if (error) throw error;
+    const originalRow = previousRow;
     let mapped = mapRow(data);
     // sync shift_assignments if employees provided in payload
-    if (payload.employees && Array.isArray(payload.employees)) {
+    if (Array.isArray(payload.employees)) {
       try {
-        // remove existing assignments for this shift then add new ones
-        try {
-          await supabase.from('shift_assignments').delete().eq('shift_id', id);
-        } catch (e) {
-          // ignore
+        await replaceAssignments(id, payload.employees);
+      } catch (assignmentError) {
+        const rollback: Record<string, unknown> = {};
+        for (const [source, target] of [["date", "date"], ["start_time", "start_time"], ["end_time", "end_time"], ["role", "role"], ["location", "location"]]) {
+          if (originalRow[source] !== undefined) rollback[target] = originalRow[source];
         }
-        const assignments = (payload.employees || []).map((uid: string) => ({ shift_id: id, user_id: uid }));
-        try {
-          if (assignments.length > 0) await supabase.from('shift_assignments').insert(assignments);
-        } catch (e) {
-          // ignore
+        const { error: rollbackError } = await supabase.from("shifts").update(rollback).eq("id", id);
+        if (rollbackError) {
+          throw new Error(`Assignments could not be saved (${errorMessage(assignmentError)}), and the shift changes could not be reverted (${rollbackError.message}).`, { cause: assignmentError });
         }
-        mapped = { ...mapped, employees: payload.employees, employeeName: payload.employeeName ?? (Array.isArray(payload.employees) && payload.employees.length > 0 ? payload.employees[0] : mapped.employeeName) };
-      } catch (e) {
-        // ignore
+        throw new Error(`Shift changes were reverted because assignments could not be saved: ${errorMessage(assignmentError)}`, { cause: assignmentError });
       }
+      mapped = { ...mapped, employees: payload.employees, employeeName: payload.employeeName ?? (payload.employees.length > 0 ? payload.employees[0] : mapped.employeeName) };
     }
     setShifts((s) => s.map((sh) => (sh.id === mapped.id ? mapped : sh)));
     console.log("updateShift: UPDATED SHIFT", mapped);
