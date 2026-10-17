@@ -203,7 +203,7 @@ export function SetupEmployees() {
                     </button>
                   </div>
                   <p className="text-xs text-green-700 mt-2">
-                    {t("joinCode", { code: inviteLink.split("/").pop() })}
+                    {t("joinCode", { code: inviteLink.split("/").pop() ?? "" })}
                   </p>
                 </div>
               )}
